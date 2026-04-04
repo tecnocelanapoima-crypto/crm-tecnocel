@@ -3,6 +3,14 @@
  * Funciones de utilidad para la interfaz
  */
 
+// ANTI-FOUC (Carga Inmediata de Tema Visual)
+(function() {
+    const theme = localStorage.getItem('crm_theme');
+    if (theme && theme !== 'cyan') {
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+})();
+
 /**
  * Muestra un diálogo de confirmación antes de eliminar un registro.
  * @param {string} nombre - Nombre del elemento a eliminar
@@ -58,14 +66,85 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('[title], [data-bs-toggle="tooltip"]')
     );
     tooltipTriggerList.map(function (el) {
-        // Evitar doble instancia
         if (!bootstrap.Tooltip.getInstance(el)) {
-            return new bootstrap.Tooltip(el, { 
-                trigger: 'hover',
-                delay: { "show": 300, "hide": 100 } // Pequeño retraso para que no sea molesto
-            });
+            return new bootstrap.Tooltip(el, { trigger: 'hover', delay: { "show": 300, "hide": 100 } });
         }
     });
+
+    // ── MOTOR DE CONFIGURACIÓN Y PERSONALIZACIÓN ──
+    const themeSelectors = document.querySelectorAll('.theme-btn');
+    const widgetToggles = document.querySelectorAll('.config-toggle');
+    const resetBtn = document.getElementById('btnResetConfig');
+
+    // 1. Cargar Theme guardado
+    const currentTheme = localStorage.getItem('crm_theme') || 'cyan';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    themeSelectors.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.theme === currentTheme) {
+            btn.classList.add('active');
+            btn.style.borderColor = '#ffffff';
+        } else {
+            btn.style.borderColor = 'transparent';
+        }
+    });
+
+    // 2. Cargar preferencias de Widgets
+    let widgetState = JSON.parse(localStorage.getItem('crm_widgets')) || {};
+    widgetToggles.forEach(toggle => {
+        const targetId = toggle.dataset.target;
+        const targetElement = document.getElementById(targetId);
+        
+        // Si el estado está guardado como false (oculto)
+        if (widgetState[targetId] === false) {
+            toggle.checked = false;
+            if (targetElement) targetElement.classList.add('d-none');
+        } else {
+            // Predeterminado: Visible
+            toggle.checked = true;
+            if (targetElement) targetElement.classList.remove('d-none');
+        }
+
+        // Listener de cambio
+        toggle.addEventListener('change', function() {
+            const isVisible = this.checked;
+            widgetState[targetId] = isVisible;
+            localStorage.setItem('crm_widgets', JSON.stringify(widgetState));
+            
+            if (targetElement) {
+                if (isVisible) targetElement.classList.remove('d-none');
+                else targetElement.classList.add('d-none');
+            }
+        });
+    });
+
+    // 3. Listener para cambio de Theme
+    themeSelectors.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const newTheme = this.dataset.theme;
+            localStorage.setItem('crm_theme', newTheme);
+            document.documentElement.setAttribute('data-theme', newTheme);
+            
+            // Actualizar interfaz del selector
+            themeSelectors.forEach(b => {
+                b.classList.remove('active');
+                b.style.borderColor = 'transparent';
+            });
+            this.classList.add('active');
+            this.style.borderColor = '#ffffff';
+        });
+    });
+
+    // 4. Restablecer Configuración
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            if (confirm('¿Restablecer tema y módulos a la vista de fábrica?')) {
+                localStorage.removeItem('crm_theme');
+                localStorage.removeItem('crm_widgets');
+                window.location.reload();
+            }
+        });
+    }
 });
 
 /**

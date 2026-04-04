@@ -2,6 +2,17 @@
 {% block title %}Nueva Venta — Tecnocel CRM{% endblock %}
 
 {% block content %}
+<!-- Tom Select CSS para buscador -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .ts-control { background: var(--tc-dark-3) !important; border-color: rgba(0,207,255,0.2) !important; color: var(--tc-text) !important; min-height: calc(1.5em + 1rem + 2px); display: flex; align-items: center; }
+    .ts-control input { color: var(--tc-text) !important; font-size: 1.1rem; }
+    .ts-dropdown { background: var(--tc-dark-2) !important; border-color: rgba(0,207,255,0.2) !important; color: var(--tc-text) !important; }
+    .ts-dropdown .option { color: var(--tc-text) !important; }
+    .ts-dropdown .option.active, .ts-dropdown .option:hover { background: rgba(0,207,255,0.15) !important; color: var(--tc-cyan) !important; }
+    .ts-wrapper.form-select { padding: 0 !important; }
+    .ts-control > .item { color: var(--tc-text) !important; font-size: 1.1rem; }
+</style>
 <div class="row justify-content-center">
     <div class="col-12 col-lg-7">
 
@@ -33,17 +44,25 @@
                             <select class="form-select form-select-lg" id="cliente_id" name="cliente_id" required>
                                 <option value="">— Seleccionar cliente —</option>
                                 {% for c in clientes %}
-                                <option value="{{ c.id }}"
+                                <option value="{{ c.id }}" data-telefono="{{ c.telefono or '' }}"
                                     {% if form.cliente_id|string == c.id|string %}selected{% endif %}>
                                     {{ c.nombre }}
                                 </option>
                                 {% endfor %}
                             </select>
-                            <div class="form-text">
-                                ¿Cliente nuevo?
-                                <a href="{{ url_for('clientes.crear') }}" target="_blank">
-                                    Crear cliente <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                </a>
+                            <div class="form-text d-flex justify-content-between">
+                                <span>¿Cliente nuevo? <a href="{{ url_for('clientes.crear') }}" target="_blank">Crear cliente <i class="bi bi-box-arrow-up-right ms-1"></i></a></span>
+                            </div>
+
+                            <!-- Casilla rápida de WhatsApp -->
+                            <div class="mt-3 d-none transition-fade" id="whatsappBox">
+                                <div class="input-group input-group-sm border border-success rounded-2 overflow-hidden shadow-sm" style="border-width: 2px !important;">
+                                    <span class="input-group-text bg-success bg-opacity-10 border-success text-success"><i class="bi bi-whatsapp"></i> WhatsApp Rápido</span>
+                                    <input type="text" class="form-control border-success bg-dark text-light" id="waMessage" placeholder="Escribe un mensaje para este cliente...">
+                                    <a href="#" class="btn btn-success fw-bold" id="btnWhatsappClient" title="Compartir mensaje" onclick="event.preventDefault(); window.location.href = this.href + '&text=' + encodeURIComponent(document.getElementById('waMessage').value);">
+                                        Enviar <i class="bi bi-send ms-1"></i>
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
@@ -178,7 +197,41 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Tom Select JS -->
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script>
+// Inicializar buscador de clientes
+if (document.getElementById('cliente_id')) {
+    new TomSelect("#cliente_id", {
+        create: false,
+        placeholder: "Buscar por nombre de cliente...",
+        maxOptions: null
+    });
+}
+
+// Activar casilla de WhatsApp si el cliente tiene teléfono
+const selectClient = document.getElementById('cliente_id');
+const waBox = document.getElementById('whatsappBox');
+const btnWa = document.getElementById('btnWhatsappClient');
+
+if(selectClient && waBox) {
+    selectClient.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if(selectedOption) {
+            const tel = selectedOption.getAttribute('data-telefono');
+            if(tel && tel.length >= 7 && tel !== '0000000000') {
+                const cleanTel = tel.replace(/\D/g, '');
+                btnWa.href = 'whatsapp://send?phone=57' + cleanTel;
+                waBox.classList.remove('d-none');
+            } else {
+                waBox.classList.add('d-none');
+            }
+        }
+    });
+    // Disparar validación al cargar si hay un preseleccionado
+    selectClient.dispatchEvent(new Event('change'));
+}
+
 // Mostrar preview del precio formateado
 const inputPrecio = document.getElementById('precio');
 const precioPreview = document.getElementById('precioPreview');

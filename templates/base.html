@@ -103,6 +103,68 @@
 
 </div>
 
+<!-- ── Panel Lateral de Configuración (Offcanvas) ── -->
+<div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="configPanel" aria-labelledby="configPanelLabel" style="border-left: 1px solid var(--tc-cyan-border);">
+    <div class="offcanvas-header border-bottom border-secondary">
+        <h5 class="offcanvas-title fw-bold text-primary" id="configPanelLabel">
+            <i class="bi bi-sliders me-2"></i>Personalización
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        
+        <!-- Tema de Color -->
+        <div class="mb-4">
+            <h6 class="text-uppercase text-muted fw-bold small mb-3">Color de Acento</h6>
+            <div class="d-flex gap-2 flex-wrap" id="themeSelectors">
+                <button class="btn theme-btn rounded-circle p-0 active" data-theme="cyan" style="width: 35px; height: 35px; background: #00CFFF; border: 2px solid #fff;" title="Cyan Neón (Original)"></button>
+                <button class="btn theme-btn rounded-circle p-0" data-theme="emerald" style="width: 35px; height: 35px; background: #00E676; border: 2px solid transparent;" title="Verde Esmeralda"></button>
+                <button class="btn theme-btn rounded-circle p-0" data-theme="amber" style="width: 35px; height: 35px; background: #FFD740; border: 2px solid transparent;" title="Ámbar Solar"></button>
+                <button class="btn theme-btn rounded-circle p-0" data-theme="purple" style="width: 35px; height: 35px; background: #B388FF; border: 2px solid transparent;" title="Púrpura Cibernético"></button>
+            </div>
+        </div>
+
+        <!-- Visibilidad de Módulos del Dashboard -->
+        {% if request.endpoint == 'index' %}
+        <div class="mb-4">
+            <h6 class="text-uppercase text-muted fw-bold small mb-3">Módulos del Dashboard</h6>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input config-toggle" type="checkbox" role="switch" id="toggleStats" checked data-target="dashboard-stats">
+                <label class="form-check-label text-light small" for="toggleStats">Tarjetas Numéricas (Clientes/Ventas)</label>
+            </div>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input config-toggle" type="checkbox" role="switch" id="toggleLastSales" checked data-target="dashboard-last-sales">
+                <label class="form-check-label text-light small" for="toggleLastSales">Panel de Últimas Ventas</label>
+            </div>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input config-toggle" type="checkbox" role="switch" id="toggleLastClients" checked data-target="dashboard-last-clients">
+                <label class="form-check-label text-light small" for="toggleLastClients">Panel de Últimos Clientes</label>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-dark border border-secondary text-muted small py-2">
+            <i class="bi bi-info-circle me-1"></i>Vuelve al Dashboard principal para configurar los bloques visibles.
+        </div>
+        {% endif %}
+
+        <hr class="border-secondary opacity-50 my-4">
+        
+        <button class="btn btn-outline-danger w-100 btn-sm" id="btnResetConfig" title="Volver a la configuración de fábrica">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer Todo
+        </button>
+
+    </div>
+</div>
+
+<!-- Botón Flotante Configuración -->
+<button class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+        id="btnConfigFloating"
+        type="button" data-bs-toggle="offcanvas" data-bs-target="#configPanel" 
+        title="Personalizar el CRM"
+        style="position: fixed; bottom: 25px; right: 25px; width: 55px; height: 55px; z-index: 1040; font-size: 1.5rem; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+    <i class="bi bi-gear-fill" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'"></i>
+</button>
+
 <!-- ── Pie de página ───────────────────────────────── -->
 <footer class="footer mt-auto py-3">
     <div class="container-fluid text-center small">

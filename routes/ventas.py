@@ -75,7 +75,7 @@ def crear():
         if errores:
             for error in errores:
                 flash(error, 'danger')
-            clientes = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
+            clientes = db.execute('SELECT id, nombre, telefono FROM clientes ORDER BY nombre').fetchall()
             db.close()
             return render_template('ventas/form.html',
                                    clientes=clientes,
@@ -95,15 +95,22 @@ def crear():
         flash(f'Venta de "{producto}" registrada exitosamente.', 'success')
         return redirect(url_for('facturas.generar', venta_id=venta_id))
 
-    clientes = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
+    # Asegurar que exista 'CLIENTE EXPRÉS'
+    cliente_expres = db.execute('SELECT id FROM clientes WHERE UPPER(nombre) LIKE "%EXPR_S%" OR UPPER(nombre) LIKE "%EXPRES%"').fetchone()
+    if not cliente_expres:
+        db.execute('INSERT INTO clientes (nombre, telefono) VALUES (?, ?)', ('CLIENTE EXPRÉS', '0000000000'))
+        db.commit()
+        cliente_expres = db.execute('SELECT id FROM clientes WHERE UPPER(nombre) LIKE "%EXPRES%" OR UPPER(nombre) LIKE "%EXPR_S%"').fetchone()
+
+    clientes = db.execute('SELECT id, nombre, telefono FROM clientes ORDER BY nombre').fetchall()
     db.close()
 
-    # Pasar cliente preseleccionado si viene de la URL
-    cliente_preseleccionado = request.args.get('cliente_id', '')
+    # Pasar cliente preseleccionado si viene de la URL (o Cliente Exprés por defecto)
+    cliente_preseleccionado = request.args.get('cliente_id', cliente_expres['id'] if cliente_expres else '')
 
     return render_template('ventas/form.html',
                            clientes=clientes,
-                           form={'cliente_id': cliente_preseleccionado},
+                           form={'cliente_id': str(cliente_preseleccionado)},
                            hoy=date.today().isoformat())
 
 
@@ -161,7 +168,7 @@ def editar(id):
             return redirect(url_for('index'))
         return redirect(url_for('index')) # We fallback to index because the dashboard invokes this mainly
 
-    clientes = db.execute('SELECT id, nombre FROM clientes ORDER BY nombre').fetchall()
+    clientes = db.execute('SELECT id, nombre, telefono FROM clientes ORDER BY nombre').fetchall()
     db.close()
     return render_template('ventas/form.html', clientes=clientes, form=dict(venta), accion='Editar', hoy=venta['fecha'])
 
