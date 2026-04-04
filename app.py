@@ -10,6 +10,9 @@ from database.db import init_db, get_db
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'tecnocel-saas-secret-2024-cambiar-en-produccion')
 
+with app.app_context():
+    init_db()
+
 # ── Blueprints ─────────────────────────────────────────
 from routes.auth      import auth_bp
 from routes.clientes  import clientes_bp
