@@ -1,0 +1,219 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventario — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="h4 mb-1 fw-bold text-primary">
+            <i class="bi bi-box-seam-fill me-2"></i>Inventario de Productos
+        </h2>
+        <p class="text-muted mb-0 small">Gestión de stock y catálogo de productos</p>
+    </div>
+    <a href="{{ url_for('inventario.crear') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Nuevo Producto
+    </a>
+</div>
+
+<!-- Estadísticas del inventario -->
+{% if stats %}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-3">
+                <div class="fs-4 fw-bold text-primary">{{ stats['total_productos'] }}</div>
+                <div class="small text-muted">Productos</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-3">
+                <div class="fs-4 fw-bold text-info">{{ stats['total_unidades'] }}</div>
+                <div class="small text-muted">Unidades en Stock</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-3">
+                <div class="fs-4 fw-bold text-success">$ {{ "{:,.0f}".format(stats['valor_total']) }}</div>
+                <div class="small text-muted">Valor del Inventario</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-3">
+                <div class="fs-4 fw-bold {% if stats['sin_stock'] > 0 %}text-danger{% else %}text-success{% endif %}">
+                    {{ stats['sin_stock'] }}
+                </div>
+                <div class="small text-muted">Sin Stock</div>
+                {% if stats['stock_bajo'] > 0 %}
+                <div class="small text-warning mt-1">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ stats['stock_bajo'] }} con stock bajo
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Buscador -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="GET" action="{{ url_for('inventario.lista') }}" class="d-flex gap-2 mb-0">
+            <input type="text" name="q" class="form-control"
+                   placeholder="Buscar por nombre, marca o categoría..." value="{{ busqueda }}">
+            <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-search me-1"></i>Buscar
+            </button>
+            {% if busqueda %}
+                <a href="{{ url_for('inventario.lista') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Limpiar
+                </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de productos -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="70" class="text-center">Foto</th>
+                        <th>Producto</th>
+                        <th>Marca</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in productos %}
+                    <tr>
+                        <td class="text-center">
+                            {% if p['foto'] %}
+                                <img src="{{ url_for('static', filename='uploads/productos/' ~ p['foto']) }}"
+                                     alt="Foto de {{ p['nombre'] }}"
+                                     style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;">
+                            {% else %}
+                                <div class="d-flex align-items-center justify-content-center bg-light rounded"
+                                     style="width:48px;height:48px;font-size:22px;margin:0 auto;border:1px solid #dee2e6;">
+                                    <i class="bi bi-box-seam text-secondary"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ p['nombre'] }}</div>
+                            {% if p['descripcion'] %}
+                                <small class="text-muted text-truncate d-inline-block" style="max-width:250px;">
+                                    {{ p['descripcion'] }}
+                                </small>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ p['marca'] or '—' }}</td>
+                        <td class="text-muted">{{ p['categoria'] or '—' }}</td>
+                        <td class="fw-bold text-success">$ {{ "{:,.0f}".format(p['precio']) }}</td>
+                        <td>
+                            <span class="badge {% if p['stock'] > 3 %}bg-success{% elif p['stock'] > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %} fs-6 px-2">
+                                {{ p['stock'] }}
+                            </span>
+                            {% if p['stock'] == 0 %}
+                                <small class="text-danger d-block">Sin stock</small>
+                            {% elif p['stock'] < 3 %}
+                                <small class="text-warning d-block">Stock bajo</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 justify-content-center flex-wrap">
+                                <!-- Ajuste rápido de stock -->
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        title="Ajustar stock"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalStock{{ p['id'] }}">
+                                    <i class="bi bi-plus-slash-minus"></i>
+                                </button>
+                                <a href="{{ url_for('inventario.editar', id=p['id']) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Editar producto">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="{{ url_for('inventario.eliminar', id=p['id']) }}" method="POST"
+                                      class="d-inline"
+                                      onsubmit="return confirm('¿Eliminar el producto {{ p['nombre'] }}? Esta acción no se puede deshacer.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar producto">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Modal de ajuste de stock -->
+                    <div class="modal fade" id="modalStock{{ p['id'] }}" tabindex="-1">
+                        <div class="modal-dialog modal-sm">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h6 class="modal-title">
+                                        <i class="bi bi-plus-slash-minus me-1"></i>Ajustar Stock
+                                    </h6>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form action="{{ url_for('inventario.ajustar_stock', id=p['id']) }}" method="POST">
+                                    <div class="modal-body">
+                                        <p class="small text-muted mb-3">
+                                            <strong>{{ p['nombre'] }}</strong><br>
+                                            Stock actual: <span class="fw-bold">{{ p['stock'] }}</span>
+                                        </p>
+                                        <div class="mb-3">
+                                            <label class="form-label small">Operación</label>
+                                            <select name="operacion" class="form-select form-select-sm">
+                                                <option value="entrada">+ Entrada (agregar)</option>
+                                                <option value="salida">- Salida (descontar)</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-0">
+                                            <label class="form-label small">Cantidad</label>
+                                            <input type="number" name="cantidad" class="form-control form-control-sm"
+                                                   min="1" value="1" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                        <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-50"></i>
+                            <h5 class="fw-normal">
+                                {% if busqueda %}
+                                    No se encontraron productos para "{{ busqueda }}"
+                                {% else %}
+                                    No hay productos registrados
+                                {% endif %}
+                            </h5>
+                            {% if not busqueda %}
+                            <a href="{{ url_for('inventario.crear') }}" class="btn btn-primary mt-2">
+                                <i class="bi bi-plus-circle me-1"></i>Agregar Primer Producto
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

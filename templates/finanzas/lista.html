@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+
+{% block title %}Finanzas — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="h4 mb-1 fw-bold text-primary">
+            <i class="bi bi-calculator-fill me-2"></i>Finanzas y Caja
+        </h2>
+        <p class="text-muted mb-0 small">Control de ingresos, egresos y balance del negocio</p>
+    </div>
+    <span class="badge bg-light text-dark border fs-6">
+        <i class="bi bi-calendar3 me-1"></i>{{ hoy }}
+    </span>
+</div>
+
+<!-- Resumen Histórico Total -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-success border-opacity-50 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-success text-uppercase mb-1 small fw-bold" style="letter-spacing:1px;">Ingresos Totales</h6>
+                        <h3 class="mb-0 fw-bold">$ {{ "{:,.0f}".format(ingresos_total) }}</h3>
+                    </div>
+                    <div class="p-2 bg-success bg-opacity-10 rounded text-success">
+                        <i class="bi bi-graph-up-arrow fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-2 text-muted small">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>Suma de todas las ventas
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger border-opacity-50 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-danger text-uppercase mb-1 small fw-bold" style="letter-spacing:1px;">Egresos Totales</h6>
+                        <h3 class="mb-0 fw-bold">$ {{ "{:,.0f}".format(egresos_total) }}</h3>
+                    </div>
+                    <div class="p-2 bg-danger bg-opacity-10 rounded text-danger">
+                        <i class="bi bi-graph-down-arrow fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-2 text-muted small">
+                    <i class="bi bi-info-circle-fill text-danger me-1"></i>Suma de todos los gastos
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card {% if balance_total >= 0 %}border-primary{% else %}border-warning{% endif %} border-opacity-50 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="{% if balance_total >= 0 %}text-primary{% else %}text-warning{% endif %} text-uppercase mb-1 small fw-bold" style="letter-spacing:1px;">Balance Neto</h6>
+                        <h3 class="mb-0 fw-bold {% if balance_total >= 0 %}text-primary{% else %}text-warning{% endif %}">
+                            $ {{ "{:,.0f}".format(balance_total) }}
+                        </h3>
+                    </div>
+                    <div class="p-2 {% if balance_total >= 0 %}bg-primary{% else %}bg-warning{% endif %} bg-opacity-10 rounded {% if balance_total >= 0 %}text-primary{% else %}text-warning{% endif %}">
+                        <i class="bi bi-cash-stack fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-2 small">
+                    {% if balance_total > 0 %}
+                        <span class="text-success"><i class="bi bi-arrow-up-right me-1"></i>Negocio rentable</span>
+                    {% elif balance_total < 0 %}
+                        <span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Más salidas que entradas</span>
+                    {% else %}
+                        <span class="text-muted">Balance neutral</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtro por Mes -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="GET" action="{{ url_for('finanzas.lista') }}" class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label small text-muted mb-1">Mes</label>
+                <select name="mes" class="form-select form-select-sm">
+                    {% for m in meses_disponibles %}
+                    <option value="{{ m.valor }}" {% if m.valor == mes_actual %}selected{% endif %}>
+                        {{ m.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label small text-muted mb-1">Año</label>
+                <select name="anio" class="form-select form-select-sm">
+                    {% for y in range(anio_min, anio_max + 1) %}
+                    <option value="{{ y }}" {% if y|string == anio_actual %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-funnel me-1"></i>Filtrar
+                </button>
+            </div>
+            <div class="col-auto ms-auto">
+                <div class="text-muted small">
+                    Mostrando: <strong>{{ mes_actual }}/{{ anio_actual }}</strong>
+                    &nbsp;|&nbsp; Ingresos: <span class="text-success fw-bold">$ {{ "{:,.0f}".format(ingresos_mes) }}</span>
+                    &nbsp;|&nbsp; Egresos: <span class="text-danger fw-bold">$ {{ "{:,.0f}".format(egresos_mes) }}</span>
+                    &nbsp;|&nbsp; Balance: <span class="{% if balance_mes >= 0 %}text-primary{% else %}text-warning{% endif %} fw-bold">$ {{ "{:,.0f}".format(balance_mes) }}</span>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Registrar Nuevo Egreso -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header border-bottom py-3">
+                <h6 class="mb-0 fw-bold text-uppercase small">
+                    <i class="bi bi-plus-circle me-2 text-danger"></i>Registrar Gasto / Egreso
+                </h6>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('finanzas.crear_egreso') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Concepto <span class="text-danger">*</span></label>
+                        <input type="text" name="concepto" class="form-control"
+                               placeholder="Ej: Arriendo, Servicios, Compra de mercancía..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Monto (COP) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="1" min="1" name="monto" class="form-control"
+                                   placeholder="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Fecha <span class="text-danger">*</span></label>
+                        <input type="date" name="fecha" class="form-control" value="{{ hoy }}" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold">Notas</label>
+                        <textarea name="notas" class="form-control" rows="2"
+                                  placeholder="Descripción adicional (opcional)..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-dash-circle me-1"></i>Registrar Egreso
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de Egresos del Mes -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-uppercase small">
+                    <i class="bi bi-list-ul me-2"></i>Egresos — {{ mes_actual }}/{{ anio_actual }}
+                </h6>
+                <span class="badge bg-danger">
+                    Total: $ {{ "{:,.0f}".format(egresos_mes) }}
+                </span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Concepto</th>
+                                <th>Notas</th>
+                                <th class="text-end">Monto</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for egreso in egresos %}
+                            <tr>
+                                <td class="text-muted small" style="white-space:nowrap;">{{ egreso['fecha'] }}</td>
+                                <td class="fw-semibold">{{ egreso['concepto'] }}</td>
+                                <td class="text-muted small">{{ egreso['notas'] or '—' }}</td>
+                                <td class="text-danger fw-bold text-end" style="white-space:nowrap;">
+                                    − $ {{ "{:,.0f}".format(egreso['monto']) }}
+                                </td>
+                                <td class="text-center">
+                                    <form action="{{ url_for('finanzas.eliminar_egreso', id=egreso['id']) }}" method="POST"
+                                          onsubmit="return confirm('¿Eliminar el gasto {{ egreso['concepto'] }}?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar gasto">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-5">
+                                    <i class="bi bi-piggy-bank fs-1 d-block mb-3 opacity-50"></i>
+                                    <p class="mb-0">No hay egresos registrados en {{ mes_actual }}/{{ anio_actual }}.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ventas del Mes -->
+{% if ventas_mes %}
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold text-uppercase small">
+            <i class="bi bi-cart-fill me-2 text-success"></i>Ventas del Mes — {{ mes_actual }}/{{ anio_actual }}
+        </h6>
+        <span class="badge bg-success">
+            Ingresos: $ {{ "{:,.0f}".format(ingresos_mes) }}
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Producto</th>
+                        <th>Tipo de Pago</th>
+                        <th class="text-end">Precio</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in ventas_mes %}
+                    <tr>
+                        <td class="text-muted small">{{ v['fecha'] }}</td>
+                        <td class="fw-semibold">{{ v['cliente_nombre'] }}</td>
+                        <td>{{ v['producto'] }}</td>
+                        <td>
+                            <span class="badge {% if v['tipo_pago'] == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                {{ v['tipo_pago'] }}
+                            </span>
+                        </td>
+                        <td class="text-success fw-bold text-end">$ {{ "{:,.0f}".format(v['precio']) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}{{ accion }} Cliente — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+
+        <!-- Cabecera -->
+        <div class="d-flex align-items-center mb-4">
+            <a href="{{ url_for('clientes.lista') }}" class="btn btn-outline-secondary btn-sm me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="mb-1 fw-bold text-primary">
+                    <i class="bi bi-person-{% if accion == 'Crear' %}plus-fill{% else %}gear-fill{% endif %} me-2"></i>
+                    {{ accion }} Cliente
+                </h2>
+                <p class="text-muted mb-0">
+                    {% if accion == 'Crear' %}Registra un nuevo cliente en el sistema{% else %}Modifica los datos del cliente{% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Formulario -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" novalidate id="formCliente">
+
+                    <div class="row g-3">
+                        <!-- Nombre completo -->
+                        <div class="col-12">
+                            <label for="nombre" class="form-label fw-semibold">
+                                Nombre completo <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control form-control-lg"
+                                   id="nombre"
+                                   name="nombre"
+                                   placeholder="Ej: Juan Carlos López"
+                                   value="{{ cliente.nombre if cliente.nombre is defined else '' }}"
+                                   required maxlength="150">
+                            <div class="invalid-feedback">El nombre es obligatorio.</div>
+                        </div>
+
+                        <!-- Cédula -->
+                        <div class="col-12 col-md-6">
+                            <label for="cedula" class="form-label fw-semibold">Número de cédula</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="cedula"
+                                   name="cedula"
+                                   placeholder="Ej: 1234567890"
+                                   value="{{ cliente.cedula if cliente.cedula is defined else '' }}"
+                                   maxlength="20">
+                        </div>
+
+                        <!-- Teléfono -->
+                        <div class="col-12 col-md-6">
+                            <label for="telefono" class="form-label fw-semibold">Teléfono / WhatsApp</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-whatsapp text-success"></i>
+                                </span>
+                                <input type="tel"
+                                       class="form-control"
+                                       id="telefono"
+                                       name="telefono"
+                                       placeholder="Ej: 3001234567"
+                                       value="{{ cliente.telefono if cliente.telefono is defined else '' }}"
+                                       maxlength="20">
+                            </div>
+                        </div>
+
+                        <!-- Dirección -->
+                        <div class="col-12">
+                            <label for="direccion" class="form-label fw-semibold">Dirección</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="direccion"
+                                   name="direccion"
+                                   placeholder="Ej: Calle 10 # 5-32, Barrio Centro"
+                                   value="{{ cliente.direccion if cliente.direccion is defined else '' }}"
+                                   maxlength="200">
+                        </div>
+
+                        <!-- Ciudad -->
+                        <div class="col-12 col-md-6">
+                            <label for="ciudad" class="form-label fw-semibold">Ciudad</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="ciudad"
+                                   name="ciudad"
+                                   placeholder="Ej: Bogotá"
+                                   value="{{ cliente.ciudad if cliente.ciudad is defined else '' }}"
+                                   maxlength="100">
+                        </div>
+
+                        <!-- Notas -->
+                        <div class="col-12">
+                            <label for="notas" class="form-label fw-semibold">Notas adicionales</label>
+                            <textarea class="form-control"
+                                      id="notas"
+                                      name="notas"
+                                      rows="3"
+                                      placeholder="Información adicional sobre el cliente...">{{ cliente.notas if cliente.notas is defined else '' }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary btn-lg px-4">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if accion == 'Crear' %}Guardar Cliente{% else %}Actualizar Cliente{% endif %}
+                        </button>
+                        <a href="{{ url_for('clientes.lista') }}" class="btn btn-outline-secondary btn-lg px-4">
+                            <i class="bi bi-x-lg me-1"></i>Cancelar
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Validación del formulario antes de enviar
+document.getElementById('formCliente').addEventListener('submit', function(e) {
+    const nombre = document.getElementById('nombre').value.trim();
+    if (!nombre) {
+        e.preventDefault();
+        document.getElementById('nombre').classList.add('is-invalid');
+        document.getElementById('nombre').focus();
+    }
+});
+
+// Quitar clase de error al escribir
+document.getElementById('nombre').addEventListener('input', function() {
+    this.classList.remove('is-invalid');
+});
+</script>
+{% endblock %}
