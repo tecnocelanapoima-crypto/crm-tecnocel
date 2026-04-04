@@ -1,84 +1,104 @@
 """
-Base de datos SQLite para Tecnocel CRM
-Contiene la inicialización y funciones de acceso a la BD
+Base de datos SQLite para Tecnocel CRM - Versión SaaS Multi-tenant
+Cada negocio tiene sus propios datos aislados por negocio_id
 """
 
 import sqlite3
 import os
 
-# Ruta del archivo de base de datos
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
 
 
 def get_db():
-    """Retorna una conexión a la base de datos con filas como diccionarios"""
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # Permite acceder columnas por nombre
-    conn.execute('PRAGMA foreign_keys = ON')  # Asegurar borrado en cascada
+    conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA foreign_keys = ON')
     return conn
 
 
 def init_db():
-    """Crea las tablas si no existen"""
     conn = get_db()
-    cursor = conn.cursor()
+    c = conn.cursor()
 
-    # Tabla de productos (Inventario)
-    cursor.execute('''
+    # ── Tabla de negocios (usuarios del SaaS) ─────────────
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS negocios (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre_negocio  TEXT    NOT NULL,
+            email           TEXT    NOT NULL UNIQUE,
+            password_hash   TEXT    NOT NULL,
+            telefono        TEXT,
+            ciudad          TEXT,
+            plan            TEXT    NOT NULL DEFAULT 'basico',
+            activo          INTEGER NOT NULL DEFAULT 1,
+            fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # ── Productos (con negocio_id) ─────────────────────────
+    c.execute('''
         CREATE TABLE IF NOT EXISTS productos (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre        TEXT    NOT NULL,
-            marca         TEXT,
-            categoria     TEXT,
-            precio        REAL    NOT NULL,
-            stock         INTEGER NOT NULL DEFAULT 1,
-            descripcion   TEXT,
-            foto          TEXT,
-            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            negocio_id      INTEGER NOT NULL,
+            nombre          TEXT    NOT NULL,
+            marca           TEXT,
+            categoria       TEXT,
+            precio          REAL    NOT NULL,
+            stock           INTEGER NOT NULL DEFAULT 1,
+            descripcion     TEXT,
+            foto            TEXT,
+            fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE
         )
     ''')
 
-    # Tabla de clientes
-    cursor.execute('''
+    # ── Clientes (con negocio_id) ──────────────────────────
+    c.execute('''
         CREATE TABLE IF NOT EXISTS clientes (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre        TEXT    NOT NULL,
-            cedula        TEXT,
-            telefono      TEXT,
-            direccion     TEXT,
-            ciudad        TEXT,
-            notas         TEXT,
-            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            negocio_id      INTEGER NOT NULL,
+            nombre          TEXT    NOT NULL,
+            cedula          TEXT,
+            telefono        TEXT,
+            direccion       TEXT,
+            ciudad          TEXT,
+            notas           TEXT,
+            fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE
         )
     ''')
 
-    # Tabla de ventas
-    cursor.execute('''
+    # ── Ventas (con negocio_id) ────────────────────────────
+    c.execute('''
         CREATE TABLE IF NOT EXISTS ventas (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            cliente_id    INTEGER NOT NULL,
-            producto      TEXT    NOT NULL,
-            precio        REAL    NOT NULL,
-            tipo_pago     TEXT    NOT NULL DEFAULT 'contado',
-            fecha         TEXT    NOT NULL,
-            notas         TEXT,
-            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            negocio_id      INTEGER NOT NULL,
+            cliente_id      INTEGER NOT NULL,
+            producto        TEXT    NOT NULL,
+            precio          REAL    NOT NULL,
+            tipo_pago       TEXT    NOT NULL DEFAULT 'contado',
+            fecha           TEXT    NOT NULL,
+            notas           TEXT,
+            fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE,
             FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
         )
     ''')
 
-    # Tabla de egresos (Finanzas)
-    cursor.execute('''
+    # ── Egresos (con negocio_id) ───────────────────────────
+    c.execute('''
         CREATE TABLE IF NOT EXISTS egresos (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            concepto      TEXT    NOT NULL,
-            monto         REAL    NOT NULL,
-            fecha         TEXT    NOT NULL,
-            notas         TEXT,
-            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            negocio_id      INTEGER NOT NULL,
+            concepto        TEXT    NOT NULL,
+            monto           REAL    NOT NULL,
+            fecha           TEXT    NOT NULL,
+            notas           TEXT,
+            fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE
         )
     ''')
 
     conn.commit()
     conn.close()
-    print("Base de datos inicializada correctamente.")
+    print("Base de datos SaaS inicializada correctamente.")

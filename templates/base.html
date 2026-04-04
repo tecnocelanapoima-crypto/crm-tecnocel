@@ -4,87 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Tecnocel CRM{% endblock %}</title>
-
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Estilos propios (tema oscuro Tecnocel) -->
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 </head>
 <body>
 
-<!-- ── Barra de navegación ─────────────────────────── -->
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container-fluid px-3">
-
-        <!-- Logo -->
         <a class="navbar-brand py-1" href="{{ url_for('index') }}">
-            <img src="{{ url_for('static', filename='img/logo.png') }}"
-                 alt="Tecnocel"
-                 class="navbar-logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Tecnocel" class="navbar-logo">
         </a>
-
-        <!-- Botón hamburguesa (móvil) -->
         <button class="navbar-toggler border-0" type="button"
                 data-bs-toggle="collapse" data-bs-target="#navbarNav"
                 style="color:rgba(0,207,255,0.7)">
             <i class="bi bi-list fs-4"></i>
         </button>
-
         <div class="collapse navbar-collapse" id="navbarNav">
-            <!-- Navegación izquierda -->
             <ul class="navbar-nav me-auto ms-3 gap-1">
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}"
-                       href="{{ url_for('index') }}">
+                    <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
                         <i class="bi bi-speedometer2 me-1"></i>Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint and 'clientes' in request.endpoint %}active{% endif %}"
-                       href="{{ url_for('clientes.lista') }}">
+                    <a class="nav-link {% if request.endpoint and 'clientes' in request.endpoint %}active{% endif %}" href="{{ url_for('clientes.lista') }}">
                         <i class="bi bi-people-fill me-1"></i>Clientes
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint and 'ventas' in request.endpoint %}active{% endif %}"
-                       href="{{ url_for('ventas.lista') }}">
+                    <a class="nav-link {% if request.endpoint and 'ventas' in request.endpoint %}active{% endif %}" href="{{ url_for('ventas.lista') }}">
                         <i class="bi bi-cart-fill me-1"></i>Ventas
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint and 'inventario' in request.endpoint %}active{% endif %}"
-                       href="{{ url_for('inventario.lista') }}">
+                    <a class="nav-link {% if request.endpoint and 'inventario' in request.endpoint %}active{% endif %}" href="{{ url_for('inventario.lista') }}">
                         <i class="bi bi-box-seam-fill me-1"></i>Inventario
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint and 'finanzas' in request.endpoint %}active{% endif %}"
-                       href="{{ url_for('finanzas.lista') }}">
+                    <a class="nav-link {% if request.endpoint and 'finanzas' in request.endpoint %}active{% endif %}" href="{{ url_for('finanzas.lista') }}">
                         <i class="bi bi-calculator-fill me-1"></i>Finanzas
                     </a>
                 </li>
             </ul>
 
-            <!-- Acciones rápidas derecha -->
-            <div class="d-flex gap-2 mt-2 mt-lg-0 mb-2 mb-lg-0">
-                <a href="{{ url_for('clientes.crear') }}" class="btn btn-success btn-sm px-3" title="Registrar un cliente en tu agenda">
+            <div class="d-flex align-items-center gap-2 mt-2 mt-lg-0 mb-2 mb-lg-0">
+                <a href="{{ url_for('clientes.crear') }}" class="btn btn-success btn-sm px-3">
                     <i class="bi bi-person-plus-fill me-1"></i>Nuevo Cliente
                 </a>
-                <a href="{{ url_for('ventas.crear') }}" class="btn btn-warning btn-sm px-3" title="Ingresar y facturar una nueva venta">
+                <a href="{{ url_for('ventas.crear') }}" class="btn btn-warning btn-sm px-3">
                     <i class="bi bi-plus-circle-fill me-1"></i>Nueva Venta
                 </a>
+                <!-- Menú del negocio -->
+                <div class="dropdown ms-1">
+                    <button class="btn btn-outline-info btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-shop me-1"></i>{{ negocio_nombre[:15] }}{% if negocio_nombre|length > 15 %}…{% endif %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="background:#0A1628; border-color:rgba(0,207,255,0.2);">
+                        <li><span class="dropdown-item-text text-muted small">{{ negocio_email }}</span></li>
+                        <li><hr class="dropdown-divider" style="border-color:rgba(0,207,255,0.1);"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                                <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
-
     </div>
 </nav>
 
-<!-- ── Contenido principal ─────────────────────────── -->
 <div class="container-fluid py-4 px-4">
-
-    <!-- Mensajes flash -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="mb-3">
@@ -98,90 +90,67 @@
             </div>
         {% endif %}
     {% endwith %}
-
     {% block content %}{% endblock %}
-
 </div>
 
-<!-- ── Panel Lateral de Configuración (Offcanvas) ── -->
+<!-- Panel configuración y footer igual que antes -->
 <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="configPanel" aria-labelledby="configPanelLabel" style="border-left: 1px solid var(--tc-cyan-border);">
     <div class="offcanvas-header border-bottom border-secondary">
         <h5 class="offcanvas-title fw-bold text-primary" id="configPanelLabel">
             <i class="bi bi-sliders me-2"></i>Personalización
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body">
-        
-        <!-- Tema de Color -->
         <div class="mb-4">
             <h6 class="text-uppercase text-muted fw-bold small mb-3">Color de Acento</h6>
             <div class="d-flex gap-2 flex-wrap" id="themeSelectors">
-                <button class="btn theme-btn rounded-circle p-0 active" data-theme="cyan" style="width: 35px; height: 35px; background: #00CFFF; border: 2px solid #fff;" title="Cyan Neón (Original)"></button>
-                <button class="btn theme-btn rounded-circle p-0" data-theme="emerald" style="width: 35px; height: 35px; background: #00E676; border: 2px solid transparent;" title="Verde Esmeralda"></button>
-                <button class="btn theme-btn rounded-circle p-0" data-theme="amber" style="width: 35px; height: 35px; background: #FFD740; border: 2px solid transparent;" title="Ámbar Solar"></button>
-                <button class="btn theme-btn rounded-circle p-0" data-theme="purple" style="width: 35px; height: 35px; background: #B388FF; border: 2px solid transparent;" title="Púrpura Cibernético"></button>
+                <button class="btn theme-btn rounded-circle p-0 active" data-theme="cyan" style="width:35px;height:35px;background:#00CFFF;border:2px solid #fff;"></button>
+                <button class="btn theme-btn rounded-circle p-0" data-theme="emerald" style="width:35px;height:35px;background:#00E676;border:2px solid transparent;"></button>
+                <button class="btn theme-btn rounded-circle p-0" data-theme="amber" style="width:35px;height:35px;background:#FFD740;border:2px solid transparent;"></button>
+                <button class="btn theme-btn rounded-circle p-0" data-theme="purple" style="width:35px;height:35px;background:#B388FF;border:2px solid transparent;"></button>
             </div>
         </div>
-
-        <!-- Visibilidad de Módulos del Dashboard -->
         {% if request.endpoint == 'index' %}
         <div class="mb-4">
             <h6 class="text-uppercase text-muted fw-bold small mb-3">Módulos del Dashboard</h6>
             <div class="form-check form-switch mb-3">
                 <input class="form-check-input config-toggle" type="checkbox" role="switch" id="toggleStats" checked data-target="dashboard-stats">
-                <label class="form-check-label text-light small" for="toggleStats">Tarjetas Numéricas (Clientes/Ventas)</label>
+                <label class="form-check-label text-light small" for="toggleStats">Tarjetas Numéricas</label>
             </div>
             <div class="form-check form-switch mb-3">
                 <input class="form-check-input config-toggle" type="checkbox" role="switch" id="toggleLastSales" checked data-target="dashboard-last-sales">
-                <label class="form-check-label text-light small" for="toggleLastSales">Panel de Últimas Ventas</label>
+                <label class="form-check-label text-light small" for="toggleLastSales">Últimas Ventas</label>
             </div>
             <div class="form-check form-switch mb-3">
                 <input class="form-check-input config-toggle" type="checkbox" role="switch" id="toggleLastClients" checked data-target="dashboard-last-clients">
-                <label class="form-check-label text-light small" for="toggleLastClients">Panel de Últimos Clientes</label>
+                <label class="form-check-label text-light small" for="toggleLastClients">Últimos Clientes</label>
             </div>
         </div>
-        {% else %}
-        <div class="alert alert-dark border border-secondary text-muted small py-2">
-            <i class="bi bi-info-circle me-1"></i>Vuelve al Dashboard principal para configurar los bloques visibles.
-        </div>
         {% endif %}
-
         <hr class="border-secondary opacity-50 my-4">
-        
-        <button class="btn btn-outline-danger w-100 btn-sm" id="btnResetConfig" title="Volver a la configuración de fábrica">
+        <button class="btn btn-outline-danger w-100 btn-sm" id="btnResetConfig">
             <i class="bi bi-arrow-counterclockwise me-1"></i>Restablecer Todo
         </button>
-
     </div>
 </div>
 
-<!-- Botón Flotante Configuración -->
-<button class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
-        id="btnConfigFloating"
-        type="button" data-bs-toggle="offcanvas" data-bs-target="#configPanel" 
-        title="Personalizar el CRM"
-        style="position: fixed; bottom: 25px; right: 25px; width: 55px; height: 55px; z-index: 1040; font-size: 1.5rem; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-    <i class="bi bi-gear-fill" style="transition: transform 0.5s ease;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'"></i>
+<button class="btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+        id="btnConfigFloating" type="button" data-bs-toggle="offcanvas" data-bs-target="#configPanel"
+        style="position:fixed;bottom:25px;right:25px;width:55px;height:55px;z-index:1040;font-size:1.5rem;">
+    <i class="bi bi-gear-fill"></i>
 </button>
 
-<!-- ── Pie de página ───────────────────────────────── -->
 <footer class="footer mt-auto py-3">
     <div class="container-fluid text-center small">
-        <img src="{{ url_for('static', filename='img/logo.png') }}"
-             alt="Tecnocel"
-             style="height:26px; vertical-align:middle; filter:drop-shadow(0 0 6px rgba(0,207,255,0.5));"
-             class="me-2">
-        <span style="color:rgba(0,207,255,0.6); font-weight:600;">Tecnocel CRM</span>
-        <span style="color:rgba(122,175,200,0.4); margin:0 6px;">·</span>
-        <span style="color:rgba(122,175,200,0.35);">Sistema de gestión interno &copy; 2024</span>
+        <span style="color:rgba(0,207,255,0.6);font-weight:600;">Tecnocel CRM</span>
+        <span style="color:rgba(122,175,200,0.4);margin:0 6px;">·</span>
+        <span style="color:rgba(122,175,200,0.35);">{{ negocio_nombre }} &copy; 2024</span>
     </div>
 </footer>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block scripts %}{% endblock %}
-
 </body>
 </html>

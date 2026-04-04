@@ -1,69 +1,64 @@
-"""
-Rutas para gestión de clientes
-CRUD completo: Crear, Leer, Actualizar, Eliminar
-"""
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from database.db import get_db
+from routes.auth import login_required
 
 clientes_bp = Blueprint('clientes', __name__)
 
 
 @clientes_bp.route('/')
+@login_required
 def lista():
-    """Lista todos los clientes con opción de búsqueda"""
-    db = get_db()
+    nid = session['negocio_id']
+    db  = get_db()
     busqueda = request.args.get('q', '').strip()
 
     if busqueda:
-        # Buscar por nombre, cédula o teléfono
         clientes = db.execute('''
             SELECT c.*, COUNT(v.id) as total_compras,
                    COALESCE(SUM(v.precio), 0) as total_gastado
             FROM clientes c
-            LEFT JOIN ventas v ON v.cliente_id = c.id
-            WHERE c.nombre LIKE ? OR c.cedula LIKE ? OR c.telefono LIKE ?
-            GROUP BY c.id
-            ORDER BY c.nombre
-        ''', (f'%{busqueda}%', f'%{busqueda}%', f'%{busqueda}%')).fetchall()
+            LEFT JOIN ventas v ON v.cliente_id = c.id AND v.negocio_id = ?
+            WHERE c.negocio_id = ?
+              AND (c.nombre LIKE ? OR c.cedula LIKE ? OR c.telefono LIKE ?)
+            GROUP BY c.id ORDER BY c.nombre
+        ''', (nid, nid, f'%{busqueda}%', f'%{busqueda}%', f'%{busqueda}%')).fetchall()
     else:
         clientes = db.execute('''
             SELECT c.*, COUNT(v.id) as total_compras,
                    COALESCE(SUM(v.precio), 0) as total_gastado
             FROM clientes c
-            LEFT JOIN ventas v ON v.cliente_id = c.id
-            GROUP BY c.id
-            ORDER BY c.fecha_creacion DESC
-        ''').fetchall()
+            LEFT JOIN ventas v ON v.cliente_id = c.id AND v.negocio_id = ?
+            WHERE c.negocio_id = ?
+            GROUP BY c.id ORDER BY c.fecha_creacion DESC
+        ''', (nid, nid)).fetchall()
 
     db.close()
     return render_template('clientes/lista.html', clientes=clientes, busqueda=busqueda)
 
 
 @clientes_bp.route('/crear', methods=['GET', 'POST'])
+@login_required
 def crear():
-    """Formulario y procesamiento para crear un nuevo cliente"""
+    nid = session['negocio_id']
     if request.method == 'POST':
-        nombre = request.form.get('nombre', '').strip()
-        cedula = request.form.get('cedula', '').strip()
+        nombre   = request.form.get('nombre', '').strip()
+        cedula   = request.form.get('cedula', '').strip()
         telefono = request.form.get('telefono', '').strip()
-        direccion = request.form.get('direccion', '').strip()
-        ciudad = request.form.get('ciudad', '').strip()
-        notas = request.form.get('notas', '').strip()
+        direccion= request.form.get('direccion', '').strip()
+        ciudad   = request.form.get('ciudad', '').strip()
+        notas    = request.form.get('notas', '').strip()
 
-        # Validación básica
         if not nombre:
             flash('El nombre del cliente es obligatorio.', 'danger')
             return render_template('clientes/form.html', accion='Crear', cliente=request.form)
 
         db = get_db()
         db.execute('''
-            INSERT INTO clientes (nombre, cedula, telefono, direccion, ciudad, notas)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (nombre, cedula, telefono, direccion, ciudad, notas))
+            INSERT INTO clientes (negocio_id, nombre, cedula, telefono, direccion, ciudad, notas)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (nid, nombre, cedula, telefono, direccion, ciudad, notas))
         db.commit()
         db.close()
-
         flash(f'Cliente "{nombre}" creado exitosamente.', 'success')
         return redirect(url_for('clientes.lista'))
 
@@ -71,10 +66,13 @@ def crear():
 
 
 @clientes_bp.route('/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
 def editar(id):
-    """Formulario y procesamiento para editar un cliente existente"""
-    db = get_db()
-    cliente = db.execute('SELECT * FROM clientes WHERE id = ?', (id,)).fetchone()
+    nid = session['negocio_id']
+    db  = get_db()
+    cliente = db.execute(
+        'SELECT * FROM clientes WHERE id = ? AND negocio_id = ?', (id, nid)
+    ).fetchone()
 
     if not cliente:
         db.close()
@@ -82,12 +80,12 @@ def editar(id):
         return redirect(url_for('clientes.lista'))
 
     if request.method == 'POST':
-        nombre = request.form.get('nombre', '').strip()
-        cedula = request.form.get('cedula', '').strip()
+        nombre   = request.form.get('nombre', '').strip()
+        cedula   = request.form.get('cedula', '').strip()
         telefono = request.form.get('telefono', '').strip()
-        direccion = request.form.get('direccion', '').strip()
-        ciudad = request.form.get('ciudad', '').strip()
-        notas = request.form.get('notas', '').strip()
+        direccion= request.form.get('direccion', '').strip()
+        ciudad   = request.form.get('ciudad', '').strip()
+        notas    = request.form.get('notas', '').strip()
 
         if not nombre:
             flash('El nombre del cliente es obligatorio.', 'danger')
@@ -96,12 +94,11 @@ def editar(id):
         db.execute('''
             UPDATE clientes
             SET nombre=?, cedula=?, telefono=?, direccion=?, ciudad=?, notas=?
-            WHERE id=?
-        ''', (nombre, cedula, telefono, direccion, ciudad, notas, id))
+            WHERE id=? AND negocio_id=?
+        ''', (nombre, cedula, telefono, direccion, ciudad, notas, id, nid))
         db.commit()
         db.close()
-
-        flash(f'Cliente "{nombre}" actualizado correctamente.', 'success')
+        flash(f'Cliente "{nombre}" actualizado.', 'success')
         return redirect(url_for('clientes.lista'))
 
     db.close()
@@ -109,27 +106,31 @@ def editar(id):
 
 
 @clientes_bp.route('/<int:id>/eliminar', methods=['POST'])
+@login_required
 def eliminar(id):
-    """Elimina un cliente y sus ventas asociadas"""
-    db = get_db()
-    cliente = db.execute('SELECT nombre FROM clientes WHERE id = ?', (id,)).fetchone()
-
+    nid = session['negocio_id']
+    db  = get_db()
+    cliente = db.execute(
+        'SELECT nombre FROM clientes WHERE id = ? AND negocio_id = ?', (id, nid)
+    ).fetchone()
     if cliente:
-        db.execute('DELETE FROM clientes WHERE id = ?', (id,))
+        db.execute('DELETE FROM clientes WHERE id = ? AND negocio_id = ?', (id, nid))
         db.commit()
         flash(f'Cliente "{cliente["nombre"]}" eliminado.', 'success')
     else:
         flash('Cliente no encontrado.', 'danger')
-
     db.close()
     return redirect(url_for('clientes.lista'))
 
 
 @clientes_bp.route('/<int:id>/detalle')
+@login_required
 def detalle(id):
-    """Muestra el detalle de un cliente con su historial de compras"""
-    db = get_db()
-    cliente = db.execute('SELECT * FROM clientes WHERE id = ?', (id,)).fetchone()
+    nid = session['negocio_id']
+    db  = get_db()
+    cliente = db.execute(
+        'SELECT * FROM clientes WHERE id = ? AND negocio_id = ?', (id, nid)
+    ).fetchone()
 
     if not cliente:
         db.close()
@@ -138,14 +139,12 @@ def detalle(id):
 
     ventas = db.execute('''
         SELECT * FROM ventas
-        WHERE cliente_id = ?
+        WHERE cliente_id = ? AND negocio_id = ?
         ORDER BY fecha DESC
-    ''', (id,)).fetchall()
+    ''', (id, nid)).fetchall()
 
     total_gastado = sum(v['precio'] for v in ventas)
     db.close()
-
     return render_template('clientes/detalle.html',
-                           cliente=cliente,
-                           ventas=ventas,
+                           cliente=cliente, ventas=ventas,
                            total_gastado=total_gastado)
