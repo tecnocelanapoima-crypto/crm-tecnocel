@@ -59,7 +59,7 @@
                                 <div class="input-group input-group-sm border border-success rounded-2 overflow-hidden shadow-sm" style="border-width: 2px !important;">
                                     <span class="input-group-text bg-success bg-opacity-10 border-success text-success"><i class="bi bi-whatsapp"></i> WhatsApp Rápido</span>
                                     <input type="text" class="form-control border-success bg-dark text-light" id="waMessage" placeholder="Escribe un mensaje para este cliente...">
-                                    <a href="#" class="btn btn-success fw-bold" id="btnWhatsappClient" title="Compartir mensaje" onclick="event.preventDefault(); window.location.href = this.href + '&text=' + encodeURIComponent(document.getElementById('waMessage').value);">
+                                    <a href="#" class="btn btn-success fw-bold" id="btnWhatsappClient" title="Enviar mensaje por WhatsApp" onclick="event.preventDefault(); var phone = this.getAttribute('data-phone'); if(phone){ window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(document.getElementById('waMessage').value), '_blank'); }">
                                         Enviar <i class="bi bi-send ms-1"></i>
                                     </a>
                                 </div>
@@ -221,7 +221,8 @@ if(selectClient && waBox) {
             const tel = selectedOption.getAttribute('data-telefono');
             if(tel && tel.length >= 7 && tel !== '0000000000') {
                 const cleanTel = tel.replace(/\D/g, '');
-                btnWa.href = 'whatsapp://send?phone=57' + cleanTel;
+                // Guardar teléfono en data attribute; usando wa.me que funciona en PC y móvil
+                btnWa.setAttribute('data-phone', '57' + cleanTel);
                 waBox.classList.remove('d-none');
             } else {
                 waBox.classList.add('d-none');
