@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <div>
+        <h2 class="mb-1 fw-bold text-primary">
+            <i class="bi bi-speedometer2 me-2"></i>Panel Principal
+        </h2>
+        <p class="text-muted mb-0">Resumen general del negocio</p>
+    </div>
+    <div class="ms-auto d-flex gap-2">
+        <a href="{{ url_for('clientes.crear') }}" class="btn btn-success">
+            <i class="bi bi-person-plus-fill me-1"></i>Nuevo Cliente
+        </a>
+        <a href="{{ url_for('ventas.crear') }}" class="btn btn-warning">
+            <i class="bi bi-plus-circle-fill me-1"></i>Nueva Venta
+        </a>
+    </div>
+</div>
+
+<!-- Tarjetas de estadísticas -->
+<div class="row g-4 mb-4">
+    <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card stat-card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon bg-primary-subtle text-primary rounded-3 p-3">
+                    <i class="bi bi-people-fill fs-2"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-1">Total Clientes</p>
+                    <h3 class="fw-bold mb-0">{{ total_clientes }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card stat-card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon bg-success-subtle text-success rounded-3 p-3">
+                    <i class="bi bi-cart-check-fill fs-2"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-1">Total Ventas</p>
+                    <h3 class="fw-bold mb-0">{{ total_ventas }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-4">
+        <div class="card stat-card border-0 shadow-sm h-100" style="cursor: pointer; transition: transform 0.2s;" data-bs-toggle="collapse" data-bs-target="#desgloseIngresos" onmouseover="this.style.transform='scale(1.02)';" onmouseout="this.style.transform='scale(1)';">
+            <div class="card-body d-flex align-items-center gap-3 p-4">
+                <div class="stat-icon bg-warning-subtle text-warning rounded-3 p-3">
+                    <i class="bi bi-cash-coin fs-2"></i>
+                </div>
+                <div>
+                    <p class="text-muted small mb-1">Total Ingresos <i class="bi bi-chevron-down ms-1"></i></p>
+                    <h3 class="fw-bold mb-0">$ {{ "{:,.0f}".format(total_ingresos) }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Desglose de Ingresos -->
+<div class="collapse mb-4" id="desgloseIngresos">
+    <div class="card border-0 shadow-sm border-warning border-opacity-50">
+        <div class="card-header bg-warning text-dark border-bottom py-3 d-flex justify-content-between align-items-center" style="background-color: #ffc107 !important;">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2"></i>Desglose de Ingresos</h5>
+            <button type="button" class="btn-close" data-bs-toggle="collapse" data-bs-target="#desgloseIngresos" aria-label="Close"></button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Producto</th>
+                            <th class="text-end">Monto (Precio)</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in todas_ventas %}
+                        <tr>
+                            <td class="text-muted" style="white-space: nowrap;">{{ v.fecha }}</td>
+                            <td class="fw-semibold">{{ v.cliente_nombre }}</td>
+                            <td>{{ v.producto }}</td>
+                            <td class="text-success fw-bold text-end precio-hover-black" style="white-space: nowrap;">$ {{ "{:,.0f}".format(v.precio) }}</td>
+                            <td class="text-center" style="white-space: nowrap;">
+                                <a href="{{ url_for('ventas.editar', id=v.id) }}" class="btn btn-sm btn-outline-info me-1" title="Ajustar precio">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="{{ url_for('ventas.eliminar', id=v.id) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('¿Seguro que deseas eliminar esta venta/ingreso? Se restará del total.');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Borrar ingreso">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No hay ingresos registrados para desglosar.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Últimas ventas -->
+    <div class="col-12 col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-clock-history me-2 text-primary"></i>Últimas Ventas
+                </h5>
+                <a href="{{ url_for('ventas.lista') }}" class="btn btn-outline-primary btn-sm">
+                    Ver todas <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if ventas_recientes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th>Tipo Pago</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for v in ventas_recientes %}
+                                <tr>
+                                    <td>
+                                        <span class="fw-semibold">{{ v.cliente_nombre }}</span>
+                                    </td>
+                                    <td>{{ v.producto }}</td>
+                                    <td class="text-success fw-bold">$ {{ "{:,.0f}".format(v.precio) }}</td>
+                                    <td>
+                                        <span class="badge {% if v.tipo_pago == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                            {{ v.tipo_pago }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('facturas.generar', venta_id=v.id) }}"
+                                           class="btn btn-sm btn-outline-primary" title="Ver factura">
+                                            <i class="bi bi-receipt"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-cart-x fs-1 d-block mb-2"></i>
+                        No hay ventas registradas aún.
+                        <br>
+                        <a href="{{ url_for('ventas.crear') }}" class="btn btn-primary btn-sm mt-3">
+                            Registrar primera venta
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Últimos clientes -->
+    <div class="col-12 col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-person-lines-fill me-2 text-success"></i>Clientes Recientes
+                </h5>
+                <a href="{{ url_for('clientes.lista') }}" class="btn btn-outline-success btn-sm">
+                    Ver todos <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if clientes_recientes %}
+                    <ul class="list-group list-group-flush">
+                        {% for c in clientes_recientes %}
+                        <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                            <div class="avatar-circle bg-primary-subtle text-primary fw-bold">
+                                {{ c.nombre[0].upper() }}
+                            </div>
+                            <div class="flex-grow-1 min-width-0">
+                                <p class="mb-0 fw-semibold text-truncate">{{ c.nombre }}</p>
+                                <small class="text-muted">
+                                    <i class="bi bi-telephone me-1"></i>{{ c.telefono or 'Sin teléfono' }}
+                                    {% if c.ciudad %}
+                                    · <i class="bi bi-geo-alt me-1"></i>{{ c.ciudad }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <a href="{{ url_for('clientes.detalle', id=c.id) }}"
+                               class="btn btn-sm btn-outline-secondary" title="Ver detalle">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-person-x fs-1 d-block mb-2"></i>
+                        No hay clientes registrados.
+                        <br>
+                        <a href="{{ url_for('clientes.crear') }}" class="btn btn-success btn-sm mt-3">
+                            Agregar primer cliente
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

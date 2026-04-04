@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ accion }} Producto - Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0">
+        <i class="bi bi-{% if accion == 'Crear' %}plus-circle{% else %}pencil{% endif %} text-primary me-2"></i>
+        {{ accion }} Producto
+    </h2>
+    <a href="{{ url_for('inventario.lista') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
+</div>
+
+<div class="card bg-dark border-light shadow" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-body p-4">
+        <form method="POST" enctype="multipart/form-data">
+            
+            <div class="mb-4">
+                <label class="form-label text-uppercase small fw-bold text-muted" style="letter-spacing: 1px;">Foto del Producto</label>
+                
+                <div class="d-flex align-items-center gap-3 p-3 rounded" id="photo-zone"
+                     style="border: 2px dashed rgba(0,212,255,0.2); background: rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s;"
+                     onclick="document.getElementById('prod-foto-input').click()"
+                     ondragover="event.preventDefault(); this.style.borderColor='rgba(0,212,255,0.6)'; this.style.backgroundColor='rgba(0,212,255,0.04)';"
+                     ondragleave="this.style.borderColor='rgba(0,212,255,0.2)'; this.style.backgroundColor='rgba(0,0,0,0.2)';"
+                     ondrop="handlePhotoDrop(event)">
+                    
+                    <div id="photo-preview-box" 
+                         style="width: 80px; height: 80px; flex-shrink: 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0,212,255,0.2); background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                        {% if producto.get('foto') %}
+                            <img src="{{ url_for('static', filename='uploads/productos/' ~ producto['foto']) }}" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <span>📷</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <div style="font-size: 13px; color: #adb5bd;">
+                            <strong style="color: #00aadd; display: block; font-size: 14px; margin-bottom: 2px;">Haz clic o arrastra una imagen</strong>
+                            Formatos soportados: JPG, PNG, WEBP (Recomendado: menos de 2 MB)
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="btn-quitar-foto"
+                                style="{% if not producto.get('foto') %}display: none;{% endif %}"
+                                onclick="event.stopPropagation(); quitarFoto()">✕ Quitar foto seleccionada</button>
+                    </div>
+                </div>
+                
+                <input type="file" id="prod-foto-input" name="foto" accept="image/*" style="display: none;" onchange="handleFotoInput(this)">
+                <input type="hidden" id="eliminar-foto" name="eliminar_foto" value="false">
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label class="form-label text-uppercase small fw-bold text-muted">Nombre del Producto *</label>
+                    <input type="text" name="nombre" class="form-control bg-dark text-white border-secondary" 
+                           value="{{ producto.get('nombre', '') }}" placeholder="Ej: iPhone 15 128GB Negro" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label text-uppercase small fw-bold text-muted">Marca</label>
+                    <input type="text" name="marca" class="form-control bg-dark text-white border-secondary" 
+                           value="{{ producto.get('marca', '') }}" placeholder="Apple, Samsung, Xiaomi...">
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label text-uppercase small fw-bold text-muted">Categoría</label>
+                    <select name="categoria" class="form-select bg-dark text-white border-secondary">
+                        <option value="Smartphones" {% if producto.get('categoria') == 'Smartphones' %}selected{% endif %}>Smartphones</option>
+                        <option value="Accesorios" {% if producto.get('categoria') == 'Accesorios' %}selected{% endif %}>Accesorios</option>
+                        <option value="Reparación" {% if producto.get('categoria') == 'Reparación' %}selected{% endif %}>Reparación</option>
+                        <option value="Tablets" {% if producto.get('categoria') == 'Tablets' %}selected{% endif %}>Tablets</option>
+                        <option value="Audio" {% if producto.get('categoria') == 'Audio' %}selected{% endif %}>Audio</option>
+                        <option value="Smartwatch" {% if producto.get('categoria') == 'Smartwatch' %}selected{% endif %}>Smartwatch</option>
+                        <option value="Otro" {% if producto.get('categoria') == 'Otro' %}selected{% endif %}>Otro</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label text-uppercase small fw-bold text-muted">Precio de Venta (COP) *</label>
+                    <input type="number" step="0.01" name="precio" class="form-control bg-dark text-white border-secondary" 
+                           value="{{ producto.get('precio', '') }}" placeholder="0" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label text-uppercase small fw-bold text-muted">Stock</label>
+                    <input type="number" name="stock" class="form-control bg-dark text-white border-secondary" 
+                           value="{{ producto.get('stock', '1') }}" placeholder="0" min="0">
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label text-uppercase small fw-bold text-muted">Descripción</label>
+                    <textarea name="descripcion" class="form-control bg-dark text-white border-secondary" 
+                              rows="3" placeholder="IMEI, especificaciones, color...">{{ producto.get('descripcion', '') }}</textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top border-secondary text-end">
+                <a href="{{ url_for('inventario.lista') }}" class="btn btn-outline-secondary me-2">Cancelar</a>
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-save me-1"></i>Guardar Producto
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function handleFotoInput(input) {
+    const file = input.files[0];
+    if (!file) return;
+    loadFotoFile(file);
+}
+
+function handlePhotoDrop(event) {
+    event.preventDefault();
+    const zone = document.getElementById('photo-zone');
+    zone.style.borderColor = 'rgba(0,212,255,0.2)';
+    zone.style.backgroundColor = 'rgba(0,0,0,0.2)';
+    
+    const file = event.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    document.getElementById('prod-foto-input').files = dataTransfer.files;
+    
+    loadFotoFile(file);
+}
+
+function loadFotoFile(file) {
+    document.getElementById('eliminar-foto').value = "false";
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        showFotoPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+}
+
+function showFotoPreview(base64) {
+    const box = document.getElementById('photo-preview-box');
+    box.innerHTML = `<img src="${base64}" alt="Foto seleccionada" style="width: 100%; height: 100%; object-fit: cover;">`;
+    document.getElementById('btn-quitar-foto').style.display = 'inline-block';
+}
+
+function quitarFoto() {
+    const box = document.getElementById('photo-preview-box');
+    box.innerHTML = '<span>📷</span>';
+    document.getElementById('btn-quitar-foto').style.display = 'none';
+    document.getElementById('prod-foto-input').value = '';
+    document.getElementById('eliminar-foto').value = "true";
+}
+</script>
+{% endblock %}

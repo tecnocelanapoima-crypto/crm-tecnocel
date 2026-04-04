@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}Nueva Venta — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-7">
+
+        <!-- Cabecera -->
+        <div class="d-flex align-items-center mb-4">
+            <a href="{{ url_for('ventas.lista') }}" class="btn btn-outline-secondary btn-sm me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="mb-1 fw-bold text-primary">
+                    <i class="bi bi-{% if accion == 'Editar' %}pencil{% else %}cart-plus-fill{% endif %} me-2"></i>{{ accion|default('Registrar') }} Venta
+                </h2>
+                <p class="text-muted mb-0">Completa los datos de la venta</p>
+            </div>
+        </div>
+
+        <!-- Formulario -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" novalidate id="formVenta">
+
+                    <div class="row g-3">
+
+                        <!-- Cliente -->
+                        <div class="col-12">
+                            <label for="cliente_id" class="form-label fw-semibold">
+                                Cliente <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select form-select-lg" id="cliente_id" name="cliente_id" required>
+                                <option value="">— Seleccionar cliente —</option>
+                                {% for c in clientes %}
+                                <option value="{{ c.id }}"
+                                    {% if form.cliente_id|string == c.id|string %}selected{% endif %}>
+                                    {{ c.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                ¿Cliente nuevo?
+                                <a href="{{ url_for('clientes.crear') }}" target="_blank">
+                                    Crear cliente <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Producto -->
+                        <div class="col-12">
+                            <label for="producto" class="form-label fw-semibold">
+                                Producto <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control form-control-lg"
+                                   id="producto"
+                                   name="producto"
+                                   placeholder="Ej: Samsung Galaxy A15, Realme C55, iPhone 15..."
+                                   value="{{ form.producto if form.producto is defined else '' }}"
+                                   required maxlength="200"
+                                   list="productos-sugeridos">
+                            <!-- Sugerencias de productos -->
+                            <datalist id="productos-sugeridos">
+                                <option value="Samsung Galaxy A15">
+                                <option value="Samsung Galaxy A35">
+                                <option value="Samsung Galaxy A55">
+                                <option value="Samsung Galaxy S24">
+                                <option value="Realme C55">
+                                <option value="Realme C65">
+                                <option value="Realme Note 50">
+                                <option value="Xiaomi Redmi 13C">
+                                <option value="Xiaomi Redmi Note 13">
+                                <option value="iPhone 13">
+                                <option value="iPhone 14">
+                                <option value="iPhone 15">
+                                <option value="Motorola Moto G34">
+                                <option value="Motorola Moto G54">
+                                <option value="Motorola Edge 40">
+                            </datalist>
+                        </div>
+
+                        <!-- Precio -->
+                        <div class="col-12 col-md-6">
+                            <label for="precio" class="form-label fw-semibold">
+                                Precio (COP) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text fw-bold">$</span>
+                                <input type="number"
+                                       class="form-control"
+                                       id="precio"
+                                       name="precio"
+                                       placeholder="0"
+                                       value="{{ form.precio if form.precio is defined else '' }}"
+                                       min="1"
+                                       step="1000"
+                                       required>
+                            </div>
+                        </div>
+
+                        <!-- Tipo de pago -->
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold">
+                                Tipo de Pago <span class="text-danger">*</span>
+                            </label>
+                            <div class="d-flex gap-2">
+                                <div class="form-check form-check-pago flex-fill">
+                                    <input class="form-check-input" type="radio"
+                                           name="tipo_pago" id="tipo_contado"
+                                           value="contado"
+                                           {% if form.tipo_pago == 'contra entrega' %}{% else %}checked{% endif %}>
+                                    <label class="form-check-label btn btn-outline-success w-100 text-start"
+                                           for="tipo_contado">
+                                        <i class="bi bi-cash me-2"></i>Contado
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-pago flex-fill">
+                                    <input class="form-check-input" type="radio"
+                                           name="tipo_pago" id="tipo_contra_entrega"
+                                           value="contra entrega"
+                                           {% if form.tipo_pago == 'contra entrega' %}checked{% endif %}>
+                                    <label class="form-check-label btn btn-outline-warning w-100 text-start"
+                                           for="tipo_contra_entrega">
+                                        <i class="bi bi-truck me-2"></i>Contra Entrega
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fecha -->
+                        <div class="col-12 col-md-6">
+                            <label for="fecha" class="form-label fw-semibold">
+                                Fecha de la venta <span class="text-danger">*</span>
+                            </label>
+                            <input type="date"
+                                   class="form-control"
+                                   id="fecha"
+                                   name="fecha"
+                                   value="{{ form.fecha if form.fecha is defined else hoy }}"
+                                   required>
+                        </div>
+
+                        <!-- Notas -->
+                        <div class="col-12">
+                            <label for="notas" class="form-label fw-semibold">Notas de la venta</label>
+                            <textarea class="form-control"
+                                      id="notas"
+                                      name="notas"
+                                      rows="2"
+                                      placeholder="Ej: incluye cargador, incluye audifonos, garantía 6 meses...">{{ form.notas if form.notas is defined else '' }}</textarea>
+                        </div>
+
+                    </div>
+
+                    <!-- Preview del precio formateado -->
+                    <div class="alert alert-info d-none mt-3" id="precioPreview">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Precio ingresado: <strong id="precioFormateado"></strong>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary btn-lg px-4">
+                            <i class="bi bi-check-lg me-1"></i>Guardar Venta
+                        </button>
+                        <a href="{{ url_for('ventas.lista') }}" class="btn btn-outline-secondary btn-lg px-4">
+                            <i class="bi bi-x-lg me-1"></i>Cancelar
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Mostrar preview del precio formateado
+const inputPrecio = document.getElementById('precio');
+const precioPreview = document.getElementById('precioPreview');
+const precioFormateado = document.getElementById('precioFormateado');
+
+inputPrecio.addEventListener('input', function() {
+    const valor = parseFloat(this.value);
+    if (!isNaN(valor) && valor > 0) {
+        precioFormateado.textContent = '$ ' + valor.toLocaleString('es-CO');
+        precioPreview.classList.remove('d-none');
+    } else {
+        precioPreview.classList.add('d-none');
+    }
+});
+
+// Disparar el evento si ya hay un valor (al recargar con error)
+if (inputPrecio.value) inputPrecio.dispatchEvent(new Event('input'));
+
+// Estilo visual para los radio buttons de tipo de pago
+document.querySelectorAll('input[name="tipo_pago"]').forEach(radio => {
+    radio.classList.add('d-none'); // Ocultar el radio original
+    radio.addEventListener('change', actualizarEstiloPago);
+});
+actualizarEstiloPago();
+
+function actualizarEstiloPago() {
+    document.querySelectorAll('input[name="tipo_pago"]').forEach(radio => {
+        const label = document.querySelector(`label[for="${radio.id}"]`);
+        if (radio.checked) {
+            label.classList.add('active', radio.value === 'contado' ? 'btn-success' : 'btn-warning');
+            label.classList.remove(radio.value === 'contado' ? 'btn-outline-success' : 'btn-outline-warning');
+        } else {
+            label.classList.remove('active', 'btn-success', 'btn-warning');
+            label.classList.add(radio.value === 'contado' ? 'btn-outline-success' : 'btn-outline-warning');
+        }
+    });
+}
+</script>
+{% endblock %}

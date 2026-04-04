@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventario - Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0"><i class="bi bi-box-seam-fill me-2 text-primary"></i>Inventario de Productos</h2>
+    <a href="{{ url_for('inventario.crear') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Nuevo Producto
+    </a>
+</div>
+
+<div class="card bg-dark border-light mb-4 shadow">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('inventario.lista') }}" class="d-flex gap-2 mb-0">
+            <input type="text" name="q" class="form-control bg-dark text-white border-secondary" 
+                   placeholder="Buscar por nombre, marca o categoría..." value="{{ busqueda }}">
+            <button type="submit" class="btn btn-outline-info">Buscar</button>
+            {% if busqueda %}
+                <a href="{{ url_for('inventario.lista') }}" class="btn btn-outline-secondary">Limpiar</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card bg-dark border-light shadow">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th width="70" class="text-center">Foto</th>
+                        <th>Producto</th>
+                        <th>Marca</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in productos %}
+                    <tr>
+                        <td class="text-center">
+                            {% if p['foto'] %}
+                                <img src="{{ url_for('static', filename='uploads/productos/' ~ p['foto']) }}" 
+                                     alt="Foto" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(0,212,255,0.2);">
+                            {% else %}
+                                <div style="width: 48px; height: 48px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(0,212,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto;">
+                                    📦
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ p['nombre'] }}</div>
+                            {% if p['descripcion'] %}
+                                <small class="text-muted text-truncate d-inline-block" style="max-width: 250px;">
+                                    {{ p['descripcion'] }}
+                                </small>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ p['marca'] or '—' }}</td>
+                        <td class="text-muted">{{ p['categoria'] or '—' }}</td>
+                        <td class="text-info fw-bold">$ {{ "{:,.0f}".format(p['precio']).replace(',', '.') }}</td>
+                        <td>
+                            <span class="badge {% if p['stock'] > 3 %}bg-success{% elif p['stock'] > 0 %}bg-warning{% else %}bg-danger{% endif %} text-dark">
+                                {{ p['stock'] }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('inventario.editar', id=p['id']) }}" class="btn btn-sm btn-outline-info me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form action="{{ url_for('inventario.eliminar', id=p['id']) }}" method="post" class="d-inline"
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-50"></i>
+                            <h5 class="fw-normal">No hay productos registrados</h5>
+                            <p class="small mb-0">Agrega productos al inventario para comenzar</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

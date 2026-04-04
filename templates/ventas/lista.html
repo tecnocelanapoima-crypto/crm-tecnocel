@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}Ventas — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-1 fw-bold text-primary">
+            <i class="bi bi-cart-fill me-2"></i>Ventas
+        </h2>
+        <p class="text-muted mb-0">Historial de todas las ventas realizadas</p>
+    </div>
+    <div class="ms-auto">
+        <a href="{{ url_for('ventas.crear') }}" class="btn btn-warning">
+            <i class="bi bi-plus-circle-fill me-1"></i>Nueva Venta
+        </a>
+    </div>
+</div>
+
+<!-- Resumen de ingresos -->
+<div class="alert alert-success d-flex align-items-center gap-3 mb-4 border-0 shadow-sm" role="alert">
+    <i class="bi bi-cash-coin fs-3"></i>
+    <div>
+        <strong>Total de ingresos mostrados:</strong>
+        <span class="fs-5 fw-bold ms-2">$ {{ "{:,.0f}".format(total_ingresos) }}</span>
+        <span class="text-muted ms-2">({{ ventas|length }} venta(s))</span>
+    </div>
+</div>
+
+<!-- Tabla de ventas -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if ventas %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Factura</th>
+                        <th>Cliente</th>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Tipo de Pago</th>
+                        <th>Fecha</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in ventas %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-light text-dark border">#{{ "%04d"|format(v.id) }}</span>
+                        </td>
+                        <td>
+                            <span class="fw-semibold">{{ v.cliente_nombre }}</span>
+                            {% if v.cliente_telefono %}
+                            <br>
+                            <small class="text-muted">
+                                <i class="bi bi-telephone me-1"></i>{{ v.cliente_telefono }}
+                            </small>
+                            {% endif %}
+                        </td>
+                        <td class="fw-semibold">{{ v.producto }}</td>
+                        <td class="text-success fw-bold precio-hover-black">$ {{ "{:,.0f}".format(v.precio) }}</td>
+                        <td>
+                            <span class="badge {% if v.tipo_pago == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                <i class="bi bi-{% if v.tipo_pago == 'contado' %}cash{% else %}truck{% endif %} me-1"></i>
+                                {{ v.tipo_pago }}
+                            </span>
+                        </td>
+                        <td class="text-muted">{{ v.fecha }}</td>
+                        <td>
+                            <div class="d-flex gap-1 justify-content-center">
+                                <a href="{{ url_for('facturas.generar', venta_id=v.id) }}"
+                                   class="btn btn-sm btn-outline-primary" title="Ver factura">
+                                    <i class="bi bi-receipt"></i>
+                                </a>
+                                <a href="{{ url_for('facturas.descargar', venta_id=v.id) }}"
+                                   class="btn btn-sm btn-outline-success" title="Descargar PDF">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                                <form method="POST"
+                                      action="{{ url_for('ventas.eliminar', id=v.id) }}"
+                                      class="d-inline"
+                                      onsubmit="return confirmarEliminar('{{ v.producto }}')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-cart-x fs-1 d-block mb-3 text-secondary"></i>
+            <h5 class="text-secondary">No hay ventas registradas</h5>
+            <a href="{{ url_for('ventas.crear') }}" class="btn btn-warning mt-2">
+                <i class="bi bi-plus-circle-fill me-1"></i>Registrar Primera Venta
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

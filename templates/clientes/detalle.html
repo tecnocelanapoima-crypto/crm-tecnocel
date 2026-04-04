@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% block title %}{{ cliente.nombre }} — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<!-- Cabecera -->
+<div class="d-flex align-items-center mb-4 flex-wrap gap-2">
+    <a href="{{ url_for('clientes.lista') }}" class="btn btn-outline-secondary btn-sm me-2">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <div>
+        <h2 class="mb-1 fw-bold text-primary">
+            <i class="bi bi-person-circle me-2"></i>{{ cliente.nombre }}
+        </h2>
+        <p class="text-muted mb-0">Detalle del cliente y historial de compras</p>
+    </div>
+    <div class="ms-auto d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('ventas.crear') }}?cliente_id={{ cliente.id }}"
+           class="btn btn-success">
+            <i class="bi bi-cart-plus me-1"></i>Nueva Venta
+        </a>
+        <a href="{{ url_for('clientes.editar', id=cliente.id) }}"
+           class="btn btn-warning">
+            <i class="bi bi-pencil me-1"></i>Editar
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Datos del cliente -->
+    <div class="col-12 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-info-circle me-2 text-primary"></i>Datos del Cliente
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="avatar-circle-lg bg-primary-subtle text-primary fw-bold mx-auto mb-3">
+                        {{ cliente.nombre[0].upper() }}
+                    </div>
+                    <h5 class="fw-bold mb-1">{{ cliente.nombre }}</h5>
+                    <span class="badge bg-primary">Cliente #{{ cliente.id }}</span>
+                </div>
+
+                <ul class="list-unstyled">
+                    <li class="d-flex gap-3 mb-3">
+                        <i class="bi bi-card-text text-primary mt-1"></i>
+                        <div>
+                            <small class="text-muted d-block">Cédula</small>
+                            <span class="fw-semibold">{{ cliente.cedula or 'No registrada' }}</span>
+                        </div>
+                    </li>
+                    <li class="d-flex gap-3 mb-3">
+                        <i class="bi bi-telephone text-success mt-1"></i>
+                        <div>
+                            <small class="text-muted d-block">Teléfono</small>
+                            <span class="fw-semibold">{{ cliente.telefono or 'No registrado' }}</span>
+                        </div>
+                    </li>
+                    <li class="d-flex gap-3 mb-3">
+                        <i class="bi bi-geo-alt text-danger mt-1"></i>
+                        <div>
+                            <small class="text-muted d-block">Dirección</small>
+                            <span class="fw-semibold">{{ cliente.direccion or 'No registrada' }}</span>
+                        </div>
+                    </li>
+                    <li class="d-flex gap-3 mb-3">
+                        <i class="bi bi-building text-warning mt-1"></i>
+                        <div>
+                            <small class="text-muted d-block">Ciudad</small>
+                            <span class="fw-semibold">{{ cliente.ciudad or 'No registrada' }}</span>
+                        </div>
+                    </li>
+                    {% if cliente.notas %}
+                    <li class="d-flex gap-3 mb-3">
+                        <i class="bi bi-sticky text-info mt-1"></i>
+                        <div>
+                            <small class="text-muted d-block">Notas</small>
+                            <span>{{ cliente.notas }}</span>
+                        </div>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <!-- Resumen de compras -->
+                <div class="bg-light rounded-3 p-3 mt-3">
+                    <div class="row g-2 text-center">
+                        <div class="col-6">
+                            <div class="fs-4 fw-bold text-primary">{{ ventas|length }}</div>
+                            <small class="text-muted">Compras</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="fs-5 fw-bold text-success">$ {{ "{:,.0f}".format(total_gastado) }}</div>
+                            <small class="text-muted">Total gastado</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de ventas -->
+    <div class="col-12 col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-clock-history me-2 text-success"></i>Historial de Compras
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if ventas %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Factura</th>
+                                <th>Producto</th>
+                                <th>Precio</th>
+                                <th>Tipo Pago</th>
+                                <th>Fecha</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in ventas %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-light text-dark border">#{{ "%04d"|format(v.id) }}</span>
+                                </td>
+                                <td class="fw-semibold">{{ v.producto }}</td>
+                                <td class="text-success fw-bold">$ {{ "{:,.0f}".format(v.precio) }}</td>
+                                <td>
+                                    <span class="badge {% if v.tipo_pago == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                        {{ v.tipo_pago }}
+                                    </span>
+                                </td>
+                                <td class="text-muted">{{ v.fecha }}</td>
+                                <td>
+                                    <div class="d-flex gap-1 justify-content-center">
+                                        <a href="{{ url_for('facturas.generar', venta_id=v.id) }}"
+                                           class="btn btn-sm btn-outline-primary" title="Ver factura">
+                                            <i class="bi bi-receipt"></i>
+                                        </a>
+                                        <a href="{{ url_for('facturas.descargar', venta_id=v.id) }}"
+                                           class="btn btn-sm btn-outline-success" title="Descargar PDF">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <form method="POST"
+                                              action="{{ url_for('ventas.eliminar', id=v.id) }}"
+                                              onsubmit="return confirmarEliminar('{{ v.producto }}')">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-cart-x fs-1 d-block mb-3"></i>
+                    <p>Este cliente no tiene compras registradas.</p>
+                    <a href="{{ url_for('ventas.crear') }}?cliente_id={{ cliente.id }}"
+                       class="btn btn-success btn-sm">
+                        <i class="bi bi-cart-plus me-1"></i>Registrar primera venta
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

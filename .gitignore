@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.env
+tecnocel.db
+facturas_pdf/
+static/uploads/productos/

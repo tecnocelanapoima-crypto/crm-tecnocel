@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" fill="white"/>
+  <defs>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" style="stop-color:#00D4FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0050B3;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#B8EEF8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7AD4EC;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect x="95" y="360" width="68" height="300" rx="12" ry="12"
+        fill="url(#iconGrad)" transform="rotate(-40, 129, 510)"/>
+  <rect x="165" y="370" width="68" height="300" rx="12" ry="12"
+        fill="url(#iconGrad)" transform="rotate(-40, 199, 520)"/>
+  <text x="270" y="560" font-family="Arial Black, sans-serif" font-weight="900"
+        font-size="195" fill="url(#textGrad)" letter-spacing="8">TECNOCEL</text>
+  <text x="950" y="450" font-family="Arial" font-size="40" fill="#7AD4EC">&#174;</text>
+</svg>
