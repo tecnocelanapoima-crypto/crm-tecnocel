@@ -22,7 +22,6 @@ def enviar(venta_id):
         FROM ventas v JOIN clientes c ON v.cliente_id = c.id
         WHERE v.id = ? AND v.negocio_id = ?
     ''', (venta_id, nid)).fetchone()
-    db.close()
     if not venta:
         flash('Venta no encontrada.', 'danger')
         return redirect(url_for('ventas.lista'))
@@ -54,7 +53,6 @@ def abrir_chat(venta_id):
         JOIN clientes c ON v.cliente_id = c.id
         WHERE v.id = ? AND v.negocio_id = ?
     ''', (venta_id, nid)).fetchone()
-    db.close()
     if not venta:
         flash('Venta no encontrada.', 'danger')
         return redirect(url_for('ventas.lista'))

@@ -53,7 +53,6 @@ def init_ordenes_table():
         )
     ''')
     db.commit()
-    db.close()
 
 
 @ordenes_bp.before_app_request
@@ -94,7 +93,6 @@ def lista():
         GROUP BY estado
     ''', (nid,)).fetchall()
 
-    db.close()
     contadores_dict = {r['estado']: r['total'] for r in contadores}
     return render_template('ordenes/lista.html',
                            ordenes=ordenes,
@@ -126,7 +124,6 @@ def crear():
             clientes = db.execute(
                 'SELECT id, nombre, telefono FROM clientes WHERE negocio_id = ? ORDER BY nombre', (nid,)
             ).fetchall()
-            db.close()
             return render_template('ordenes/form.html', clientes=clientes,
                                    form=request.form, hoy=datetime.now().strftime('%Y-%m-%d'))
 
@@ -161,7 +158,6 @@ def crear():
         db.commit()
 
         orden_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
-        db.close()
 
         flash(f'Orden {numero_orden} creada exitosamente.', 'success')
         return redirect(url_for('ordenes.detalle', id=orden_id))
@@ -169,7 +165,6 @@ def crear():
     clientes = db.execute(
         'SELECT id, nombre, telefono FROM clientes WHERE negocio_id = ? ORDER BY nombre', (nid,)
     ).fetchall()
-    db.close()
     return render_template('ordenes/form.html', clientes=clientes,
                            form={}, hoy=datetime.now().strftime('%Y-%m-%d'))
 
@@ -185,7 +180,6 @@ def detalle(id):
         FROM ordenes o JOIN clientes c ON o.cliente_id = c.id
         WHERE o.id = ? AND o.negocio_id = ?
     ''', (id, nid)).fetchone()
-    db.close()
 
     if not orden:
         flash('Orden no encontrada.', 'danger')
@@ -211,7 +205,6 @@ def cambiar_estado(id):
     ).fetchone()
 
     if not orden:
-        db.close()
         flash('Orden no encontrada.', 'danger')
         return redirect(url_for('ordenes.lista'))
 
@@ -232,7 +225,6 @@ def cambiar_estado(id):
         WHERE id=? AND negocio_id=?
     ''', (nuevo_estado, fecha_listo, fecha_entregado, costo_f, id, nid))
     db.commit()
-    db.close()
 
     estados = {'recibido': 'Recibido', 'listo': 'Listo para retirar', 'entregado': 'Entregado'}
     flash(f'Estado cambiado a "{estados[nuevo_estado]}".', 'success')
@@ -250,7 +242,6 @@ def whatsapp(id, tipo):
         FROM ordenes o JOIN clientes c ON o.cliente_id = c.id
         WHERE o.id = ? AND o.negocio_id = ?
     ''', (id, nid)).fetchone()
-    db.close()
 
     if not orden:
         flash('Orden no encontrada.', 'danger')
@@ -271,7 +262,7 @@ def whatsapp(id, tipo):
             f"📱 *Equipo:* {orden['marca_modelo']}\n"
             f"🔧 *Problema reportado:* {orden['problema']}\n"
             f"📅 *Fecha de recepción:* {orden['fecha_recibido']}\n"
-            f"{'💰 *Costo estimado:* $ ' + f\"{orden['costo_estimado']:,.0f}\" if orden['costo_estimado'] else ''}\n\n"
+            f"{'Costo estimado: $ ' + '{:,.0f}'.format(orden['costo_estimado']) + '\n\n' if orden['costo_estimado'] else '\n\n'}"
             f"Te notificaremos cuando esté listo. ¡Gracias por confiar en nosotros! 🙏"
         )
     elif tipo == 'listo':
@@ -280,7 +271,7 @@ def whatsapp(id, tipo):
             f"🎉 ¡Tu equipo está *LISTO* para retirar!\n\n"
             f"📋 *Orden:* {orden['numero_orden']}\n"
             f"📱 *Equipo:* {orden['marca_modelo']}\n"
-            f"{'💰 *Valor a pagar:* $ ' + f\"{orden['costo_final']:,.0f}\" if orden['costo_final'] else ''}\n\n"
+            f"{'Valor a pagar: $ ' + '{:,.0f}'.format(orden['costo_final']) + '\n\n' if orden['costo_final'] else '\n\n'}"
             f"Puedes pasar a recogerlo en *{negocio_nombre}*.\n"
             f"¡Te esperamos! 😊"
         )

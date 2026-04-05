@@ -73,7 +73,6 @@ def editar(id):
     ).fetchone()
 
     if not cliente:
-        db.close()
         flash('Cliente no encontrado.', 'danger')
         return redirect(url_for('clientes.lista'))
 
@@ -128,7 +127,6 @@ def detalle(id):
     ).fetchone()
 
     if not cliente:
-        db.close()
         flash('Cliente no encontrado.', 'danger')
         return redirect(url_for('clientes.lista'))
 
