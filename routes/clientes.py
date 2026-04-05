@@ -32,7 +32,6 @@ def lista():
             GROUP BY c.id ORDER BY c.fecha_creacion DESC
         ''', (nid, nid)).fetchall()
 
-    db.close()
     return render_template('clientes/lista.html', clientes=clientes, busqueda=busqueda)
 
 
@@ -58,7 +57,6 @@ def crear():
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (nid, nombre, cedula, telefono, direccion, ciudad, notas))
         db.commit()
-        db.close()
         flash(f'Cliente "{nombre}" creado exitosamente.', 'success')
         return redirect(url_for('clientes.lista'))
 
@@ -97,11 +95,9 @@ def editar(id):
             WHERE id=? AND negocio_id=?
         ''', (nombre, cedula, telefono, direccion, ciudad, notas, id, nid))
         db.commit()
-        db.close()
         flash(f'Cliente "{nombre}" actualizado.', 'success')
         return redirect(url_for('clientes.lista'))
 
-    db.close()
     return render_template('clientes/form.html', accion='Editar', cliente=cliente)
 
 
@@ -119,7 +115,6 @@ def eliminar(id):
         flash(f'Cliente "{cliente["nombre"]}" eliminado.', 'success')
     else:
         flash('Cliente no encontrado.', 'danger')
-    db.close()
     return redirect(url_for('clientes.lista'))
 
 
@@ -144,7 +139,6 @@ def detalle(id):
     ''', (id, nid)).fetchall()
 
     total_gastado = sum(v['precio'] for v in ventas)
-    db.close()
     return render_template('clientes/detalle.html',
                            cliente=cliente, ventas=ventas,
                            total_gastado=total_gastado)

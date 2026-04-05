@@ -5,10 +5,11 @@ Sistema multi-tenant: cada negocio ve solo sus datos
 
 import os
 from flask import Flask, render_template, redirect, url_for, session
-from database.db import init_db, get_db
+from database.db import init_db, get_db, close_db
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'tecnocel-saas-secret-2024-cambiar-en-produccion')
+app.secret_key = os.environ.get('SECRET_KEY', '7e9c0c0e-c760-4b6e-8c1b-2dad20c8fc35-tecnocel-prod')
+app.teardown_appcontext(close_db)
 
 with app.app_context():
     init_db()
@@ -88,7 +89,7 @@ def index():
         LIMIT 5
     ''', (nid,)).fetchall()
 
-    db.close()
+
 
     return render_template(
         'index.html',
@@ -102,7 +103,6 @@ def index():
 
 
 if __name__ == '__main__':
-    init_db()
     print("=" * 50)
     print("  Tecnocel CRM SaaS iniciado")
     print("  Accede en: http://localhost:5000")

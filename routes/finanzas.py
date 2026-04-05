@@ -26,7 +26,6 @@ def lista():
     ).fetchone()[0]
 
     balance_total = ingresos_total - egresos_total
-    db.close()
 
     return render_template('finanzas/lista.html',
                            ingresos_total=ingresos_total,
@@ -55,7 +54,6 @@ def crear_egreso():
         VALUES (?, ?, ?, ?, ?)
     ''', (nid, concepto, float(monto), fecha, notas))
     db.commit()
-    db.close()
     flash('Gasto registrado correctamente.', 'success')
     return redirect(url_for('finanzas.lista'))
 
@@ -67,6 +65,5 @@ def eliminar_egreso(id):
     db  = get_db()
     db.execute('DELETE FROM egresos WHERE id = ? AND negocio_id = ?', (id, nid))
     db.commit()
-    db.close()
     flash('Gasto eliminado.', 'success')
     return redirect(url_for('finanzas.lista'))

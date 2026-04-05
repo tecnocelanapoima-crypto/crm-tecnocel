@@ -2,17 +2,11 @@
 Autenticación — registro, login y logout
 """
 
-import hashlib
-import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from database.db import get_db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 auth_bp = Blueprint('auth', __name__)
-
-
-def hash_password(password):
-    """Hash SHA-256 simple. En producción usar bcrypt."""
-    return hashlib.sha256(password.encode()).hexdigest()
 
 
 def login_required(f):
@@ -54,18 +48,16 @@ def registro():
         db = get_db()
         existente = db.execute('SELECT id FROM negocios WHERE email = ?', (email,)).fetchone()
         if existente:
-            db.close()
-            flash('Ese correo ya está registrado. Inicia sesión.', 'danger')
+            flash('Este correo electrónico ya está registrado. Por favor, inicia sesión.', 'warning')
             return render_template('auth/registro.html', form=request.form)
 
         db.execute('''
             INSERT INTO negocios (nombre_negocio, email, password_hash, telefono, ciudad)
             VALUES (?, ?, ?, ?, ?)
-        ''', (nombre_negocio, email, hash_password(password), telefono, ciudad))
+        ''', (nombre_negocio, email, generate_password_hash(password), telefono, ciudad))
         db.commit()
 
         negocio = db.execute('SELECT id FROM negocios WHERE email = ?', (email,)).fetchone()
-        db.close()
 
         session['negocio_id']     = negocio['id']
         session['negocio_nombre'] = nombre_negocio
@@ -88,13 +80,30 @@ def login():
 
         db = get_db()
         negocio = db.execute(
-            'SELECT * FROM negocios WHERE email = ? AND activo = 1',
+            'SELECT * FROM negocios WHERE email = ?',
             (email,)
         ).fetchone()
-        db.close()
 
-        if not negocio or negocio['password_hash'] != hash_password(password):
-            flash('Correo o contraseña incorrectos.', 'danger')
+        if not negocio:
+            flash('El correo electrónico no está registrado.', 'danger')
+            return render_template('auth/login.html', email=email)
+        
+        if not check_password_hash(negocio['password_hash'], password):
+            # Soporte para migración: Verificar si es un hash SHA-256 antiguo
+            import hashlib
+            legacy_hash = hashlib.sha256(password.encode()).hexdigest()
+            
+            if negocio['password_hash'] == legacy_hash:
+                # ¡Es una cuenta antigua! La actualizamos al nuevo formato de seguridad
+                new_hash = generate_password_hash(password)
+                db.execute('UPDATE negocios SET password_hash = ? WHERE id = ?', (new_hash, negocio['id']))
+                db.commit()
+            else:
+                flash('La contraseña es incorrecta.', 'danger')
+                return render_template('auth/login.html', email=email)
+
+        if not negocio['activo']:
+            flash('Tu cuenta está desactivada. Contacta al soporte.', 'warning')
             return render_template('auth/login.html', email=email)
 
         session['negocio_id']     = negocio['id']

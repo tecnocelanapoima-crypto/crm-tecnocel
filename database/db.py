@@ -9,15 +9,24 @@ import os
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
 
 
+from flask import g
+
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA foreign_keys = ON')
-    return conn
+    if 'db' not in g:
+        g.db = sqlite3.connect(DB_PATH)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute('PRAGMA foreign_keys = ON')
+    return g.db
+
+
+def close_db(e=None):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 
 def init_db():
-    conn = get_db()
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     # ── Tabla de negocios (usuarios del SaaS) ─────────────

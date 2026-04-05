@@ -29,7 +29,6 @@ def lista():
         ''', (nid,)).fetchall()
 
     total_ingresos = sum(v['precio'] for v in ventas)
-    db.close()
     return render_template('ventas/lista.html', ventas=ventas, total_ingresos=total_ingresos)
 
 
@@ -74,7 +73,6 @@ def crear():
                 'SELECT id, nombre, telefono FROM clientes WHERE negocio_id = ? ORDER BY nombre',
                 (nid,)
             ).fetchall()
-            db.close()
             return render_template('ventas/form.html', clientes=clientes,
                                    form=request.form, hoy=date.today().isoformat())
 
@@ -84,7 +82,6 @@ def crear():
         ''', (nid, cliente_id, producto, precio, tipo_pago, fecha, notas))
         db.commit()
         venta_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
-        db.close()
         flash(f'Venta de "{producto}" registrada exitosamente.', 'success')
         return redirect(url_for('facturas.generar', venta_id=venta_id))
 
@@ -108,8 +105,6 @@ def crear():
         'SELECT id, nombre, telefono FROM clientes WHERE negocio_id = ? ORDER BY nombre',
         (nid,)
     ).fetchall()
-    db.close()
-
     cliente_preseleccionado = request.args.get('cliente_id', expres['id'] if expres else '')
     return render_template('ventas/form.html', clientes=clientes,
                            form={'cliente_id': str(cliente_preseleccionado)},
@@ -126,7 +121,6 @@ def editar(id):
     ).fetchone()
 
     if not venta:
-        db.close()
         flash('Venta no encontrada.', 'danger')
         return redirect(url_for('ventas.lista'))
 
@@ -153,7 +147,6 @@ def editar(id):
             clientes = db.execute(
                 'SELECT id, nombre FROM clientes WHERE negocio_id = ? ORDER BY nombre', (nid,)
             ).fetchall()
-            db.close()
             vd = dict(venta); vd.update(request.form)
             return render_template('ventas/form.html', clientes=clientes, form=vd, accion='Editar')
 
@@ -163,14 +156,12 @@ def editar(id):
             WHERE id=? AND negocio_id=?
         ''', (cliente_id, producto, precio, tipo_pago, fecha, notas, id, nid))
         db.commit()
-        db.close()
         flash('Venta actualizada correctamente.', 'success')
         return redirect(url_for('index'))
 
     clientes = db.execute(
         'SELECT id, nombre, telefono FROM clientes WHERE negocio_id = ? ORDER BY nombre', (nid,)
     ).fetchall()
-    db.close()
     return render_template('ventas/form.html', clientes=clientes,
                            form=dict(venta), accion='Editar', hoy=venta['fecha'])
 
@@ -189,5 +180,4 @@ def eliminar(id):
         flash(f'Venta de "{venta["producto"]}" eliminada.', 'success')
     else:
         flash('Venta no encontrada.', 'danger')
-    db.close()
     return redirect(url_for('ventas.lista'))

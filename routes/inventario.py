@@ -29,7 +29,6 @@ def lista():
         productos = db.execute(
             'SELECT * FROM productos WHERE negocio_id = ? ORDER BY fecha_creacion DESC', (nid,)
         ).fetchall()
-    db.close()
     return render_template('inventario/lista.html', productos=productos, busqueda=busqueda)
 
 
@@ -66,7 +65,6 @@ def crear():
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (nid, nombre, marca, categoria, float(precio), int(stock), descripcion, foto_filename))
         db.commit()
-        db.close()
         flash('Producto creado exitosamente.', 'success')
         return redirect(url_for('inventario.lista'))
 
@@ -83,7 +81,6 @@ def editar(id):
     ).fetchone()
 
     if not producto:
-        db.close()
         flash('Producto no encontrado.', 'danger')
         return redirect(url_for('inventario.lista'))
 
@@ -121,11 +118,9 @@ def editar(id):
             WHERE id=? AND negocio_id=?
         ''', (nombre, marca, categoria, float(precio), int(stock), descripcion, foto_filename, id, nid))
         db.commit()
-        db.close()
         flash('Producto actualizado correctamente.', 'success')
         return redirect(url_for('inventario.lista'))
 
-    db.close()
     return render_template('inventario/form.html', accion='Editar', producto=producto)
 
 
@@ -144,5 +139,4 @@ def eliminar(id):
         db.execute('DELETE FROM productos WHERE id = ? AND negocio_id = ?', (id, nid))
         db.commit()
         flash('Producto eliminado.', 'success')
-    db.close()
     return redirect(url_for('inventario.lista'))
