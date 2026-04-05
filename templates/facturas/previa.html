@@ -22,7 +22,7 @@
                     <i class="bi bi-download me-1"></i>Descargar PDF
                 </a>
                 <a href="{{ url_for('whatsapp.enviar', venta_id=venta.id) }}" 
-                   class="btn btn-success btn-whatsapp">
+                   class="btn btn-success btn-whatsapp" target="_blank" rel="noopener noreferrer">
                     <i class="bi bi-whatsapp me-1"></i>Enviar por WhatsApp
                 </a>
             </div>
@@ -175,7 +175,7 @@
                 <i class="bi bi-file-earmark-pdf me-2"></i>Descargar PDF
             </a>
             <a href="{{ url_for('whatsapp.enviar', venta_id=venta.id) }}" 
-               class="btn btn-lg px-4 btn-whatsapp">
+               class="btn btn-lg px-4 btn-whatsapp" target="_blank" rel="noopener noreferrer">
                 <i class="bi bi-whatsapp me-2"></i>Abrir WhatsApp Web
             </a>
             <a href="{{ url_for('clientes.detalle', id=venta.cliente_id) }}"
