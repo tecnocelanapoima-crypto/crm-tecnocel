@@ -4,9 +4,17 @@ Sistema multi-tenant: cada negocio ve solo sus datos.
 """
 
 import os
+import logging
 import secrets
 from flask import Flask, render_template, redirect, url_for, session, g
 from database.db import init_db, get_db
+
+# ── Configuración de logging ───────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -63,6 +71,18 @@ def inject_negocio():
         'negocio_email':  session.get('negocio_email',  ''),
         'negocio_id':     session.get('negocio_id'),
     }
+
+
+# ── Manejadores de errores globales ───────────────────────
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error('Error 500: %s', error)
+    return render_template('errors/500.html'), 500
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('errors/404.html'), 404
 
 
 # ── Ruta principal: Dashboard ──────────────────────────────

@@ -6,18 +6,31 @@ Usa werkzeug.security para hashing seguro de contraseñas (PBKDF2/SHA-256).
 from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from database.db import get_db
+from database.db import get_db, negocio_existe
 
 auth_bp = Blueprint('auth', __name__)
 
 
 def login_required(f):
-    """Decorador: redirige al login si no hay sesión activa."""
+    """
+    Decorador: redirige al login si no hay sesión activa o si el negocio
+    ya no existe en la base de datos (por ejemplo, tras un reinicio del
+    servidor con almacenamiento efímero en Railway).
+    """
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get('negocio_id'):
+        negocio_id = session.get('negocio_id')
+        if not negocio_id:
             flash('Debes iniciar sesión para continuar.', 'warning')
             return redirect(url_for('auth.login'))
+
+        # Verificar que el negocio aún existe en la BD
+        # (protege contra reinicios del servidor con BD efímera)
+        if not negocio_existe(negocio_id):
+            session.clear()
+            flash('Tu sesión ha expirado. Por favor inicia sesión nuevamente.', 'warning')
+            return redirect(url_for('auth.login'))
+
         return f(*args, **kwargs)
     return decorated
 

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Error del Servidor — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-12 col-md-6 text-center">
+        <div class="card border-0 shadow-sm p-5">
+            <div class="mb-4">
+                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 4rem;"></i>
+            </div>
+            <h2 class="fw-bold text-danger mb-3">Error Interno del Servidor</h2>
+            <p class="text-muted mb-4">
+                Ocurrió un error inesperado al procesar tu solicitud. 
+                Por favor intenta nuevamente. Si el problema persiste, 
+                cierra sesión e inicia sesión de nuevo.
+            </p>
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Volver
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="bi bi-house me-1"></i> Ir al Dashboard
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger">
+                    <i class="bi bi-box-arrow-right me-1"></i> Cerrar Sesión
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

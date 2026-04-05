@@ -1,8 +1,10 @@
+import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from database.db import get_db
 from routes.auth import login_required
 
 clientes_bp = Blueprint('clientes', __name__)
+logger = logging.getLogger(__name__)
 
 
 @clientes_bp.route('/')
@@ -53,14 +55,21 @@ def crear():
             return render_template('clientes/form.html', accion='Crear', cliente=request.form)
 
         db = get_db()
-        db.execute('''
-            INSERT INTO clientes (negocio_id, nombre, cedula, telefono, direccion, ciudad, notas)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (nid, nombre, cedula, telefono, direccion, ciudad, notas))
-        db.commit()
-        db.close()
-        flash(f'Cliente "{nombre}" creado exitosamente.', 'success')
-        return redirect(url_for('clientes.lista'))
+        try:
+            db.execute('''
+                INSERT INTO clientes (negocio_id, nombre, cedula, telefono, direccion, ciudad, notas)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (nid, nombre, cedula, telefono, direccion, ciudad, notas))
+            db.commit()
+            flash(f'Cliente "{nombre}" creado exitosamente.', 'success')
+            return redirect(url_for('clientes.lista'))
+        except Exception as e:
+            logger.error('Error al crear cliente negocio_id=%s: %s', nid, e)
+            db.rollback()
+            flash('Ocurrió un error al guardar el cliente. Por favor intenta nuevamente.', 'danger')
+            return render_template('clientes/form.html', accion='Crear', cliente=request.form)
+        finally:
+            db.close()
 
     return render_template('clientes/form.html', accion='Crear', cliente={})
 
@@ -89,17 +98,25 @@ def editar(id):
 
         if not nombre:
             flash('El nombre del cliente es obligatorio.', 'danger')
+            db.close()
             return render_template('clientes/form.html', accion='Editar', cliente=request.form)
 
-        db.execute('''
-            UPDATE clientes
-            SET nombre=?, cedula=?, telefono=?, direccion=?, ciudad=?, notas=?
-            WHERE id=? AND negocio_id=?
-        ''', (nombre, cedula, telefono, direccion, ciudad, notas, id, nid))
-        db.commit()
-        db.close()
-        flash(f'Cliente "{nombre}" actualizado.', 'success')
-        return redirect(url_for('clientes.lista'))
+        try:
+            db.execute('''
+                UPDATE clientes
+                SET nombre=?, cedula=?, telefono=?, direccion=?, ciudad=?, notas=?
+                WHERE id=? AND negocio_id=?
+            ''', (nombre, cedula, telefono, direccion, ciudad, notas, id, nid))
+            db.commit()
+            flash(f'Cliente "{nombre}" actualizado.', 'success')
+            return redirect(url_for('clientes.lista'))
+        except Exception as e:
+            logger.error('Error al editar cliente id=%s negocio_id=%s: %s', id, nid, e)
+            db.rollback()
+            flash('Ocurrió un error al actualizar el cliente. Por favor intenta nuevamente.', 'danger')
+            return render_template('clientes/form.html', accion='Editar', cliente=request.form)
+        finally:
+            db.close()
 
     db.close()
     return render_template('clientes/form.html', accion='Editar', cliente=cliente)

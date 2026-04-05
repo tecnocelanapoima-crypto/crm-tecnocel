@@ -1,12 +1,19 @@
 """
 Base de datos SQLite para Tecnocel CRM — Versión SaaS Multi-tenant.
 Cada negocio tiene sus propios datos aislados por negocio_id.
+
+La ruta de la base de datos puede configurarse con la variable de entorno DB_PATH.
+En Railway u otros servicios con volúmenes persistentes, establece DB_PATH al
+directorio montado, por ejemplo: /data/tecnocel.db
 """
 
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
+# Permite configurar la ruta de la BD via variable de entorno para producción
+# con almacenamiento persistente (Railway Volumes, Render Disks, etc.)
+_default_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
+DB_PATH = os.environ.get('DB_PATH', _default_path)
 
 
 def get_db():
@@ -113,3 +120,16 @@ def init_db():
     conn.commit()
     conn.close()
     print("Base de datos SaaS inicializada correctamente.")
+
+
+def negocio_existe(negocio_id):
+    """Verifica si un negocio existe en la base de datos."""
+    try:
+        conn = get_db()
+        row = conn.execute(
+            'SELECT id FROM negocios WHERE id = ? AND activo = 1', (negocio_id,)
+        ).fetchone()
+        conn.close()
+        return row is not None
+    except Exception:
+        return False
