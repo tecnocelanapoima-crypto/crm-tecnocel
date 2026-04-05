@@ -1,35 +1,31 @@
-"""
-Base de datos SQLite para Tecnocel CRM - Versión SaaS Multi-tenant
-Cada negocio tiene sus propios datos aislados por negocio_id
-"""
-
 import sqlite3
 import os
+from flask import g
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
 
-
-from flask import g
-
 def get_db():
     if 'db' not in g:
-        g.db = sqlite3.connect(DB_PATH)
+        # check_same_thread=False permite usar la conexión en el mismo request de Flask
+        # timeout ayuda a esperar si la base de datos está ocupada
+        g.db = sqlite3.connect(DB_PATH, timeout=10, check_same_thread=False)
         g.db.row_factory = sqlite3.Row
         g.db.execute('PRAGMA foreign_keys = ON')
+        # Modo WAL mejora el rendimiento y reduce errores de base de datos bloqueada
+        g.db.execute('PRAGMA journal_mode = WAL')
     return g.db
-
 
 def close_db(e=None):
     db = g.pop('db', None)
     if db is not None:
         db.close()
 
-
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
-
-    # ── Tabla de negocios (usuarios del SaaS) ─────────────
+    
+    # ── Tabla de negocios (SaaS) ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS negocios (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,7 +40,7 @@ def init_db():
         )
     ''')
 
-    # ── Productos (con negocio_id) ─────────────────────────
+    # ── Tabla de productos ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS productos (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +57,7 @@ def init_db():
         )
     ''')
 
-    # ── Clientes (con negocio_id) ──────────────────────────
+    # ── Tabla de clientes ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS clientes (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,7 +73,7 @@ def init_db():
         )
     ''')
 
-    # ── Ventas (con negocio_id) ────────────────────────────
+    # ── Tabla de ventas ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS ventas (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,7 +90,7 @@ def init_db():
         )
     ''')
 
-    # ── Egresos (con negocio_id) ───────────────────────────
+    # ── Tabla de egresos ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS egresos (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,4 +106,4 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("Base de datos SaaS inicializada correctamente.")
+    print("Base de datos SaaS inicializada con modo WAL.")
