@@ -6,6 +6,7 @@ Sistema multi-tenant: cada negocio ve solo sus datos.
 import os
 import logging
 import secrets
+from datetime import date
 from flask import Flask, render_template, redirect, url_for, session, g, flash
 from database.db import init_db, get_db
 
@@ -93,6 +94,7 @@ def index():
 
     nid = session['negocio_id']
     db  = get_db()
+    hoy = date.today().isoformat()
 
     total_clientes = db.execute(
         'SELECT COUNT(*) FROM clientes WHERE negocio_id = ?', (nid,)
@@ -112,14 +114,44 @@ def index():
 
     balance_neto = total_ingresos - total_egresos
 
+    # Equipos recibidos hoy
+    equipos_hoy = db.execute(
+        'SELECT COUNT(*) FROM ventas WHERE negocio_id=? AND DATE(fecha_creacion)=?',
+        (nid, hoy)
+    ).fetchone()[0]
+
+    # Listos para entregar — vacío hasta tener tabla ordenes
+    equipos_listos = 0
+    equipos_listos_detalle = []
+
+    # Ventas del día
+    ventas_hoy = db.execute(
+        'SELECT COUNT(*) FROM ventas WHERE negocio_id=? AND DATE(fecha_creacion)=?',
+        (nid, hoy)
+    ).fetchone()[0]
+
+    # Plata recaudada hoy
+    recaudado_hoy = db.execute(
+        'SELECT COALESCE(SUM(precio),0) FROM ventas WHERE negocio_id=? AND DATE(fecha_creacion)=?',
+        (nid, hoy)
+    ).fetchone()[0]
+
+    # Total accesorios hoy
+    total_accesorios_hoy = db.execute(
+        'SELECT COALESCE(SUM(precio),0) FROM ventas WHERE negocio_id=? AND DATE(fecha_creacion)=?',
+        (nid, hoy)
+    ).fetchone()[0]
+
+    # Órdenes activas — vacío hasta tener tabla ordenes
+    ordenes_activas = []
+
     ventas_recientes = db.execute('''
-        SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha,
-               c.nombre AS cliente_nombre
+        SELECT v.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono
         FROM ventas v
         JOIN clientes c ON v.cliente_id = c.id
         WHERE v.negocio_id = ?
         ORDER BY v.fecha_creacion DESC
-        LIMIT 5
+        LIMIT 8
     ''', (nid,)).fetchall()
 
     todas_ventas = db.execute('''
@@ -157,10 +189,18 @@ def index():
         total_ingresos=total_ingresos,
         total_egresos=total_egresos,
         balance_neto=balance_neto,
+        equipos_hoy=equipos_hoy,
+        equipos_listos=equipos_listos,
+        equipos_listos_detalle=equipos_listos_detalle,
+        ventas_hoy=ventas_hoy,
+        recaudado_hoy=recaudado_hoy,
+        total_accesorios_hoy=total_accesorios_hoy,
+        ordenes_activas=ordenes_activas,
         ventas_recientes=ventas_recientes,
         clientes_recientes=clientes_recientes,
         todas_ventas=todas_ventas,
         stock_bajo=stock_bajo,
+        hoy=hoy,
     )
 
 
