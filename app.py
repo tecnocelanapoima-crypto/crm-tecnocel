@@ -63,6 +63,15 @@ app.register_blueprint(inventario_bp, url_prefix='/inventario')
 app.register_blueprint(finanzas_bp,   url_prefix='/finanzas')
 
 
+# ── Filtro de moneda ──────────────────────────────────────
+@app.template_filter('moneda')
+def filtro_moneda(valor):
+    try:
+        return '$ {:,.0f}'.format(float(valor))
+    except (ValueError, TypeError):
+        return '$ 0'
+
+
 # ── Inyección de datos del negocio en todos los templates ──
 @app.context_processor
 def inject_negocio():
