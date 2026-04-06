@@ -6,7 +6,7 @@ Sistema multi-tenant: cada negocio ve solo sus datos.
 import os
 import logging
 import secrets
-from flask import Flask, render_template, redirect, url_for, session, g
+from flask import Flask, render_template, redirect, url_for, session, g, flash
 from database.db import init_db, get_db
 
 # ── Configuración de logging ───────────────────────────────
@@ -162,6 +162,23 @@ def index():
         todas_ventas=todas_ventas,
         stock_bajo=stock_bajo,
     )
+
+
+# ── Ruta de reset para pruebas (TEMPORAL) ─────────────────
+@app.route('/reset-datos', methods=['POST'])
+def reset_datos():
+    if not session.get('negocio_id'):
+        return redirect(url_for('auth.login'))
+    nid = session['negocio_id']
+    db = get_db()
+    db.execute('DELETE FROM ventas WHERE negocio_id = ?', (nid,))
+    db.execute('DELETE FROM clientes WHERE negocio_id = ?', (nid,))
+    db.execute('DELETE FROM productos WHERE negocio_id = ?', (nid,))
+    db.execute('DELETE FROM egresos WHERE negocio_id = ?', (nid,))
+    db.commit()
+    db.close()
+    flash('Datos reseteados correctamente.', 'success')
+    return redirect(url_for('index'))
 
 
 if __name__ == '__main__':
