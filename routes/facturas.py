@@ -48,7 +48,10 @@ def asegurar_carpeta_facturas():
 def generar_pdf(venta, cliente):
     """Genera la factura PDF — sin cambios respecto a la versión original."""
     asegurar_carpeta_facturas()
-    nombre_archivo = f'factura_{venta["id"]:04d}.pdf'
+    producto_slug = venta["producto"].strip().lower()
+    producto_slug = ''.join(c if c.isalnum() or c in (' ', '-') else '' for c in producto_slug)
+    producto_slug = producto_slug.replace(' ', '_')[:30]
+    nombre_archivo = f'factura_{venta["id"]:04d}_{producto_slug}.pdf'
     ruta_pdf       = os.path.join(FACTURAS_DIR, nombre_archivo)
 
     doc = SimpleDocTemplate(ruta_pdf, pagesize=A4,
