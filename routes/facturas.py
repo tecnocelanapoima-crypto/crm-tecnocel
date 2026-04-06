@@ -218,7 +218,6 @@ def generar(venta_id):
         FROM ventas v JOIN clientes c ON v.cliente_id = c.id
         WHERE v.id = ? AND v.negocio_id = ?
     ''', (venta_id, nid)).fetchone()
-    db.close()
 
     if not venta:
         flash('Factura no encontrada.', 'danger')
@@ -237,7 +236,6 @@ def descargar(venta_id):
         FROM ventas v JOIN clientes c ON v.cliente_id = c.id
         WHERE v.id = ? AND v.negocio_id = ?
     ''', (venta_id, nid)).fetchone()
-    db.close()
 
     if not venta:
         flash('Factura no encontrada.', 'danger')

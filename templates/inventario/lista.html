@@ -1,89 +1,46 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Inventario — Tecnocel CRM{% endblock %}
+{% block title %}Inventario - Tecnocel CRM{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
     <div>
-        <h2 class="h4 mb-1 fw-bold text-primary">
-            <i class="bi bi-box-seam-fill me-2"></i>Inventario de Productos
-        </h2>
-        <p class="text-muted mb-0 small">Gestión de stock y catálogo de productos</p>
+        <h2 class="h4 mb-0"><i class="bi bi-box-seam-fill me-2 text-primary"></i>Inventario de Productos</h2>
     </div>
-    <a href="{{ url_for('inventario.crear') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-1"></i>Nuevo Producto
-    </a>
-</div>
-
-<!-- Estadísticas del inventario -->
-{% if stats %}
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-4 fw-bold text-primary">{{ stats['total_productos'] }}</div>
-                <div class="small text-muted">Productos</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-4 fw-bold text-info">{{ stats['total_unidades'] }}</div>
-                <div class="small text-muted">Unidades en Stock</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-4 fw-bold text-success">$ {{ "{:,.0f}".format(stats['valor_total']) }}</div>
-                <div class="small text-muted">Valor del Inventario</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center py-3">
-                <div class="fs-4 fw-bold {% if stats['sin_stock'] > 0 %}text-danger{% else %}text-success{% endif %}">
-                    {{ stats['sin_stock'] }}
-                </div>
-                <div class="small text-muted">Sin Stock</div>
-                {% if stats['stock_bajo'] > 0 %}
-                <div class="small text-warning mt-1">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ stats['stock_bajo'] }} con stock bajo
-                </div>
-                {% endif %}
-            </div>
-        </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAccesorio">
+            <i class="bi bi-bag-plus me-1"></i>+ Venta de accesorio
+        </button>
+        <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalRecepcionRapida">
+            <i class="bi bi-phone-vibrate me-1"></i>+ Recibir equipo (Rápido)
+        </button>
+        <a href="{{ url_for('ordenes.crear') }}" class="btn btn-outline-primary btn-sm px-3">
+            <i class="bi bi-plus-circle me-1"></i>+ Formulario completo
+        </a>
+        <a href="{{ url_for('inventario.crear') }}" class="btn btn-outline-secondary btn-sm px-3">
+            <i class="bi bi-plus-circle me-1"></i>Nuevo Producto
+        </a>
     </div>
 </div>
-{% endif %}
 
-<!-- Buscador -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body py-3">
+<div class="card bg-dark border-light mb-4 shadow">
+    <div class="card-body">
         <form method="GET" action="{{ url_for('inventario.lista') }}" class="d-flex gap-2 mb-0">
-            <input type="text" name="q" class="form-control"
+            <input type="text" name="q" class="form-control bg-dark text-white border-secondary" 
                    placeholder="Buscar por nombre, marca o categoría..." value="{{ busqueda }}">
-            <button type="submit" class="btn btn-outline-primary">
-                <i class="bi bi-search me-1"></i>Buscar
-            </button>
+            <button type="submit" class="btn btn-outline-info">Buscar</button>
             {% if busqueda %}
-                <a href="{{ url_for('inventario.lista') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-x-circle me-1"></i>Limpiar
-                </a>
+                <a href="{{ url_for('inventario.lista') }}" class="btn btn-outline-secondary">Limpiar</a>
             {% endif %}
         </form>
     </div>
 </div>
 
-<!-- Tabla de productos -->
-<div class="card border-0 shadow-sm">
+<div class="card bg-dark border-light shadow">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+            <table class="table table-dark table-hover mb-0 align-middle">
+                <thead>
                     <tr>
                         <th width="70" class="text-center">Foto</th>
                         <th>Producto</th>
@@ -99,115 +56,41 @@
                     <tr>
                         <td class="text-center">
                             {% if p['foto'] %}
-                                <img src="{{ url_for('static', filename='uploads/productos/' ~ p['foto']) }}"
-                                     alt="Foto de {{ p['nombre'] }}"
-                                     style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;">
+                                <img src="{{ url_for('static', filename='uploads/productos/' ~ p['foto']) }}" 
+                                     alt="Foto" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(0,212,255,0.2);">
                             {% else %}
-                                <div class="d-flex align-items-center justify-content-center bg-light rounded"
-                                     style="width:48px;height:48px;font-size:22px;margin:0 auto;border:1px solid #dee2e6;">
-                                    <i class="bi bi-box-seam text-secondary"></i>
+                                <div style="width: 48px; height: 48px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(0,212,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto;">
+                                    📦
                                 </div>
                             {% endif %}
                         </td>
+                        <td class="fw-semibold">{{ p['nombre'] }}</td>
+                        <td>{{ p['marca'] or '-' }}</td>
+                        <td><span class="badge text-bg-info">{{ p['categoria'] or 'General' }}</span></td>
+                        <td class="text-success fw-bold">$ {{ "{:,.0f}".format(p['precio']).replace(',', '.') }}</td>
                         <td>
-                            <div class="fw-bold">{{ p['nombre'] }}</div>
-                            {% if p['descripcion'] %}
-                                <small class="text-muted text-truncate d-inline-block" style="max-width:250px;">
-                                    {{ p['descripcion'] }}
-                                </small>
-                            {% endif %}
-                        </td>
-                        <td class="text-muted">{{ p['marca'] or '—' }}</td>
-                        <td class="text-muted">{{ p['categoria'] or '—' }}</td>
-                        <td class="fw-bold text-success">$ {{ "{:,.0f}".format(p['precio']) }}</td>
-                        <td>
-                            <span class="badge {% if p['stock'] > 3 %}bg-success{% elif p['stock'] > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %} fs-6 px-2">
+                            <span class="badge {% if p['stock'] > 5 %}text-bg-success{% elif p['stock'] > 0 %}text-bg-warning{% else %}text-bg-danger{% endif %}">
                                 {{ p['stock'] }}
                             </span>
-                            {% if p['stock'] == 0 %}
-                                <small class="text-danger d-block">Sin stock</small>
-                            {% elif p['stock'] < 3 %}
-                                <small class="text-warning d-block">Stock bajo</small>
-                            {% endif %}
                         </td>
-                        <td>
-                            <div class="d-flex gap-1 justify-content-center flex-wrap">
-                                <!-- Ajuste rápido de stock -->
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        title="Ajustar stock"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#modalStock{{ p['id'] }}">
-                                    <i class="bi bi-plus-slash-minus"></i>
+                        <td class="text-center">
+                            <a href="{{ url_for('inventario.editar', id=p['id']) }}" class="btn btn-sm btn-outline-info me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form action="{{ url_for('inventario.eliminar', id=p['id']) }}" method="post" class="d-inline"
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
                                 </button>
-                                <a href="{{ url_for('inventario.editar', id=p['id']) }}"
-                                   class="btn btn-sm btn-outline-primary" title="Editar producto">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <form action="{{ url_for('inventario.eliminar', id=p['id']) }}" method="POST"
-                                      class="d-inline"
-                                      onsubmit="return confirm('¿Eliminar el producto {{ p['nombre'] }}? Esta acción no se puede deshacer.');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar producto">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
+                            </form>
                         </td>
                     </tr>
-
-                    <!-- Modal de ajuste de stock -->
-                    <div class="modal fade" id="modalStock{{ p['id'] }}" tabindex="-1">
-                        <div class="modal-dialog modal-sm">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h6 class="modal-title">
-                                        <i class="bi bi-plus-slash-minus me-1"></i>Ajustar Stock
-                                    </h6>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <form action="{{ url_for('inventario.ajustar_stock', id=p['id']) }}" method="POST">
-                                    <div class="modal-body">
-                                        <p class="small text-muted mb-3">
-                                            <strong>{{ p['nombre'] }}</strong><br>
-                                            Stock actual: <span class="fw-bold">{{ p['stock'] }}</span>
-                                        </p>
-                                        <div class="mb-3">
-                                            <label class="form-label small">Operación</label>
-                                            <select name="operacion" class="form-select form-select-sm">
-                                                <option value="entrada">+ Entrada (agregar)</option>
-                                                <option value="salida">- Salida (descontar)</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-0">
-                                            <label class="form-label small">Cantidad</label>
-                                            <input type="number" name="cantidad" class="form-control form-control-sm"
-                                                   min="1" value="1" required>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                        <button type="submit" class="btn btn-sm btn-primary">Aplicar</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
                     {% else %}
                     <tr>
                         <td colspan="7" class="text-center text-muted py-5">
                             <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-50"></i>
-                            <h5 class="fw-normal">
-                                {% if busqueda %}
-                                    No se encontraron productos para "{{ busqueda }}"
-                                {% else %}
-                                    No hay productos registrados
-                                {% endif %}
-                            </h5>
-                            {% if not busqueda %}
-                            <a href="{{ url_for('inventario.crear') }}" class="btn btn-primary mt-2">
-                                <i class="bi bi-plus-circle me-1"></i>Agregar Primer Producto
-                            </a>
-                            {% endif %}
+                            <h5 class="fw-normal">No hay productos registrados</h5>
+                            <p class="small mb-0">Agrega productos al inventario para comenzar</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -216,4 +99,149 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Venta de Accesorio -->
+<div class="modal fade" id="modalAccesorio" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-semibold">Venta de accesorio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url_for('ventas.venta_rapida') }}">
+          <input type="hidden" name="origen" value="modal">
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Producto</label>
+            <input type="text" name="producto" class="form-control"
+                   placeholder="Ej: Vidrio templado Samsung A55" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Precio</label>
+            <input type="number" name="precio" class="form-control"
+                   placeholder="15000" min="1" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Tipo de pago</label>
+            <select name="tipo_pago" class="form-select">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Nequi">Nequi</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Daviplata">Daviplata</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Nombre del cliente</label>
+            <input type="text" name="cliente_nombre" class="form-control"
+                   placeholder="Dejar vacío para Cliente Exprés">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Teléfono</label>
+            <input type="text" name="cliente_telefono" class="form-control"
+                   placeholder="3001234567" maxlength="10">
+          </div>
+          <input type="hidden" name="fecha" value="{{ hoy }}">
+          <div class="d-flex gap-2 mt-4">
+            <button type="button" class="btn btn-outline-secondary flex-fill"
+                    data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success flex-fill">
+              <i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Recepción Rápida de Equipos -->
+<div class="modal fade" id="modalRecepcionRapida" tabindex="-1" aria-labelledby="modalRecepcionRapidaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary bg-opacity-10 border-primary border-bottom">
+        <h5 class="modal-title fw-bold text-primary" id="modalRecepcionRapidaLabel">
+          <i class="bi bi-phone-vibrate me-2"></i>Recepción Rápida de Equipo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('ordenes.recepcion_rapida') }}" novalidate>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label for="nombre_cliente_rapida" class="form-label fw-semibold">
+              Nombre del Cliente <span class="text-danger">*</span>
+            </label>
+            <input type="text" 
+                   class="form-control form-control-lg" 
+                   id="nombre_cliente_rapida" 
+                   name="nombre_cliente_rapida" 
+                   placeholder="Ej: Juan Pérez"
+                   required
+                   autofocus>
+          </div>
+          
+          <div class="mb-3">
+            <label for="telefono_cliente_rapida" class="form-label fw-semibold">
+              Teléfono <span class="text-danger">*</span>
+            </label>
+            <input type="tel" 
+                   class="form-control form-control-lg" 
+                   id="telefono_cliente_rapida" 
+                   name="telefono_cliente_rapida" 
+                   placeholder="Ej: 3001234567"
+                   required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="marca_modelo_rapida" class="form-label fw-semibold">
+              Marca/Modelo <span class="text-danger">*</span>
+            </label>
+            <input type="text" 
+                   class="form-control form-control-lg" 
+                   id="marca_modelo_rapida" 
+                   name="marca_modelo_rapida" 
+                   placeholder="Ej: Samsung A55, iPhone 15..."
+                   required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="problema_rapida" class="form-label fw-semibold">
+              Problema <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control form-control-lg" 
+                      id="problema_rapida" 
+                      name="problema_rapida" 
+                      placeholder="Ej: Pantalla rota, No carga..." 
+                      rows="3" 
+                      required></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label for="costo_estimado_rapida" class="form-label fw-semibold">
+              Costo Estimado (Opcional)
+            </label>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text fw-bold">$</span>
+              <input type="number" 
+                     class="form-control" 
+                     id="costo_estimado_rapida" 
+                     name="costo_estimado_rapida" 
+                     placeholder="0" 
+                     min="0" 
+                     step="1000">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Registrar Equipo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

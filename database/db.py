@@ -1,36 +1,31 @@
-"""
-Base de datos SQLite para Tecnocel CRM — Versión SaaS Multi-tenant.
-Cada negocio tiene sus propios datos aislados por negocio_id.
-
-La ruta de la base de datos puede configurarse con la variable de entorno DB_PATH.
-En Railway u otros servicios con volúmenes persistentes, establece DB_PATH al
-directorio montado, por ejemplo: /data/tecnocel.db
-"""
-
 import sqlite3
 import os
+from flask import g
 
-# Permite configurar la ruta de la BD via variable de entorno para producción
-# con almacenamiento persistente (Railway Volumes, Render Disks, etc.)
-_default_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
-DB_PATH = os.environ.get('DB_PATH', _default_path)
-
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
 
 def get_db():
-    """Abre y retorna una conexión a la base de datos SQLite."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA foreign_keys = ON')
-    conn.execute('PRAGMA journal_mode = WAL')  # Mejor rendimiento en concurrencia
-    return conn
+    if 'db' not in g:
+        # check_same_thread=False permite usar la conexión en el mismo request de Flask
+        # timeout ayuda a esperar si la base de datos está ocupada
+        g.db = sqlite3.connect(DB_PATH, timeout=10, check_same_thread=False)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute('PRAGMA foreign_keys = ON')
+        # Modo WAL mejora el rendimiento y reduce errores de base de datos bloqueada
+        g.db.execute('PRAGMA journal_mode = WAL')
+    return g.db
 
+def close_db(e=None):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 def init_db():
-    """Crea las tablas y los índices si no existen."""
-    conn = get_db()
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
-
-    # ── Tabla de negocios (usuarios del SaaS) ─────────────
+    
+    # ── Tabla de negocios (SaaS) ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS negocios (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +40,7 @@ def init_db():
         )
     ''')
 
-    # ── Productos (con negocio_id) ─────────────────────────
+    # ── Tabla de productos ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS productos (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,8 +48,8 @@ def init_db():
             nombre          TEXT    NOT NULL,
             marca           TEXT,
             categoria       TEXT,
-            precio          REAL    NOT NULL DEFAULT 0,
-            stock           INTEGER NOT NULL DEFAULT 0,
+            precio          REAL    NOT NULL,
+            stock           INTEGER NOT NULL DEFAULT 1,
             descripcion     TEXT,
             foto            TEXT,
             fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -62,7 +57,7 @@ def init_db():
         )
     ''')
 
-    # ── Clientes (con negocio_id) ──────────────────────────
+    # ── Tabla de clientes ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS clientes (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,7 +73,7 @@ def init_db():
         )
     ''')
 
-    # ── Ventas (con negocio_id) ────────────────────────────
+    # ── Tabla de ventas ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS ventas (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -95,7 +90,7 @@ def init_db():
         )
     ''')
 
-    # ── Egresos (con negocio_id) ───────────────────────────
+    # ── Tabla de egresos ──
     c.execute('''
         CREATE TABLE IF NOT EXISTS egresos (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,27 +104,6 @@ def init_db():
         )
     ''')
 
-    # ── Índices para mejorar el rendimiento en consultas frecuentes ──
-    c.execute('CREATE INDEX IF NOT EXISTS idx_clientes_negocio ON clientes(negocio_id)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_ventas_negocio   ON ventas(negocio_id)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_ventas_cliente   ON ventas(cliente_id)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_ventas_fecha     ON ventas(fecha_creacion DESC)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_productos_negocio ON productos(negocio_id)')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_egresos_negocio  ON egresos(negocio_id)')
-
     conn.commit()
     conn.close()
-    print("Base de datos SaaS inicializada correctamente.")
-
-
-def negocio_existe(negocio_id):
-    """Verifica si un negocio existe en la base de datos."""
-    try:
-        conn = get_db()
-        row = conn.execute(
-            'SELECT id FROM negocios WHERE id = ? AND activo = 1', (negocio_id,)
-        ).fetchone()
-        conn.close()
-        return row is not None
-    except Exception:
-        return False
+    print("Base de datos SaaS inicializada con modo WAL.")
