@@ -178,6 +178,18 @@ def reset_crm():
     return redirect(url_for('index'))
 
 
+@app.route('/reset-now')
+@login_required
+def reset_now():
+    nid = session['negocio_id']
+    db  = get_db()
+    db.execute('DELETE FROM ventas WHERE negocio_id=?', (nid,))
+    db.execute('DELETE FROM clientes WHERE negocio_id=?', (nid,))
+    db.commit()
+    flash('CRM reseteado. Todos los datos en cero.', 'success')
+    return redirect(url_for('index'))
+
+
 if __name__ == '__main__':
     init_db()
     print("=" * 50)
