@@ -51,6 +51,46 @@
         .logo-caret{color:rgba(0,207,255,0.5);font-size:.7rem;transition:transform .2s}
         .logo-dropdown-toggle.show .logo-caret{transform:rotate(180deg)}
         .color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+        /* ===== NAVBAR LINKS GLOW ===== */
+        .navbar-nav .nav-link {
+            color: rgba(160,196,216,0.75);
+            font-weight: 600;
+            font-size: .875rem;
+            letter-spacing: .03em;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: color .25s, border-color .25s, box-shadow .25s, background .25s, text-shadow .25s;
+            position: relative;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #00CFFF;
+            border-color: rgba(0,207,255,0.45);
+            background: rgba(0,207,255,0.07);
+            box-shadow: 0 0 10px rgba(0,207,255,0.45), 0 0 22px rgba(0,207,255,0.2);
+            text-shadow: 0 0 8px rgba(0,207,255,0.8);
+            animation: nav-glow-pulse 1.8s ease-in-out infinite;
+        }
+        .navbar-nav .nav-link.active {
+            color: #00CFFF;
+            border-color: rgba(0,207,255,0.6);
+            background: rgba(0,207,255,0.10);
+            box-shadow: 0 0 14px rgba(0,207,255,0.6), 0 0 32px rgba(0,207,255,0.3), inset 0 0 10px rgba(0,207,255,0.08);
+            text-shadow: 0 0 10px rgba(0,207,255,0.9);
+            animation: nav-glow-pulse 1.8s ease-in-out infinite;
+        }
+        .navbar-nav .nav-link i {
+            transition: filter .25s;
+        }
+        .navbar-nav .nav-link:hover i,
+        .navbar-nav .nav-link.active i {
+            filter: drop-shadow(0 0 6px rgba(0,207,255,0.9));
+        }
+        @keyframes nav-glow-pulse {
+            0%,100% { box-shadow: 0 0 10px rgba(0,207,255,0.5), 0 0 22px rgba(0,207,255,0.2); }
+            50%      { box-shadow: 0 0 18px rgba(0,207,255,0.85), 0 0 40px rgba(0,207,255,0.4), inset 0 0 12px rgba(0,207,255,0.12); }
+        }
     </style>
 </head>
 <body>
@@ -80,6 +120,7 @@
                 <div class="logo-dropdown-section">
                     <div class="logo-dropdown-section-title">Navegación</div>
                     <a class="logo-dropdown-item" href="{{ url_for('index') }}"><i class="bi bi-speedometer2"></i>Dashboard</a>
+                    <a class="logo-dropdown-item" href="{{ url_for('completos') }}"><i class="bi bi-check-all text-success"></i>Completos</a>
                     <a class="logo-dropdown-item" href="{{ url_for('clientes.lista') }}"><i class="bi bi-people-fill"></i>Clientes</a>
                     <a class="logo-dropdown-item" href="{{ url_for('ventas.lista') }}"><i class="bi bi-cart-fill"></i>Ventas</a>
                     <a class="logo-dropdown-item" href="{{ url_for('inventario.lista') }}"><i class="bi bi-box-seam-fill"></i>Inventario</a>
@@ -89,8 +130,8 @@
                 <!-- Acciones rápidas -->
                 <div class="logo-dropdown-section">
                     <div class="logo-dropdown-section-title">Acciones rápidas</div>
-                    <a class="logo-dropdown-item" href="{{ url_for('clientes.crear') }}"><i class="bi bi-person-plus-fill"></i>Nuevo cliente</a>
-                    <a class="logo-dropdown-item" href="{{ url_for('ventas.crear') }}"><i class="bi bi-plus-circle-fill"></i>Nueva venta</a>
+                    {# <a class="logo-dropdown-item" href="{{ url_for('clientes.crear') }}"><i class="bi bi-person-plus-fill"></i>Nuevo cliente</a> #}
+                    {# <a class="logo-dropdown-item" href="{{ url_for('ventas.crear') }}"><i class="bi bi-plus-circle-fill"></i>Nueva venta</a> #}
                     <a class="logo-dropdown-item" href="{{ url_for('inventario.crear') }}"><i class="bi bi-box-fill"></i>Nuevo producto</a>
                 </div>
 
@@ -137,19 +178,33 @@
                         <i class="bi bi-speedometer2 me-1"></i>Dashboard
                     </a>
                 </li>
+                {# 
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint and 'clientes' in request.endpoint %}active{% endif %}" href="{{ url_for('clientes.lista') }}">
                         <i class="bi bi-people-fill me-1"></i>Clientes
                     </a>
                 </li>
+                 #}
+                {# 
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint and 'ventas' in request.endpoint %}active{% endif %}" href="{{ url_for('ventas.lista') }}">
                         <i class="bi bi-cart-fill me-1"></i>Ventas
                     </a>
                 </li>
+                 #}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint and 'ordenes' in request.endpoint %}active{% endif %}" href="{{ url_for('ordenes.lista') }}">
+                        <i class="bi bi-tools me-1"></i>Órdenes
+                    </a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint and 'inventario' in request.endpoint %}active{% endif %}" href="{{ url_for('inventario.lista') }}">
                         <i class="bi bi-box-seam-fill me-1"></i>Inventario
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'completos' %}active{% endif %}" href="{{ url_for('completos') }}">
+                        <i class="bi bi-check-all me-1"></i>Completos
                     </a>
                 </li>
                 <li class="nav-item">
@@ -159,12 +214,14 @@
                 </li>
             </ul>
             <div class="d-flex align-items-center gap-2 mt-2 mt-lg-0 mb-2 mb-lg-0">
-                <a href="{{ url_for('clientes.crear') }}" class="btn btn-success btn-sm px-3">
+                {# <a href="{{ url_for('clientes.crear') }}" class="btn btn-success btn-sm px-3">
                     <i class="bi bi-person-plus-fill me-1"></i>Nuevo Cliente
-                </a>
+                </a> #}
+                {# 
                 <a href="{{ url_for('ventas.crear') }}" class="btn btn-warning btn-sm px-3">
                     <i class="bi bi-plus-circle-fill me-1"></i>Nueva Venta
                 </a>
+                 #}
             </div>
         </div>
     </div>
