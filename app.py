@@ -185,6 +185,7 @@ def reset_now():
     db  = get_db()
     db.execute('DELETE FROM ventas WHERE negocio_id=?', (nid,))
     db.execute('DELETE FROM clientes WHERE negocio_id=?', (nid,))
+    db.execute('DELETE FROM egresos WHERE negocio_id=?', (nid,))
     db.commit()
     flash('CRM reseteado. Todos los datos en cero.', 'success')
     return redirect(url_for('index'))
