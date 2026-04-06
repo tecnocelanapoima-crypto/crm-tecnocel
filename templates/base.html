@@ -80,6 +80,7 @@
                 <div class="logo-dropdown-section">
                     <div class="logo-dropdown-section-title">Navegación</div>
                     <a class="logo-dropdown-item" href="{{ url_for('index') }}"><i class="bi bi-speedometer2"></i>Dashboard</a>
+                    <a class="logo-dropdown-item" href="{{ url_for('completos') }}"><i class="bi bi-check-all text-success"></i>Completos</a>
                     <a class="logo-dropdown-item" href="{{ url_for('clientes.lista') }}"><i class="bi bi-people-fill"></i>Clientes</a>
                     <a class="logo-dropdown-item" href="{{ url_for('ventas.lista') }}"><i class="bi bi-cart-fill"></i>Ventas</a>
                     <a class="logo-dropdown-item" href="{{ url_for('inventario.lista') }}"><i class="bi bi-box-seam-fill"></i>Inventario</a>
@@ -89,8 +90,8 @@
                 <!-- Acciones rápidas -->
                 <div class="logo-dropdown-section">
                     <div class="logo-dropdown-section-title">Acciones rápidas</div>
-                    <a class="logo-dropdown-item" href="{{ url_for('clientes.crear') }}"><i class="bi bi-person-plus-fill"></i>Nuevo cliente</a>
-                    <a class="logo-dropdown-item" href="{{ url_for('ventas.crear') }}"><i class="bi bi-plus-circle-fill"></i>Nueva venta</a>
+                    {# <a class="logo-dropdown-item" href="{{ url_for('clientes.crear') }}"><i class="bi bi-person-plus-fill"></i>Nuevo cliente</a> #}
+                    {# <a class="logo-dropdown-item" href="{{ url_for('ventas.crear') }}"><i class="bi bi-plus-circle-fill"></i>Nueva venta</a> #}
                     <a class="logo-dropdown-item" href="{{ url_for('inventario.crear') }}"><i class="bi bi-box-fill"></i>Nuevo producto</a>
                 </div>
 
@@ -137,19 +138,33 @@
                         <i class="bi bi-speedometer2 me-1"></i>Dashboard
                     </a>
                 </li>
+                {# 
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint and 'clientes' in request.endpoint %}active{% endif %}" href="{{ url_for('clientes.lista') }}">
                         <i class="bi bi-people-fill me-1"></i>Clientes
                     </a>
                 </li>
+                 #}
+                {# 
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint and 'ventas' in request.endpoint %}active{% endif %}" href="{{ url_for('ventas.lista') }}">
                         <i class="bi bi-cart-fill me-1"></i>Ventas
                     </a>
                 </li>
+                 #}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint and 'ordenes' in request.endpoint %}active{% endif %}" href="{{ url_for('ordenes.lista') }}">
+                        <i class="bi bi-tools me-1"></i>Órdenes
+                    </a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint and 'inventario' in request.endpoint %}active{% endif %}" href="{{ url_for('inventario.lista') }}">
                         <i class="bi bi-box-seam-fill me-1"></i>Inventario
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'completos' %}active{% endif %}" href="{{ url_for('completos') }}">
+                        <i class="bi bi-check-all me-1"></i>Completos
                     </a>
                 </li>
                 <li class="nav-item">
@@ -159,12 +174,14 @@
                 </li>
             </ul>
             <div class="d-flex align-items-center gap-2 mt-2 mt-lg-0 mb-2 mb-lg-0">
-                <a href="{{ url_for('clientes.crear') }}" class="btn btn-success btn-sm px-3">
+                {# <a href="{{ url_for('clientes.crear') }}" class="btn btn-success btn-sm px-3">
                     <i class="bi bi-person-plus-fill me-1"></i>Nuevo Cliente
-                </a>
+                </a> #}
+                {# 
                 <a href="{{ url_for('ventas.crear') }}" class="btn btn-warning btn-sm px-3">
                     <i class="bi bi-plus-circle-fill me-1"></i>Nueva Venta
                 </a>
+                 #}
             </div>
         </div>
     </div>
