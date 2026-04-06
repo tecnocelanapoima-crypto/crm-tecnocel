@@ -45,7 +45,7 @@ def close_db(error):
 
 
 # ── Blueprints ─────────────────────────────────────────────
-from routes.auth       import auth_bp
+from routes.auth       import auth_bp, login_required
 from routes.clientes   import clientes_bp
 from routes.ventas     import ventas_bp
 from routes.facturas   import facturas_bp
@@ -165,19 +165,16 @@ def index():
 
 
 # ── Ruta de reset para pruebas (TEMPORAL) ─────────────────
-@app.route('/reset-datos', methods=['POST'])
-def reset_datos():
-    if not session.get('negocio_id'):
-        return redirect(url_for('auth.login'))
+@app.route('/reset', methods=['POST'])
+@login_required
+def reset_crm():
     nid = session['negocio_id']
-    db = get_db()
+    db  = get_db()
     db.execute('DELETE FROM ventas WHERE negocio_id = ?', (nid,))
     db.execute('DELETE FROM clientes WHERE negocio_id = ?', (nid,))
-    db.execute('DELETE FROM productos WHERE negocio_id = ?', (nid,))
-    db.execute('DELETE FROM egresos WHERE negocio_id = ?', (nid,))
     db.commit()
     db.close()
-    flash('Datos reseteados correctamente.', 'success')
+    flash('CRM reseteado. Todos los datos fueron eliminados.', 'success')
     return redirect(url_for('index'))
 
 
