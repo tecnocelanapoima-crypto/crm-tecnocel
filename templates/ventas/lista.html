@@ -9,7 +9,10 @@
         </h2>
         <p class="text-muted mb-0">Historial de todas las ventas realizadas</p>
     </div>
-    <div class="ms-auto">
+    <div class="ms-auto d-flex gap-2">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalVentaAccesorio">
+            <i class="bi bi-lightning-fill me-1"></i>Venta de Accesorio
+        </button>
         <a href="{{ url_for('ventas.crear') }}" class="btn btn-warning">
             <i class="bi bi-plus-circle-fill me-1"></i>Nueva Venta
         </a>
@@ -101,6 +104,131 @@
             </a>
         </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Venta de Accesorio -->
+<div class="modal fade" id="modalVentaAccesorio" tabindex="-1" aria-labelledby="modalVentaAccesorioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success bg-opacity-10 border-success border-bottom">
+                <h5 class="modal-title fw-bold text-success" id="modalVentaAccesorioLabel">
+                    <i class="bi bi-bag-fill me-2"></i>Venta de Accesorio
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('ventas.venta_accesorio') }}" novalidate>
+                <div class="modal-body p-4">
+                    <!-- Nombre del Cliente -->
+                    <div class="mb-3">
+                        <label for="nombre_accesorio" class="form-label fw-semibold">
+                            Nombre del Cliente <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="nombre_accesorio" 
+                               name="nombre_accesorio" 
+                               placeholder="Ej: Juan Pérez"
+                               required
+                               autofocus>
+                    </div>
+                    
+                    <!-- Teléfono -->
+                    <div class="mb-3">
+                        <label for="telefono_accesorio" class="form-label fw-semibold">
+                            Teléfono <span class="text-danger">*</span>
+                        </label>
+                        <input type="tel" 
+                               class="form-control form-control-lg" 
+                               id="telefono_accesorio" 
+                               name="telefono_accesorio" 
+                               placeholder="Ej: 3001234567"
+                               required>
+                    </div>
+                    
+                    <!-- Producto -->
+                    <div class="mb-3">
+                        <label for="producto_accesorio" class="form-label fw-semibold">
+                            Producto <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control form-control-lg" 
+                               id="producto_accesorio" 
+                               name="producto_accesorio" 
+                               placeholder="Ej: Cargador Samsung, Protector de pantalla..."
+                               required>
+                    </div>
+                    
+                    <!-- Precio -->
+                    <div class="mb-3">
+                        <label for="precio_accesorio" class="form-label fw-semibold">
+                            Precio (COP) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text fw-bold">$</span>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="precio_accesorio" 
+                                   name="precio_accesorio" 
+                                   placeholder="0"
+                                   min="1"
+                                   step="1000"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <!-- Tipo de Pago -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Tipo de Pago <span class="text-danger">*</span>
+                        </label>
+                        <div class="d-flex gap-2">
+                            <div class="form-check flex-fill">
+                                <input class="form-check-input" type="radio" name="tipo_pago_accesorio" id="tipo_contado" value="contado" checked>
+                                <label class="form-check-label btn btn-outline-success w-100 text-start" for="tipo_contado">
+                                    <i class="bi bi-cash me-2"></i>Contado
+                                </label>
+                            </div>
+                            <div class="form-check flex-fill">
+                                <input class="form-check-input" type="radio" name="tipo_pago_accesorio" id="tipo_credito" value="crédito">
+                                <label class="form-check-label btn btn-outline-warning w-100 text-start" for="tipo_credito">
+                                    <i class="bi bi-credit-card me-2"></i>Crédito
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Opción de Factura -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-receipt me-1"></i>Factura
+                        </label>
+                        <div class="d-flex gap-2">
+                            <div class="form-check flex-fill">
+                                <input class="form-check-input" type="radio" name="con_factura" id="sin_factura" value="no" checked>
+                                <label class="form-check-label btn btn-outline-secondary w-100 text-start" for="sin_factura">
+                                    <i class="bi bi-x-circle me-2"></i>Sin Factura
+                                </label>
+                            </div>
+                            <div class="form-check flex-fill">
+                                <input class="form-check-input" type="radio" name="con_factura" id="con_factura" value="si">
+                                <label class="form-check-label btn btn-outline-info w-100 text-start" for="con_factura">
+                                    <i class="bi bi-check-circle me-2"></i>Con Factura
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-lg me-1"></i>Registrar Venta
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

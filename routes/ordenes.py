@@ -12,6 +12,14 @@ from database.db import get_db
 from routes.auth import login_required
 from datetime import datetime
 from werkzeug.utils import secure_filename
+import platform
+import subprocess
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 ordenes_bp = Blueprint('ordenes', __name__)
 
@@ -55,6 +63,87 @@ def init_ordenes_table():
     db.commit()
 
 
+def generar_pdf_recepcion(orden, cliente, negocio):
+    carpeta = 'facturas_pdf'
+    os.makedirs(carpeta, exist_ok=True)
+
+    nombre_archivo = f"recepcion_{orden['numero_orden'].replace('-', '_')}.pdf"
+    ruta = os.path.join(carpeta, nombre_archivo)
+
+    doc = SimpleDocTemplate(ruta, pagesize=A4,
+                            rightMargin=2*cm, leftMargin=2*cm,
+                            topMargin=2*cm, bottomMargin=2*cm)
+
+    styles = getSampleStyleSheet()
+    estilo_titulo = ParagraphStyle('titulo', fontSize=20, alignment=TA_CENTER,
+                                   fontName='Helvetica-Bold', spaceAfter=4)
+    estilo_sub    = ParagraphStyle('sub', fontSize=11, alignment=TA_CENTER,
+                                   textColor=colors.grey, spaceAfter=2)
+    estilo_ot     = ParagraphStyle('ot', fontSize=28, alignment=TA_CENTER,
+                                   fontName='Helvetica-Bold', textColor=colors.HexColor('#1a73e8'),
+                                   spaceAfter=6)
+    estilo_label  = ParagraphStyle('label', fontSize=9, textColor=colors.grey)
+    estilo_valor  = ParagraphStyle('valor', fontSize=11, fontName='Helvetica-Bold')
+    estilo_nota   = ParagraphStyle('nota', fontSize=9, alignment=TA_CENTER,
+                                   textColor=colors.grey, spaceBefore=10)
+
+    fecha_hora = datetime.now().strftime('%d/%m/%Y  %H:%M')
+    nombre_negocio = negocio['nombre_negocio'] if negocio else 'Tecnocel'
+    telefono_negocio = negocio['telefono'] if negocio else ''
+
+    contenido = []
+
+    # Encabezado negocio
+    contenido.append(Paragraph(nombre_negocio.upper(), estilo_titulo))
+    if telefono_negocio:
+        contenido.append(Paragraph(f'Tel: {telefono_negocio}', estilo_sub))
+    contenido.append(Spacer(1, 0.3*cm))
+    contenido.append(HRFlowable(width='100%', thickness=1.5,
+                                color=colors.HexColor('#1a73e8')))
+    contenido.append(Spacer(1, 0.4*cm))
+
+    # Título comprobante
+    contenido.append(Paragraph('COMPROBANTE DE RECEPCIÓN', estilo_sub))
+    contenido.append(Paragraph(orden['numero_orden'], estilo_ot))
+    contenido.append(HRFlowable(width='100%', thickness=0.5, color=colors.lightgrey))
+    contenido.append(Spacer(1, 0.5*cm))
+
+    # Tabla de datos
+    datos = [
+        ['Fecha y hora:', fecha_hora],
+        ['Cliente:', cliente['nombre'].title()],
+        ['Teléfono:', cliente['telefono']],
+        ['Equipo:', orden['marca_modelo']],
+        ['Problema reportado:', orden['problema']],
+        ['Costo estimado:', f"$ {int(orden['costo_estimado'] or 0):,}".replace(',', '.')],
+        ['Abono recibido:', f"$ {int(orden['abono'] or 0):,}".replace(',', '.') + f" ({orden['tipo_pago_abono'] if orden['tipo_pago_abono'] else 'Efectivo'})"],
+        ['Saldo pendiente:', f"$ {int(orden['saldo_pendiente'] or 0):,}".replace(',', '.')],
+    ]
+
+    tabla = Table(datos, colWidths=[5*cm, 11*cm])
+    tabla.setStyle(TableStyle([
+        ('FONTNAME',    (0,0), (0,-1), 'Helvetica-Bold'),
+        ('FONTSIZE',    (0,0), (-1,-1), 10),
+        ('TEXTCOLOR',  (0,0), (0,-1), colors.grey),
+        ('TEXTCOLOR',  (1,0), (1,-1), colors.black),
+        ('ROWBACKGROUNDS', (0,0), (-1,-1), [colors.white, colors.HexColor('#f5f8ff')]),
+        ('TOPPADDING',  (0,0), (-1,-1), 7),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 7),
+        ('LEFTPADDING', (0,0), (-1,-1), 8),
+        ('GRID',        (0,0), (-1,-1), 0.3, colors.HexColor('#e0e0e0')),
+        ('ROUNDEDCORNERS', [4]),
+    ]))
+    contenido.append(tabla)
+    contenido.append(Spacer(1, 0.8*cm))
+    contenido.append(HRFlowable(width='100%', thickness=0.5, color=colors.lightgrey))
+    contenido.append(Paragraph(
+        'Conserve este comprobante. Le avisaremos cuando su equipo esté listo.',
+        estilo_nota))
+
+    doc.build(contenido)
+    return ruta, nombre_archivo
+
+
 @ordenes_bp.before_app_request
 def setup_ordenes():
     """Inicializa la tabla al arrancar"""
@@ -94,10 +183,19 @@ def lista():
     ''', (nid,)).fetchall()
 
     contadores_dict = {r['estado']: r['total'] for r in contadores}
+
+    from datetime import date
+    clientes = db.execute(
+        'SELECT id, nombre FROM clientes WHERE negocio_id = ? ORDER BY nombre', (nid,)
+    ).fetchall()
+    hoy = date.today().isoformat()
+
     return render_template('ordenes/lista.html',
                            ordenes=ordenes,
                            estado_filtro=estado,
-                           contadores=contadores_dict)
+                           contadores=contadores_dict,
+                           clientes=clientes,
+                           hoy=hoy)
 
 
 @ordenes_bp.route('/crear', methods=['GET', 'POST'])
@@ -107,25 +205,45 @@ def crear():
     db  = get_db()
 
     if request.method == 'POST':
-        cliente_id    = request.form.get('cliente_id', '').strip()
+        cliente_nombre   = request.form.get('cliente_nombre', '').strip().title()
+        cliente_telefono = request.form.get('cliente_telefono', '').strip()
         marca_modelo  = request.form.get('marca_modelo', '').strip()
         problema      = request.form.get('problema', '').strip()
-        costo_estimado= request.form.get('costo_estimado', '').strip()
+        costo_estimado = request.form.get('costo_estimado', '').strip()
+        abono          = request.form.get('abono', '0').strip()
+        tipo_pago_abono = request.form.get('tipo_pago_abono', 'Efectivo').strip()
         notas_tecnico = request.form.get('notas_tecnico', '').strip()
         fecha_recibido= request.form.get('fecha_recibido', datetime.now().strftime('%Y-%m-%d'))
 
+        abono_num       = float(abono) if abono else 0
+        costo_num       = float(costo_estimado) if costo_estimado else 0
+        saldo_pendiente = max(costo_num - abono_num, 0)
+
         errores = []
-        if not cliente_id:   errores.append('Debe seleccionar un cliente.')
+        if not cliente_nombre:   errores.append('El nombre del cliente es obligatorio.')
+        if not cliente_telefono: errores.append('El teléfono del cliente es obligatorio.')
         if not marca_modelo: errores.append('Marca y modelo son obligatorios.')
         if not problema:     errores.append('El problema es obligatorio.')
 
         if errores:
             for e in errores: flash(e, 'danger')
-            clientes = db.execute(
-                'SELECT id, nombre, telefono FROM clientes WHERE negocio_id = ? ORDER BY nombre', (nid,)
-            ).fetchall()
-            return render_template('ordenes/form.html', clientes=clientes,
-                                   form=request.form, hoy=datetime.now().strftime('%Y-%m-%d'))
+            return render_template('ordenes/form.html', form=request.form, hoy=datetime.now().strftime('%Y-%m-%d'))
+
+        # Buscar si ya existe ese cliente en este negocio por teléfono
+        cliente = db.execute(
+            'SELECT id FROM clientes WHERE negocio_id = ? AND telefono = ?',
+            (nid, cliente_telefono)
+        ).fetchone()
+
+        if cliente:
+            cliente_id = cliente['id']
+        else:
+            db.execute(
+                'INSERT INTO clientes (negocio_id, nombre, telefono) VALUES (?, ?, ?)',
+                (nid, cliente_nombre, cliente_telefono)
+            )
+            db.commit()
+            cliente_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
 
         # Generar número de orden único
         ultimo = db.execute(
@@ -146,15 +264,13 @@ def crear():
                 file.save(os.path.join(upload_folder, filename))
                 foto_filename = filename
 
-        costo_est = float(costo_estimado) if costo_estimado else None
-
         db.execute('''
-            INSERT INTO ordenes
-            (negocio_id, cliente_id, numero_orden, marca_modelo, problema,
-             foto, estado, costo_estimado, notas_tecnico, fecha_recibido)
-            VALUES (?, ?, ?, ?, ?, ?, 'recibido', ?, ?, ?)
+            INSERT INTO ordenes 
+            (negocio_id, cliente_id, numero_orden, marca_modelo, problema, estado, 
+             foto, costo_estimado, abono, saldo_pendiente, tipo_pago_abono, notas_tecnico, fecha_recibido)
+            VALUES (?, ?, ?, ?, ?, 'recibido', ?, ?, ?, ?, ?, ?, ?)
         ''', (nid, cliente_id, numero_orden, marca_modelo, problema,
-              foto_filename, costo_est, notas_tecnico, fecha_recibido))
+              foto_filename, costo_num, abono_num, saldo_pendiente, tipo_pago_abono, notas_tecnico, fecha_recibido))
         db.commit()
 
         orden_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -162,10 +278,7 @@ def crear():
         flash(f'Orden {numero_orden} creada exitosamente.', 'success')
         return redirect(url_for('ordenes.detalle', id=orden_id))
 
-    clientes = db.execute(
-        'SELECT id, nombre, telefono FROM clientes WHERE negocio_id = ? ORDER BY nombre', (nid,)
-    ).fetchall()
-    return render_template('ordenes/form.html', clientes=clientes,
+    return render_template('ordenes/form.html',
                            form={}, hoy=datetime.now().strftime('%Y-%m-%d'))
 
 
@@ -186,6 +299,64 @@ def detalle(id):
         return redirect(url_for('ordenes.lista'))
 
     return render_template('ordenes/detalle.html', orden=orden)
+
+
+@ordenes_bp.route('/<int:id>/confirmar-recepcion')
+@login_required
+def confirmar_recepcion(id):
+    negocio_id = session.get('negocio_id')
+    if not negocio_id:
+        return redirect(url_for('auth.login'))
+
+    db = get_db()
+
+    orden = db.execute(
+        'SELECT * FROM ordenes WHERE id = ? AND negocio_id = ?',
+        (id, negocio_id)
+    ).fetchone()
+
+    if not orden:
+        flash('Orden no encontrada.', 'danger')
+        return redirect(url_for('ordenes.lista'))
+
+    cliente = db.execute(
+        'SELECT * FROM clientes WHERE id = ?', (orden['cliente_id'],)
+    ).fetchone()
+
+    negocio = db.execute(
+        'SELECT * FROM negocios WHERE id = ?', (negocio_id,)
+    ).fetchone()
+
+    # Generar PDF
+    ruta_pdf, nombre_archivo = generar_pdf_recepcion(orden, cliente, negocio)
+
+    # Abrir carpeta en Windows Explorer
+    carpeta = os.path.abspath('facturas_pdf')
+    if platform.system() == 'Windows':
+        subprocess.Popen(['explorer', carpeta])
+
+    # Construir mensaje WhatsApp
+    numero = limpiar_telefono(cliente['telefono'])
+    negocio_nombre = negocio['nombre_negocio'] if negocio else 'Tecnocel'
+    
+    costo_fmt  = '$ ' + f'{int(orden["costo_estimado"] or 0):,}'.replace(',', '.')
+    abono_fmt  = '$ ' + f'{int(orden["abono"] or 0):,}'.replace(',', '.')
+    saldo_fmt  = '$ ' + f'{int(orden["saldo_pendiente"] or 0):,}'.replace(',', '.')
+
+    mensaje = (
+        f"Hola {cliente['nombre'].title()}, hemos recibido tu equipo "
+        f"{orden['marca_modelo']} correctamente. "
+        f"Tu número de orden es *{orden['numero_orden']}*. "
+        f"Costo total: *{costo_fmt}*. "
+        f"Abono recibido: *{abono_fmt}* ({orden['tipo_pago_abono'] or 'Efectivo'}). "
+        f"Saldo pendiente: *{saldo_fmt}*. "
+        f"Te avisamos cuando esté listo. — {negocio_nombre}"
+    )
+
+    url_whatsapp = f"https://wa.me/{numero}?text={urllib.parse.quote(mensaje)}"
+
+    flash(f'Comprobante generado: {nombre_archivo}', 'success')
+    return redirect(url_whatsapp)
 
 
 @ordenes_bp.route('/<int:id>/cambiar-estado', methods=['POST'])
@@ -225,6 +396,22 @@ def cambiar_estado(id):
         WHERE id=? AND negocio_id=?
     ''', (nuevo_estado, fecha_listo, fecha_entregado, costo_f, id, nid))
     db.commit()
+
+    # Si se entrega, registrar automáticamente como una venta
+    if nuevo_estado == 'entregado' and costo_f:
+        db.execute('''
+            INSERT INTO ventas 
+            (negocio_id, cliente_id, producto, precio, tipo_pago, fecha, notas)
+            VALUES (?, ?, ?, ?, 'contado', ?, ?)
+        ''', (
+            nid,
+            orden['cliente_id'],
+            'Servicio: ' + orden['marca_modelo'] + ' - ' + orden['problema'],
+            costo_f,
+            fecha_entregado,
+            'Orden ' + orden['numero_orden']
+        ))
+        db.commit()
 
     estados = {'recibido': 'Recibido', 'listo': 'Listo para retirar', 'entregado': 'Entregado'}
     flash(f'Estado cambiado a "{estados[nuevo_estado]}".', 'success')
@@ -293,3 +480,88 @@ def whatsapp(id, tipo):
 
     url_wa = f"https://wa.me/{numero}?text={urllib.parse.quote(mensaje)}"
     return redirect(url_wa)
+
+
+@ordenes_bp.route('/recepcion-rapida', methods=['POST'])
+@login_required
+def recepcion_rapida():
+    """Recepción rápida de equipos - Solo los datos esenciales"""
+    nid = session['negocio_id']
+    db  = get_db()
+
+    nombre_cliente = request.form.get('nombre_cliente_rapida', '').strip().title()
+    telefono_cliente = request.form.get('telefono_cliente_rapida', '').strip()
+    marca_modelo = request.form.get('marca_modelo_rapida', '').strip()
+    problema = request.form.get('problema_rapida', '').strip()
+    costo_estimado = request.form.get('costo_estimado_rapida', '').strip()
+
+    # Validaciones
+    if not nombre_cliente:
+        flash('El nombre del cliente es obligatorio.', 'danger')
+        return redirect(url_for('ordenes.lista'))
+    
+    if not telefono_cliente:
+        flash('El teléfono es obligatorio.', 'danger')
+        return redirect(url_for('ordenes.lista'))
+    
+    if not marca_modelo:
+        flash('La marca/modelo es obligatoria.', 'danger')
+        return redirect(url_for('ordenes.lista'))
+    
+    if not problema:
+        flash('El problema es obligatorio.', 'danger')
+        return redirect(url_for('ordenes.lista'))
+
+    # Convertir costo estimado a número
+    costo_estimado_num = None
+    if costo_estimado:
+        try:
+            costo_estimado_num = float(costo_estimado)
+        except ValueError:
+            flash('El costo estimado debe ser un número válido.', 'danger')
+            return redirect(url_for('ordenes.lista'))
+
+    # Buscar o crear cliente
+    cliente = db.execute(
+        'SELECT id FROM clientes WHERE negocio_id = ? AND telefono = ?',
+        (nid, telefono_cliente)
+    ).fetchone()
+    
+    if cliente:
+        cliente_id = cliente['id']
+    else:
+        db.execute(
+            'INSERT INTO clientes (negocio_id, nombre, telefono) VALUES (?, ?, ?)',
+            (nid, nombre_cliente, telefono_cliente)
+        )
+        db.commit()
+        cliente_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    # Generar número de orden
+    ultima_orden = db.execute(
+        'SELECT numero_orden FROM ordenes WHERE negocio_id = ? ORDER BY id DESC LIMIT 1',
+        (nid,)
+    ).fetchone()
+    
+    if ultima_orden:
+        ultimo_num = int(ultima_orden['numero_orden'].split('-')[-1])
+        nuevo_num = f"OT-{nid:03d}-{ultimo_num + 1:04d}"
+    else:
+        nuevo_num = f"OT-{nid:03d}-0001"
+
+    # Crear la orden
+    fecha_hoy = datetime.now().strftime('%Y-%m-%d')
+    db.execute(
+        '''INSERT INTO ordenes 
+           (negocio_id, cliente_id, numero_orden, marca_modelo, problema, 
+            estado, costo_estimado, fecha_recibido) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        (nid, cliente_id, nuevo_num, marca_modelo, problema, 'recibido', costo_estimado_num, fecha_hoy)
+    )
+    db.commit()
+    orden_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+    flash(f'Equipo registrado. Orden: {nuevo_num}', 'success')
+    
+    # Abrir WhatsApp para enviar notificación
+    return redirect(url_for('ordenes.whatsapp', id=orden_id, tipo='recibido'))

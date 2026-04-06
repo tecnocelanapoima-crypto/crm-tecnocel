@@ -27,20 +27,14 @@
                             <i class="bi bi-person-fill me-2"></i>Cliente
                         </h6>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Cliente <span class="text-danger">*</span></label>
-                            <select name="cliente_id" class="form-select" required>
-                                <option value="">— Selecciona un cliente —</option>
-                                {% for c in clientes %}
-                                <option value="{{ c.id }}" {% if form.get('cliente_id')|string == c.id|string %}selected{% endif %}>
-                                    {{ c.nombre }} {% if c.telefono %}— {{ c.telefono }}{% endif %}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <div class="mt-2">
-                                <a href="{{ url_for('clientes.crear') }}" class="btn btn-outline-success btn-sm">
-                                    <i class="bi bi-person-plus me-1"></i>Registrar nuevo cliente
-                                </a>
-                            </div>
+                            <label class="form-label">Nombre del cliente</label>
+                            <input type="text" name="cliente_nombre" class="form-control" 
+                                   placeholder="Ej: Andrés Urrego" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" name="cliente_telefono" class="form-control"
+                                   placeholder="Ej: 3001234567" maxlength="10" required>
                         </div>
                     </div>
 
@@ -88,6 +82,31 @@
                                 </div>
                             </div>
                             <div class="col-6">
+                              <label class="form-label fw-semibold">Abono inicial</label>
+                              <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="abono" class="form-control" 
+                                       placeholder="0" id="abono" oninput="calcularSaldo()">
+                              </div>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label fw-semibold">Tipo de pago abono</label>
+                              <select name="tipo_pago_abono" class="form-select">
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Nequi">Nequi</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Daviplata">Daviplata</option>
+                              </select>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label fw-semibold">Saldo pendiente</label>
+                              <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" id="saldo_pendiente_display" class="form-control bg-body-secondary" 
+                                       readonly placeholder="Se calcula automáticamente">
+                              </div>
+                            </div>
+                            <div class="col-6">
                                 <label class="form-label fw-semibold">Fecha de recepción</label>
                                 <input type="date" name="fecha_recibido" class="form-control"
                                        value="{{ form.get('fecha_recibido', hoy) }}">
@@ -114,4 +133,16 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calcularSaldo() {
+  var costo = parseFloat(document.querySelector('[name=costo_estimado]').value) || 0;
+  var abono = parseFloat(document.getElementById('abono').value) || 0;
+  var saldo = costo - abono;
+  document.getElementById('saldo_pendiente_display').value = saldo > 0 ? saldo : 0;
+}
+document.querySelector('[name=costo_estimado]').addEventListener('input', calcularSaldo);
+</script>
 {% endblock %}

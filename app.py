@@ -6,6 +6,7 @@ Sistema multi-tenant: cada negocio ve solo sus datos
 import os
 from flask import Flask, render_template, redirect, url_for, session
 from database.db import init_db, get_db, close_db
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '7e9c0c0e-c760-4b6e-8c1b-2dad20c8fc35-tecnocel-prod')
@@ -34,6 +35,15 @@ app.register_blueprint(finanzas_bp,  url_prefix='/finanzas')
 app.register_blueprint(ordenes_bp,  url_prefix='/ordenes')
 
 
+# ── Filtro de moneda Jinja2 ──────────────────────────────────────────────
+@app.template_filter('moneda')
+def formato_moneda(valor):
+    """Formatea un número como moneda colombiana: $ 150.000"""
+    if valor is None:
+        return '$ 0'
+    return '$ ' + f'{int(valor):,}'.replace(',', '.')
+
+
 @app.context_processor
 def inject_negocio():
     """Disponible en todos los templates."""
@@ -51,57 +61,148 @@ def index():
 
     nid = session['negocio_id']
     db  = get_db()
+    hoy = date.today().isoformat()
 
-    total_clientes = db.execute(
-        'SELECT COUNT(*) FROM clientes WHERE negocio_id = ?', (nid,)
+    # ── Tarjetas de resumen (Seguro SaaS) ───────────────────────────────────
+
+    # Equipos recibidos hoy
+    try:
+        equipos_hoy = db.execute(
+            "SELECT COUNT(*) FROM ordenes WHERE negocio_id = ? AND fecha_recibido = ?", (nid, hoy)
+        ).fetchone()[0]
+    except Exception: equipos_hoy = 0
+
+    # Equipos listos para entregar
+    try:
+        equipos_listos = db.execute(
+            "SELECT COUNT(*) FROM ordenes WHERE negocio_id = ? AND estado = 'listo'", (nid,)
+        ).fetchone()[0]
+    except Exception: equipos_listos = 0
+
+    # Ventas de hoy (conteo)
+    ventas_hoy = db.execute(
+        "SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND fecha = ?", (nid, hoy)
     ).fetchone()[0]
 
-    total_ventas = db.execute(
-        'SELECT COUNT(*) FROM ventas WHERE negocio_id = ?', (nid,)
+    # Plata recaudada hoy: ventas + órdenes entregadas hoy
+    ingresos_ventas_hoy = db.execute(
+        "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND fecha = ?", (nid, hoy)
     ).fetchone()[0]
 
-    total_ingresos = db.execute(
-        'SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ?', (nid,)
-    ).fetchone()[0]
+    # Abonos recibidos hoy (dinero que entra al recibir)
+    try:
+        ingresos_abonos_hoy = db.execute(
+            "SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ? AND fecha_recibido = ?", (nid, hoy)
+        ).fetchone()[0]
+    except Exception: ingresos_abonos_hoy = 0
 
-    ventas_recientes = db.execute('''
-        SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha,
-               c.nombre as cliente_nombre
+    # Resto cobrado hoy al entregar (Costo Final - Abono Inicial)
+    try:
+        ingresos_ordenes_hoy = db.execute(
+            "SELECT COALESCE(SUM(costo_final - abono), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado' AND fecha_entregado = ?", (nid, hoy)
+        ).fetchone()[0]
+    except Exception: ingresos_ordenes_hoy = 0
+
+    recaudado_hoy = ingresos_ventas_hoy + ingresos_abonos_hoy + ingresos_ordenes_hoy
+
+    # ── Datos detallados (SaaS safe) ────────────────────────────────────────
+
+    # Órdenes activas (no entregadas)
+    try:
+        ordenes_activas = db.execute('''
+            SELECT o.id, o.numero_orden, o.marca_modelo, o.problema, o.estado, o.fecha_creacion, o.abono,
+                   c.nombre AS cliente_nombre
+            FROM ordenes o
+            JOIN clientes c ON o.cliente_id = c.id
+            WHERE o.negocio_id = ? AND o.estado != 'entregado'
+            ORDER BY o.fecha_creacion DESC
+            LIMIT 10
+        ''', (nid,)).fetchall()
+
+        # Detalle para la alerta de WhatsApp
+        equipos_listos_detalle = db.execute('''
+            SELECT o.numero_orden, o.marca_modelo, c.nombre AS cliente_nombre, c.telefono
+            FROM ordenes o
+            JOIN clientes c ON o.cliente_id = c.id
+            WHERE o.negocio_id = ? AND o.estado = 'listo'
+            ORDER BY o.fecha_creacion ASC
+        ''', (nid,)).fetchall()
+    except Exception:
+        ordenes_activas = []
+        equipos_listos_detalle = []
+
+    # Ventas de accesorios recientes (No servicios)
+    ventas_accesorios_recientes = db.execute('''
+        SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha_creacion,
+               c.nombre AS cliente_nombre
         FROM ventas v
         JOIN clientes c ON v.cliente_id = c.id
-        WHERE v.negocio_id = ?
+        WHERE v.negocio_id = ? AND v.producto NOT LIKE 'Servicio: %'
         ORDER BY v.fecha_creacion DESC
         LIMIT 5
     ''', (nid,)).fetchall()
 
-    todas_ventas = db.execute('''
-        SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha,
-               c.nombre as cliente_nombre
+    # Entregas recientes (Servicios terminados)
+    entregas_recientes = db.execute('''
+        SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha_creacion,
+               c.nombre AS cliente_nombre
         FROM ventas v
         JOIN clientes c ON v.cliente_id = c.id
-        WHERE v.negocio_id = ?
+        WHERE v.negocio_id = ? AND v.producto LIKE 'Servicio: %'
         ORDER BY v.fecha_creacion DESC
-    ''', (nid,)).fetchall()
-
-    clientes_recientes = db.execute('''
-        SELECT id, nombre, telefono, ciudad
-        FROM clientes
-        WHERE negocio_id = ?
-        ORDER BY fecha_creacion DESC
         LIMIT 5
     ''', (nid,)).fetchall()
-
-
 
     return render_template(
         'index.html',
-        total_clientes=total_clientes,
-        total_ventas=total_ventas,
-        total_ingresos=total_ingresos,
-        ventas_recientes=ventas_recientes,
-        clientes_recientes=clientes_recientes,
-        todas_ventas=todas_ventas
+        equipos_hoy              = equipos_hoy,
+        equipos_listos           = equipos_listos,
+        equipos_listos_detalle   = equipos_listos_detalle,
+        ventas_hoy               = ventas_hoy,
+        recaudado_hoy            = recaudado_hoy,
+        ingresos_ventas_hoy      = ingresos_ventas_hoy,
+        ingresos_abonos_hoy      = ingresos_abonos_hoy,
+        ingresos_ordenes_hoy     = ingresos_ordenes_hoy,
+        ordenes_activas          = ordenes_activas,
+        ventas_accesorios        = ventas_accesorios_recientes,
+        entregas_recientes       = entregas_recientes,
+        total_accesorios_hoy     = ingresos_ventas_hoy,
+        total_entregas_hoy       = ingresos_ordenes_hoy,
+        hoy                      = hoy
     )
+
+
+@app.route('/completos')
+def completos():
+    if not session.get('negocio_id'):
+        return redirect(url_for('auth.login'))
+
+    nid = session['negocio_id']
+    db  = get_db()
+    
+    # 1. Obtener Ventas
+    ventas = db.execute('''
+        SELECT 'Venta' as tipo, v.producto as concepto, v.precio as valor, 
+               v.fecha as fecha_fin, c.nombre as cliente_nombre, 'success' as color
+        FROM ventas v JOIN clientes c ON v.cliente_id = c.id
+        WHERE v.negocio_id = ?
+    ''', (nid,)).fetchall()
+
+    # 2. Obtener Reparaciones Entregadas
+    entregas = db.execute('''
+        SELECT 'Reparación' as tipo, o.marca_modelo as concepto, o.costo_final as valor, 
+               o.fecha_entregado as fecha_fin, c.nombre as cliente_nombre, 'primary' as color
+        FROM ordenes o JOIN clientes c ON o.cliente_id = c.id
+        WHERE o.negocio_id = ? AND o.estado = 'entregado'
+    ''', (nid,)).fetchall()
+
+    # Combinar y ordenar (más reciente primero)
+    todo = list(ventas) + list(entregas)
+    todo.sort(key=lambda x: x['fecha_fin'] if x['fecha_fin'] else '', reverse=True)
+
+    total_recaudado = sum(item['valor'] for item in todo if item['valor'])
+
+    return render_template('completos.html', lista=todo, total=total_recaudado)
 
 
 if __name__ == '__main__':
