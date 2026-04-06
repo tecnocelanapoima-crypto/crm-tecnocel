@@ -312,8 +312,24 @@
         <form id="formAccesorio">
           <input type="hidden" name="origen" value="modal">
           <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Tipo de producto</label>
+            <div class="d-flex gap-2">
+              <button type="button" id="btnTipoAccesorio"
+                      class="btn btn-outline-success flex-fill active-tipo"
+                      onclick="seleccionarTipo('Accesorio')">
+                <i class="bi bi-bag-fill me-1"></i>Accesorio
+              </button>
+              <button type="button" id="btnTipoCelular"
+                      class="btn btn-outline-primary flex-fill"
+                      onclick="seleccionarTipo('Celular')">
+                <i class="bi bi-phone-fill me-1"></i>Celular
+              </button>
+            </div>
+            <input type="hidden" name="tipo_producto" id="tipo_producto" value="Accesorio">
+          </div>
+          <div class="mb-3">
             <label class="form-label text-muted" style="font-size:.85rem;">Producto</label>
-            <input type="text" name="producto" class="form-control"
+            <input type="text" name="producto" id="inputProducto" class="form-control"
                    placeholder="Ej: Vidrio templado Samsung A55" required>
           </div>
           <div class="mb-3">
@@ -350,6 +366,31 @@
           </div>
         </form>
         <script>
+        function seleccionarTipo(tipo) {
+            document.getElementById('tipo_producto').value = tipo;
+            const btnAcc = document.getElementById('btnTipoAccesorio');
+            const btnCel = document.getElementById('btnTipoCelular');
+            const inputProd = document.getElementById('inputProducto');
+            if (tipo === 'Accesorio') {
+                btnAcc.classList.add('btn-success');
+                btnAcc.classList.remove('btn-outline-success');
+                btnCel.classList.remove('btn-primary');
+                btnCel.classList.add('btn-outline-primary');
+                inputProd.placeholder = 'Ej: Vidrio templado Samsung A55, Cargador...';
+            } else {
+                btnCel.classList.add('btn-primary');
+                btnCel.classList.remove('btn-outline-primary');
+                btnAcc.classList.remove('btn-success');
+                btnAcc.classList.add('btn-outline-success');
+                inputProd.placeholder = 'Ej: Samsung Galaxy A55 128GB, iPhone 15...';
+            }
+        }
+        // Inicializar estado activo del botón Accesorio
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('btnTipoAccesorio').classList.add('btn-success');
+            document.getElementById('btnTipoAccesorio').classList.remove('btn-outline-success');
+        });
+
         function guardarAccesorio() {
             const form = document.getElementById('formAccesorio');
             if (!form.checkValidity()) { form.reportValidity(); return; }
