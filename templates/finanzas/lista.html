@@ -1,215 +1,190 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Finanzas — Tecnocel CRM{% endblock %}
+{% block title %}Finanzas y Caja - Tecnocel CRM{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
     <div>
-        <h2 class="h4 mb-1 fw-bold text-primary">
-            <i class="bi bi-calculator-fill me-2"></i>Finanzas y Caja
-        </h2>
-        <p class="text-muted mb-0 small">Control de ingresos, egresos y balance del negocio</p>
+        <h2 class="h4 mb-0"><i class="bi bi-calculator-fill me-2 text-primary"></i>Calculadora de Finanzas</h2>
+        <span class="text-muted small">Fecha actual: {{ hoy }}</span>
     </div>
-    <span class="badge bg-light text-dark border fs-6">
-        <i class="bi bi-calendar3 me-1"></i>{{ hoy }}
-    </span>
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAccesorio">
+            <i class="bi bi-bag-plus me-1"></i>+ Venta de accesorio
+        </button>
+        <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalRecepcionRapida">
+            <i class="bi bi-phone-vibrate me-1"></i>+ Recibir equipo (Rápido)
+        </button>
+        <a href="{{ url_for('ordenes.crear') }}" class="btn btn-outline-primary btn-sm px-3">
+            <i class="bi bi-plus-circle me-1"></i>+ Formulario completo
+        </a>
+    </div>
 </div>
 
-<!-- Resumen Histórico Total -->
-<div class="row g-3 mb-4">
+<div class="row g-4 mb-4">
+    <!-- Ingresos Totales -->
     <div class="col-md-4">
-        <div class="card border-success border-opacity-50 shadow-sm h-100">
+        <div class="card bg-dark border-success border-opacity-50 shadow h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="text-success text-uppercase mb-1 small fw-bold" style="letter-spacing:1px;">Ingresos Totales</h6>
-                        <h3 class="mb-0 fw-bold">$ {{ "{:,.0f}".format(ingresos_total) }}</h3>
+                        <h6 class="text-success text-uppercase mb-1" style="letter-spacing: 1px; font-weight: 700;">Ingresos Totales</h6>
+                        <h3 class="mb-0 text-white">$ {{ "{:,.0f}".format(ingresos_total).replace(',', '.') }}</h3>
                     </div>
-                    <div class="p-2 bg-success bg-opacity-10 rounded text-success">
+                    <div class="p-3 bg-success bg-opacity-10 rounded text-success">
                         <i class="bi bi-graph-up-arrow fs-3"></i>
                     </div>
                 </div>
-                <div class="mt-2 text-muted small">
-                    <i class="bi bi-check-circle-fill text-success me-1"></i>Suma de todas las ventas
+                <div class="mt-3 text-muted small">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>
+                    Calculado automáticamente sumando todas tus ventas.
                 </div>
             </div>
         </div>
     </div>
+    
+    <!-- Egresos Totales -->
     <div class="col-md-4">
-        <div class="card border-danger border-opacity-50 shadow-sm h-100">
+        <div class="card bg-dark border-danger border-opacity-50 shadow h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="text-danger text-uppercase mb-1 small fw-bold" style="letter-spacing:1px;">Egresos Totales</h6>
-                        <h3 class="mb-0 fw-bold">$ {{ "{:,.0f}".format(egresos_total) }}</h3>
+                        <h6 class="text-danger text-uppercase mb-1" style="letter-spacing: 1px; font-weight: 700;">Egresos Totales</h6>
+                        <h3 class="mb-0 text-white">$ {{ "{:,.0f}".format(egresos_total).replace(',', '.') }}</h3>
                     </div>
-                    <div class="p-2 bg-danger bg-opacity-10 rounded text-danger">
+                    <div class="p-3 bg-danger bg-opacity-10 rounded text-danger">
                         <i class="bi bi-graph-down-arrow fs-3"></i>
                     </div>
                 </div>
-                <div class="mt-2 text-muted small">
-                    <i class="bi bi-info-circle-fill text-danger me-1"></i>Suma de todos los gastos
+                <div class="mt-3 text-muted small">
+                    <i class="bi bi-info-circle-fill text-danger me-1"></i>
+                    Suma total de los gastos registrados abajo.
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Balance -->
     <div class="col-md-4">
-        <div class="card {% if balance_total >= 0 %}border-primary{% else %}border-warning{% endif %} border-opacity-50 shadow-sm h-100">
+        <div class="card bg-dark border-info border-opacity-50 shadow h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="{% if balance_total >= 0 %}text-primary{% else %}text-warning{% endif %} text-uppercase mb-1 small fw-bold" style="letter-spacing:1px;">Balance Neto</h6>
-                        <h3 class="mb-0 fw-bold {% if balance_total >= 0 %}text-primary{% else %}text-warning{% endif %}">
-                            $ {{ "{:,.0f}".format(balance_total) }}
-                        </h3>
+                        <h6 class="text-info text-uppercase mb-1" style="letter-spacing: 1px; font-weight: 700;">Balance</h6>
+                        <h3 class="mb-0 text-white">$ {{ "{:,.0f}".format(balance_total).replace(',', '.') }}</h3>
                     </div>
-                    <div class="p-2 {% if balance_total >= 0 %}bg-primary{% else %}bg-warning{% endif %} bg-opacity-10 rounded {% if balance_total >= 0 %}text-primary{% else %}text-warning{% endif %}">
-                        <i class="bi bi-cash-stack fs-3"></i>
+                    <div class="p-3 bg-info bg-opacity-10 rounded text-info">
+                        <i class="bi bi-wallet2 fs-3"></i>
                     </div>
                 </div>
-                <div class="mt-2 small">
-                    {% if balance_total > 0 %}
-                        <span class="text-success"><i class="bi bi-arrow-up-right me-1"></i>Negocio rentable</span>
-                    {% elif balance_total < 0 %}
-                        <span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Más salidas que entradas</span>
-                    {% else %}
-                        <span class="text-muted">Balance neutral</span>
-                    {% endif %}
+                <div class="mt-3 text-muted small">
+                    <i class="bi bi-calculator-fill text-info me-1"></i>
+                    Ingresos menos egresos.
                 </div>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Filtro por Mes -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body py-3">
-        <form method="GET" action="{{ url_for('finanzas.lista') }}" class="row g-2 align-items-end">
-            <div class="col-auto">
-                <label class="form-label small text-muted mb-1">Mes</label>
-                <select name="mes" class="form-select form-select-sm">
-                    {% for m in meses_disponibles %}
-                    <option value="{{ m.valor }}" {% if m.valor == mes_actual %}selected{% endif %}>
-                        {{ m.nombre }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-auto">
-                <label class="form-label small text-muted mb-1">Año</label>
-                <select name="anio" class="form-select form-select-sm">
-                    {% for y in range(anio_min, anio_max + 1) %}
-                    <option value="{{ y }}" {% if y|string == anio_actual %}selected{% endif %}>{{ y }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-funnel me-1"></i>Filtrar
-                </button>
-            </div>
-            <div class="col-auto ms-auto">
-                <div class="text-muted small">
-                    Mostrando: <strong>{{ mes_actual }}/{{ anio_actual }}</strong>
-                    &nbsp;|&nbsp; Ingresos: <span class="text-success fw-bold">$ {{ "{:,.0f}".format(ingresos_mes) }}</span>
-                    &nbsp;|&nbsp; Egresos: <span class="text-danger fw-bold">$ {{ "{:,.0f}".format(egresos_mes) }}</span>
-                    &nbsp;|&nbsp; Balance: <span class="{% if balance_mes >= 0 %}text-primary{% else %}text-warning{% endif %} fw-bold">$ {{ "{:,.0f}".format(balance_mes) }}</span>
-                </div>
-            </div>
-        </form>
     </div>
 </div>
 
 <div class="row g-4">
-    <!-- Registrar Nuevo Egreso -->
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header border-bottom py-3">
-                <h6 class="mb-0 fw-bold text-uppercase small">
-                    <i class="bi bi-plus-circle me-2 text-danger"></i>Registrar Gasto / Egreso
-                </h6>
+    <!-- Columna Ingresos -->
+    <div class="col-lg-6">
+        <div class="card bg-dark border-light shadow">
+            <div class="card-header bg-dark border-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-success">📈 Ingresos (Ventas)</h6>
             </div>
-            <div class="card-body">
-                <form action="{{ url_for('finanzas.crear_egreso') }}" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Concepto <span class="text-danger">*</span></label>
-                        <input type="text" name="concepto" class="form-control"
-                               placeholder="Ej: Arriendo, Servicios, Compra de mercancía..." required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Monto (COP) <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" step="1" min="1" name="monto" class="form-control"
-                                   placeholder="0" required>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Fecha <span class="text-danger">*</span></label>
-                        <input type="date" name="fecha" class="form-control" value="{{ hoy }}" required>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label small fw-semibold">Notas</label>
-                        <textarea name="notas" class="form-control" rows="2"
-                                  placeholder="Descripción adicional (opcional)..."></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-danger w-100">
-                        <i class="bi bi-dash-circle me-1"></i>Registrar Egreso
-                    </button>
-                </form>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cliente</th>
+                                <th class="text-end">Monto</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if ventas %}
+                                {% for venta in ventas %}
+                                <tr>
+                                    <td class="fw-semibold">{{ venta['producto'] }}</td>
+                                    <td class="text-muted">{{ venta['cliente_nombre'] }}</td>
+                                    <td class="text-success fw-bold text-end" style="white-space: nowrap;">
+                                        + {{ "{:,.0f}".format(venta['precio']).replace(',', '.') }}
+                                    </td>
+                                    <td class="text-center">
+                                        <form action="{{ url_for('finanzas.eliminar_venta', id=venta['id']) }}" method="POST"
+                                              onsubmit="return confirm('¿Seguro que deseas eliminar esta venta? Esto devolverá el dinero al balance.');">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Eliminar esta venta">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-3 opacity-50"></i>
+                                    <p class="mb-0">Aún no hay ventas registradas.</p>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Historial de Egresos del Mes -->
-    <div class="col-md-8">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header border-bottom py-3 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold text-uppercase small">
-                    <i class="bi bi-list-ul me-2"></i>Egresos — {{ mes_actual }}/{{ anio_actual }}
-                </h6>
-                <span class="badge bg-danger">
-                    Total: $ {{ "{:,.0f}".format(egresos_mes) }}
-                </span>
+    <!-- Columna Egresos -->
+    <div class="col-lg-6">
+        <div class="card bg-dark border-light shadow">
+            <div class="card-header bg-dark border-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-danger">📉 Egresos (Gastos)</h6>
+                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEgreso">
+                    <i class="bi bi-plus-circle me-1"></i>Agregar gasto
+                </button>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="table-dark">
                             <tr>
-                                <th>Fecha</th>
                                 <th>Concepto</th>
-                                <th>Notas</th>
+                                <th>Categoría</th>
                                 <th class="text-end">Monto</th>
-                                <th></th>
+                                <th class="text-center">Acción</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for egreso in egresos %}
-                            <tr>
-                                <td class="text-muted small" style="white-space:nowrap;">{{ egreso['fecha'] }}</td>
-                                <td class="fw-semibold">{{ egreso['concepto'] }}</td>
-                                <td class="text-muted small">{{ egreso['notas'] or '—' }}</td>
-                                <td class="text-danger fw-bold text-end" style="white-space:nowrap;">
-                                    − $ {{ "{:,.0f}".format(egreso['monto']) }}
-                                </td>
-                                <td class="text-center">
-                                    <form action="{{ url_for('finanzas.eliminar_egreso', id=egreso['id']) }}" method="POST"
-                                          onsubmit="return confirm('¿Eliminar el gasto {{ egreso['concepto'] }}?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar gasto">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
+                            {% if egresos %}
+                                {% for egreso in egresos %}
+                                <tr>
+                                    <td class="fw-semibold">{{ egreso['concepto'] }}</td>
+                                    <td class="text-muted">{{ egreso['categoria'] }}</td>
+                                    <td class="text-danger fw-bold text-end" style="white-space: nowrap;">
+                                        - {{ "{:,.0f}".format(egreso['monto']).replace(',', '.') }}
+                                    </td>
+                                    <td class="text-center">
+                                        <form action="{{ url_for('finanzas.eliminar_egreso', id=egreso['id']) }}" method="POST"
+                                              onsubmit="return confirm('¿Seguro que deseas eliminar este gasto? Esto devolverá el dinero al balance.');">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Eliminar este gasto">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
                             {% else %}
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-5">
+                                <td colspan="4" class="text-center text-muted py-5">
                                     <i class="bi bi-piggy-bank fs-1 d-block mb-3 opacity-50"></i>
-                                    <p class="mb-0">No hay egresos registrados en {{ mes_actual }}/{{ anio_actual }}.</p>
+                                    <p class="mb-0">Aún no hay salidas de dinero documentadas.</p>
                                 </td>
                             </tr>
-                            {% endfor %}
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
@@ -218,47 +193,214 @@
     </div>
 </div>
 
-<!-- Ventas del Mes -->
-{% if ventas_mes %}
-<div class="card border-0 shadow-sm mt-4">
-    <div class="card-header border-bottom py-3 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0 fw-bold text-uppercase small">
-            <i class="bi bi-cart-fill me-2 text-success"></i>Ventas del Mes — {{ mes_actual }}/{{ anio_actual }}
-        </h6>
-        <span class="badge bg-success">
-            Ingresos: $ {{ "{:,.0f}".format(ingresos_mes) }}
-        </span>
+<!-- Modal de Venta de Accesorio -->
+<div class="modal fade" id="modalAccesorio" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-semibold">Venta de accesorio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url_for('ventas.venta_rapida') }}">
+          <input type="hidden" name="origen" value="modal">
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Producto</label>
+            <input type="text" name="producto" class="form-control"
+                   placeholder="Ej: Vidrio templado Samsung A55" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Precio</label>
+            <input type="number" name="precio" class="form-control"
+                   placeholder="15000" min="1" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Tipo de pago</label>
+            <select name="tipo_pago" class="form-select">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Nequi">Nequi</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Daviplata">Daviplata</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Nombre del cliente</label>
+            <input type="text" name="cliente_nombre" class="form-control"
+                   placeholder="Dejar vacío para Cliente Exprés">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Teléfono</label>
+            <input type="text" name="cliente_telefono" class="form-control"
+                   placeholder="3001234567" maxlength="10">
+          </div>
+          <input type="hidden" name="fecha" value="{{ hoy }}">
+          <div class="d-flex gap-2 mt-4">
+            <button type="button" class="btn btn-outline-secondary flex-fill"
+                    data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success flex-fill">
+              <i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Cliente</th>
-                        <th>Producto</th>
-                        <th>Tipo de Pago</th>
-                        <th class="text-end">Precio</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for v in ventas_mes %}
-                    <tr>
-                        <td class="text-muted small">{{ v['fecha'] }}</td>
-                        <td class="fw-semibold">{{ v['cliente_nombre'] }}</td>
-                        <td>{{ v['producto'] }}</td>
-                        <td>
-                            <span class="badge {% if v['tipo_pago'] == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                                {{ v['tipo_pago'] }}
-                            </span>
-                        </td>
-                        <td class="text-success fw-bold text-end">$ {{ "{:,.0f}".format(v['precio']) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+  </div>
 </div>
-{% endif %}
+
+<!-- Modal de Recepción Rápida de Equipos -->
+<div class="modal fade" id="modalRecepcionRapida" tabindex="-1" aria-labelledby="modalRecepcionRapidaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary bg-opacity-10 border-primary border-bottom">
+        <h5 class="modal-title fw-bold text-primary" id="modalRecepcionRapidaLabel">
+          <i class="bi bi-phone-vibrate me-2"></i>Recepción Rápida de Equipo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="POST" action="{{ url_for('ordenes.recepcion_rapida') }}" novalidate>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label for="nombre_cliente_rapida" class="form-label fw-semibold">
+              Nombre del Cliente <span class="text-danger">*</span>
+            </label>
+            <input type="text" 
+                   class="form-control form-control-lg" 
+                   id="nombre_cliente_rapida" 
+                   name="nombre_cliente_rapida" 
+                   placeholder="Ej: Juan Pérez"
+                   required
+                   autofocus>
+          </div>
+          
+          <div class="mb-3">
+            <label for="telefono_cliente_rapida" class="form-label fw-semibold">
+              Teléfono <span class="text-danger">*</span>
+            </label>
+            <input type="tel" 
+                   class="form-control form-control-lg" 
+                   id="telefono_cliente_rapida" 
+                   name="telefono_cliente_rapida" 
+                   placeholder="Ej: 3001234567"
+                   required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="marca_modelo_rapida" class="form-label fw-semibold">
+              Marca/Modelo <span class="text-danger">*</span>
+            </label>
+            <input type="text" 
+                   class="form-control form-control-lg" 
+                   id="marca_modelo_rapida" 
+                   name="marca_modelo_rapida" 
+                   placeholder="Ej: Samsung A55, iPhone 15..."
+                   required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="problema_rapida" class="form-label fw-semibold">
+              Problema <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control form-control-lg" 
+                      id="problema_rapida" 
+                      name="problema_rapida" 
+                      placeholder="Ej: Pantalla rota, No carga..." 
+                      rows="3" 
+                      required></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label for="costo_estimado_rapida" class="form-label fw-semibold">
+              Costo Estimado (Opcional)
+            </label>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text fw-bold">$</span>
+              <input type="number" 
+                     class="form-control" 
+                     id="costo_estimado_rapida" 
+                     name="costo_estimado_rapida" 
+                     placeholder="0" 
+                     min="0" 
+                     step="1000">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Registrar Equipo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Agregar Gasto -->
+<div class="modal fade" id="modalEgreso" tabindex="-1" aria-labelledby="modalEgresoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-danger bg-opacity-10 border-danger border-bottom">
+        <h5 class="modal-title fw-bold text-danger" id="modalEgresoLabel">
+          <i class="bi bi-dash-circle me-2"></i>Registrar Gasto / Egreso
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="POST" action="{{ url_for('finanzas.crear_egreso') }}">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Concepto <span class="text-danger">*</span></label>
+            <input type="text" name="concepto" class="form-control form-control-lg"
+                   placeholder="Ej: Compra de repuestos, Arriendo, Servicios..."
+                   required autofocus>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Monto <span class="text-danger">*</span></label>
+              <div class="input-group input-group-lg">
+                <span class="input-group-text fw-bold">$</span>
+                <input type="number" name="monto" class="form-control"
+                       placeholder="0" min="1" step="1" required>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+              <input type="date" name="fecha" class="form-control form-control-lg"
+                     value="{{ hoy }}" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Categoría</label>
+            <select name="categoria" class="form-select form-select-lg">
+              <option value="">-- Sin categoría --</option>
+              <option value="Repuestos">Repuestos</option>
+              <option value="Arriendo">Arriendo</option>
+              <option value="Servicios">Servicios públicos</option>
+              <option value="Herramientas">Herramientas</option>
+              <option value="Publicidad">Publicidad</option>
+              <option value="Nómina">Nómina</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="mb-1">
+            <label class="form-label fw-semibold">Notas (opcional)</label>
+            <textarea name="notas" class="form-control" rows="2"
+                      placeholder="Descripción adicional del gasto..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-danger px-4">
+            <i class="bi bi-check-lg me-1"></i>Registrar Gasto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

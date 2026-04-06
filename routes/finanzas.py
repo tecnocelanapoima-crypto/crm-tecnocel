@@ -1,7 +1,3 @@
-"""
-Finanzas — control de ingresos, egresos y balance del negocio.
-"""
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from database.db import get_db
 from routes.auth import login_required
@@ -16,113 +12,74 @@ def lista():
     nid = session['negocio_id']
     db  = get_db()
 
-    # Filtros opcionales por mes y año
-    hoy    = datetime.now()
-    mes    = request.args.get('mes', str(hoy.month).zfill(2))
-    anio   = request.args.get('anio', str(hoy.year))
-    filtro = f"{anio}-{mes}"
-
-    # Ingresos totales (histórico)
     ingresos_total = db.execute(
         'SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ?', (nid,)
     ).fetchone()[0]
 
-    # Ingresos del mes seleccionado
-    ingresos_mes = db.execute(
-        "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND strftime('%Y-%m', fecha) = ?",
-        (nid, filtro)
-    ).fetchone()[0]
+    ventas = db.execute(
+        'SELECT * FROM ventas WHERE negocio_id = ? ORDER BY fecha DESC, id DESC',
+        (nid,)
+    ).fetchall()
 
-    # Egresos totales (histórico)
+    egresos = db.execute(
+        'SELECT * FROM egresos WHERE negocio_id = ? ORDER BY fecha DESC, fecha_creacion DESC',
+        (nid,)
+    ).fetchall()
+
     egresos_total = db.execute(
         'SELECT COALESCE(SUM(monto), 0) FROM egresos WHERE negocio_id = ?', (nid,)
     ).fetchone()[0]
 
-    # Egresos del mes seleccionado
-    egresos_mes = db.execute(
-        "SELECT COALESCE(SUM(monto), 0) FROM egresos WHERE negocio_id = ? AND strftime('%Y-%m', fecha) = ?",
-        (nid, filtro)
-    ).fetchone()[0]
-
-    # Lista de egresos del mes seleccionado
-    egresos = db.execute(
-        "SELECT * FROM egresos WHERE negocio_id = ? AND strftime('%Y-%m', fecha) = ? ORDER BY fecha DESC, fecha_creacion DESC",
-        (nid, filtro)
-    ).fetchall()
-
-    # Ventas del mes seleccionado
-    ventas_mes = db.execute('''
-        SELECT v.fecha, v.producto, v.precio, v.tipo_pago, c.nombre AS cliente_nombre
-        FROM ventas v
-        JOIN clientes c ON v.cliente_id = c.id
-        WHERE v.negocio_id = ? AND strftime('%Y-%m', v.fecha) = ?
-        ORDER BY v.fecha DESC
-    ''', (nid, filtro)).fetchall()
-
     balance_total = ingresos_total - egresos_total
-    balance_mes   = ingresos_mes - egresos_mes
-
-    # Generar lista de meses disponibles para el selector
-    meses_disponibles = [
-        {'valor': str(m).zfill(2), 'nombre': datetime(2000, m, 1).strftime('%B').capitalize()}
-        for m in range(1, 13)
-    ]
-
-    db.close()
 
     return render_template('finanzas/lista.html',
                            ingresos_total=ingresos_total,
                            egresos_total=egresos_total,
                            balance_total=balance_total,
-                           ingresos_mes=ingresos_mes,
-                           egresos_mes=egresos_mes,
-                           balance_mes=balance_mes,
+                           ventas=ventas,
                            egresos=egresos,
-                           ventas_mes=ventas_mes,
-                           hoy=hoy.strftime('%Y-%m-%d'),
-                           mes_actual=mes,
-                           anio_actual=anio,
-                           filtro=filtro,
-                           meses_disponibles=meses_disponibles,
-                           anio_min=2024,
-                           anio_max=hoy.year + 1)
+                           hoy=datetime.now().strftime('%Y-%m-%d'))
 
 
 @finanzas_bp.route('/egreso/crear', methods=['POST'])
 @login_required
 def crear_egreso():
-    nid      = session['negocio_id']
-    concepto = request.form.get('concepto', '').strip()
-    notas    = request.form.get('notas', '').strip()
-    fecha    = request.form.get('fecha', '').strip()
+    nid       = session['negocio_id']
+    concepto  = request.form.get('concepto', '').strip()
+    monto     = request.form.get('monto', 0)
+    fecha     = request.form.get('fecha', '')
+    notas     = request.form.get('notas', '').strip()
+    categoria = request.form.get('categoria', '').strip()
 
-    errores = []
-    if not concepto:
-        errores.append('El concepto del gasto es obligatorio.')
-    if not fecha:
-        errores.append('La fecha es obligatoria.')
-
-    try:
-        monto = float(request.form.get('monto', 0))
-        if monto <= 0:
-            errores.append('El monto debe ser mayor a cero.')
-    except (ValueError, TypeError):
-        errores.append('El monto debe ser un número válido.')
-        monto = 0
-
-    if errores:
-        for e in errores:
-            flash(e, 'danger')
+    if not concepto or not monto or not fecha:
+        flash('Concepto, monto y fecha son obligatorios', 'danger')
         return redirect(url_for('finanzas.lista'))
 
     db = get_db()
+    # Migración automática: agregar columna categoria si no existe
+    try:
+        db.execute('ALTER TABLE egresos ADD COLUMN categoria TEXT DEFAULT ""')
+        db.commit()
+    except Exception:
+        pass  # La columna ya existe
+
     db.execute('''
-        INSERT INTO egresos (negocio_id, concepto, monto, fecha, notas)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (nid, concepto, monto, fecha, notas))
+        INSERT INTO egresos (negocio_id, concepto, monto, fecha, notas, categoria)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (nid, concepto, float(monto), fecha, notas, categoria))
     db.commit()
-    db.close()
-    flash(f'Gasto "{concepto}" por $ {monto:,.0f} registrado correctamente.', 'success')
+    flash('Gasto registrado correctamente.', 'success')
+    return redirect(url_for('finanzas.lista'))
+
+
+@finanzas_bp.route('/venta/<int:id>/eliminar', methods=['POST'])
+@login_required
+def eliminar_venta(id):
+    nid = session['negocio_id']
+    db  = get_db()
+    db.execute('DELETE FROM ventas WHERE id = ? AND negocio_id = ?', (id, nid))
+    db.commit()
+    flash('Venta eliminada.', 'success')
     return redirect(url_for('finanzas.lista'))
 
 
@@ -131,16 +88,7 @@ def crear_egreso():
 def eliminar_egreso(id):
     nid = session['negocio_id']
     db  = get_db()
-    egreso = db.execute(
-        'SELECT concepto, monto FROM egresos WHERE id = ? AND negocio_id = ?', (id, nid)
-    ).fetchone()
-
-    if egreso:
-        db.execute('DELETE FROM egresos WHERE id = ? AND negocio_id = ?', (id, nid))
-        db.commit()
-        flash(f'Gasto "{egreso["concepto"]}" eliminado.', 'success')
-    else:
-        flash('Gasto no encontrado.', 'danger')
-
-    db.close()
+    db.execute('DELETE FROM egresos WHERE id = ? AND negocio_id = ?', (id, nid))
+    db.commit()
+    flash('Gasto eliminado.', 'success')
     return redirect(url_for('finanzas.lista'))
