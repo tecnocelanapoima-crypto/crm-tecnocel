@@ -91,6 +91,38 @@
             0%,100% { box-shadow: 0 0 10px rgba(0,207,255,0.5), 0 0 22px rgba(0,207,255,0.2); }
             50%      { box-shadow: 0 0 18px rgba(0,207,255,0.85), 0 0 40px rgba(0,207,255,0.4), inset 0 0 12px rgba(0,207,255,0.12); }
         }
+
+        /* ===== BOTÓN RETROCESO ===== */
+        .btn-back-crm {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(0,207,255,0.07);
+            color: rgba(160,196,216,0.85);
+            border: 1px solid rgba(0,207,255,0.3);
+            border-radius: 8px;
+            padding: 6px 16px 6px 12px;
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color .2s, border-color .2s, box-shadow .2s, background .2s, text-shadow .2s;
+            letter-spacing: .02em;
+        }
+        .btn-back-crm:hover {
+            color: #00CFFF;
+            border-color: rgba(0,207,255,0.6);
+            background: rgba(0,207,255,0.12);
+            box-shadow: 0 0 10px rgba(0,207,255,0.45), 0 0 22px rgba(0,207,255,0.2);
+            text-shadow: 0 0 8px rgba(0,207,255,0.7);
+        }
+        .btn-back-crm i {
+            font-size: 1.1rem;
+            transition: filter .2s, transform .2s;
+        }
+        .btn-back-crm:hover i {
+            filter: drop-shadow(0 0 6px rgba(0,207,255,0.9));
+            transform: translateX(-2px);
+        }
     </style>
 </head>
 <body>
@@ -228,6 +260,16 @@
 </nav>
 
 <div class="container-fluid py-4 px-4">
+    <!-- BOTÓN DE RETROCESO -->
+    {% if request.endpoint != 'index' and request.endpoint != 'auth.login' and request.endpoint != 'auth.registro' %}
+    <div class="mb-3">
+        <button onclick="history.back()" class="btn-back-crm">
+            <i class="bi bi-arrow-left-circle-fill"></i>
+            <span>Volver</span>
+        </button>
+    </div>
+    {% endif %}
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="mb-3">
