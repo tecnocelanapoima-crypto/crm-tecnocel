@@ -385,47 +385,151 @@
                 inputProd.placeholder = 'Ej: Samsung Galaxy A55 128GB, iPhone 15...';
             }
         }
-        // Inicializar estado activo del botón Accesorio
+        // ── Autocompletado de cliente por teléfono ─────────────────────────────────
+        function buscarClientePorTelefono(telefonoInput, nombreInput) {
+            const tel = telefonoInput.value.trim();
+            if (tel.length < 7) return;
+            fetch('/api/cliente-por-telefono?telefono=' + encodeURIComponent(tel))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.found && data.nombre) {
+                        nombreInput.value = data.nombre;
+                        nombreInput.style.borderColor = '#20c997';
+                        nombreInput.title = 'Cliente encontrado: ' + data.nombre;
+                        setTimeout(() => { nombreInput.style.borderColor = ''; }, 2000);
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // Inicializar estado activo del botón Accesorio y autocompletado
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('btnTipoAccesorio').classList.add('btn-success');
             document.getElementById('btnTipoAccesorio').classList.remove('btn-outline-success');
+
+            // Autocompletado en modal de Venta de Accesorio
+            const telAccesorio = document.querySelector('#formAccesorio input[name="cliente_telefono"]');
+            const nomAccesorio = document.querySelector('#formAccesorio input[name="cliente_nombre"]');
+            if (telAccesorio && nomAccesorio) {
+                telAccesorio.addEventListener('blur', () => buscarClientePorTelefono(telAccesorio, nomAccesorio));
+                telAccesorio.addEventListener('keyup', function() {
+                    if (this.value.length === 10) buscarClientePorTelefono(telAccesorio, nomAccesorio);
+                });
+            }
+
+            // Autocompletado en modal de Recepción Rápida
+            const telRapida = document.getElementById('telefono_cliente_rapida');
+            const nomRapida = document.getElementById('nombre_cliente_rapida');
+            if (telRapida && nomRapida) {
+                telRapida.addEventListener('blur', () => buscarClientePorTelefono(telRapida, nomRapida));
+                telRapida.addEventListener('keyup', function() {
+                    if (this.value.length === 10) buscarClientePorTelefono(telRapida, nomRapida);
+                });
+            }
         });
 
+        // ── Utilidad: mostrar toast de éxito ──────────────────────────────────
+        function mostrarToast(mensaje, tipo) {
+            const toastId = 'toast_' + Date.now();
+            const color = tipo === 'error' ? 'bg-danger' : 'bg-success';
+            const html = `<div id="${toastId}" class="toast align-items-center text-white ${color} border-0 position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+                <div class="d-flex">
+                  <div class="toast-body fw-semibold">${mensaje}</div>
+                  <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div></div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            const toastEl = document.getElementById(toastId);
+            new bootstrap.Toast(toastEl, { delay: 3000 }).show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+
+        // ── Utilidad: refrescar contadores del Dashboard sin recargar ──────────
+        function refrescarContadores() {
+            fetch('/dashboard/stats')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ventas_hoy !== undefined) {
+                        const els = document.querySelectorAll('[data-stat]');
+                        els.forEach(el => {
+                            const key = el.getAttribute('data-stat');
+                            if (data[key] !== undefined) el.textContent = data[key];
+                        });
+                    }
+                    // Recargar página para actualizar todos los contadores
+                    setTimeout(() => window.location.reload(), 800);
+                })
+                .catch(() => setTimeout(() => window.location.reload(), 800));
+        }
+
+        // ── Guardar venta de accesorio ─────────────────────────────────────────
         function guardarAccesorio() {
             const form = document.getElementById('formAccesorio');
             if (!form.checkValidity()) { form.reportValidity(); return; }
+            const btn = form.querySelector('button[onclick="guardarAccesorio()"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
             const data = new FormData(form);
             fetch("{{ url_for('ventas.venta_rapida') }}", { method: 'POST', body: data })
                 .then(r => r.json())
                 .then(res => {
-                    // Abrir WhatsApp
-                    window.open(res.whatsapp_url, '_blank');
-                    // Abrir carpeta de facturas
-                    if (res.pdf_path) {
-                        fetch('/abrir-carpeta-facturas');
-                    }
-                    // Cerrar modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalAccesorio'));
-                    modal.hide();
-                    // Recargar página
-                    setTimeout(() => window.location.reload(), 1500);
+                    // 1. Cerrar modal de forma robusta
+                    const modalEl = document.getElementById('modalAccesorio');
+                    const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInst.hide();
+                    // 2. Limpiar formulario
+                    form.reset();
+                    document.getElementById('btnTipoAccesorio').classList.add('btn-success');
+                    document.getElementById('btnTipoAccesorio').classList.remove('btn-outline-success');
+                    document.getElementById('btnTipoCelular').classList.remove('btn-primary');
+                    document.getElementById('btnTipoCelular').classList.add('btn-outline-primary');
+                    document.getElementById('tipo_producto').value = 'Accesorio';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp';
+                    // 3. Toast de éxito
+                    mostrarToast('✅ Venta registrada correctamente', 'success');
+                    // 4. Abrir WhatsApp
+                    if (res.whatsapp_url) window.open(res.whatsapp_url, '_blank');
+                    // 5. Refrescar contadores
+                    refrescarContadores();
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp';
+                    mostrarToast('❌ Error al guardar la venta', 'error');
                 });
         }
 
+        // ── Guardar recepción rápida de equipo ─────────────────────────────────
         function guardarOrden(event) {
             event.preventDefault();
             const form = document.getElementById('formRecepcionRapida');
             if (!form.checkValidity()) { form.reportValidity(); return; }
+            const btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
             const data = new FormData(form);
             fetch("{{ url_for('ordenes.recepcion_rapida') }}", { method: 'POST', body: data })
                 .then(r => r.json())
                 .then(res => {
-                    if (res.whatsapp_url) {
-                        window.open(res.whatsapp_url, '_blank');
-                    }
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalRecepcionRapida'));
-                    modal.hide();
-                    setTimeout(() => window.location.reload(), 1500);
+                    // 1. Cerrar modal de forma robusta
+                    const modalEl = document.getElementById('modalRecepcionRapida');
+                    const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInst.hide();
+                    // 2. Limpiar formulario
+                    form.reset();
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp';
+                    // 3. Toast de éxito
+                    mostrarToast('📥 Equipo recibido correctamente', 'success');
+                    // 4. Abrir WhatsApp
+                    if (res.whatsapp_url) window.open(res.whatsapp_url, '_blank');
+                    // 5. Refrescar contadores
+                    refrescarContadores();
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp';
+                    mostrarToast('❌ Error al guardar la orden', 'error');
                 });
         }
         </script>

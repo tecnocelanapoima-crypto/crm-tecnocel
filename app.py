@@ -4,7 +4,7 @@ Sistema multi-tenant: cada negocio ve solo sus datos
 """
 
 import os
-from flask import Flask, render_template, redirect, url_for, session, request, flash
+from flask import Flask, render_template, redirect, url_for, session, request, flash, jsonify
 from database.db import init_db, get_db, close_db
 from datetime import date
 
@@ -203,6 +203,54 @@ def completos():
     total_recaudado = sum(item['valor'] for item in todo if item['valor'])
 
     return render_template('completos.html', lista=todo, total=total_recaudado)
+
+
+# ── API: Stats del Dashboard (AJAX) ─────────────────────────────────────────
+@app.route('/dashboard/stats')
+def dashboard_stats():
+    """Devuelve los contadores del Dashboard en JSON para refresco asíncrono."""
+    if not session.get('negocio_id'):
+        return jsonify({'error': 'no_auth'}), 401
+    nid = session['negocio_id']
+    db  = get_db()
+    try:
+        equipos_hoy = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        equipos_listos = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ? AND estado = 'listo'", (nid,)).fetchone()[0]
+        ventas_hoy = db.execute("SELECT COUNT(*) FROM ventas WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        ingresos_ventas = db.execute("SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        ingresos_abonos = db.execute("SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        ingresos_ordenes = db.execute("SELECT COALESCE(SUM(costo_final - abono), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)).fetchone()[0]
+        recaudado = ingresos_ventas + ingresos_abonos + ingresos_ordenes
+        return jsonify({
+            'equipos_hoy': equipos_hoy,
+            'equipos_listos': equipos_listos,
+            'ventas_hoy': ventas_hoy,
+            'recaudado': f'$ {int(recaudado):,}'.replace(',', '.'),
+            'ingresos_ventas': f'$ {int(ingresos_ventas):,}'.replace(',', '.'),
+            'ingresos_abonos': f'$ {int(ingresos_abonos):,}'.replace(',', '.'),
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── API: Buscar cliente por teléfono (AJAX autocompletado) ───────────────────
+@app.route('/api/cliente-por-telefono')
+def cliente_por_telefono():
+    """Busca un cliente por teléfono para autocompletar el nombre."""
+    if not session.get('negocio_id'):
+        return jsonify({'error': 'no_auth'}), 401
+    nid = session['negocio_id']
+    telefono = request.args.get('telefono', '').strip()
+    if not telefono or len(telefono) < 7:
+        return jsonify({'found': False})
+    db = get_db()
+    cliente = db.execute(
+        "SELECT nombre FROM clientes WHERE negocio_id = ? AND telefono LIKE ?",
+        (nid, f'%{telefono}%')
+    ).fetchone()
+    if cliente:
+        return jsonify({'found': True, 'nombre': cliente['nombre']})
+    return jsonify({'found': False})
 
 
 @app.route('/abrir-carpeta-facturas')

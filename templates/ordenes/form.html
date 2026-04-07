@@ -144,5 +144,30 @@ function calcularSaldo() {
   document.getElementById('saldo_pendiente_display').value = saldo > 0 ? saldo : 0;
 }
 document.querySelector('[name=costo_estimado]').addEventListener('input', calcularSaldo);
+
+// ── Autocompletado de cliente por teléfono ────────────────────────────────
+const telInput = document.querySelector('input[name="cliente_telefono"]');
+const nomInput = document.querySelector('input[name="cliente_nombre"]');
+if (telInput && nomInput) {
+    function autocompletarCliente() {
+        const tel = telInput.value.trim();
+        if (tel.length < 7) return;
+        fetch('/api/cliente-por-telefono?telefono=' + encodeURIComponent(tel))
+            .then(r => r.json())
+            .then(data => {
+                if (data.found && data.nombre && !nomInput.value.trim()) {
+                    nomInput.value = data.nombre;
+                    nomInput.style.borderColor = '#20c997';
+                    nomInput.placeholder = '✅ Cliente encontrado';
+                    setTimeout(() => { nomInput.style.borderColor = ''; }, 2500);
+                }
+            })
+            .catch(() => {});
+    }
+    telInput.addEventListener('blur', autocompletarCliente);
+    telInput.addEventListener('keyup', function() {
+        if (this.value.length === 10) autocompletarCliente();
+    });
+}
 </script>
 {% endblock %}
