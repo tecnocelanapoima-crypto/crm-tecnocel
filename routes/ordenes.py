@@ -79,11 +79,27 @@ def init_ordenes_table():
 
 
 def generar_pdf_recepcion(orden, cliente, negocio):
-    carpeta = 'facturas_pdf'
+    # ── Carpeta organizada por año / mes / día ────────────────────────────────
+    ahora       = datetime.now()
+    meses_es    = {
+        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+        5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+        9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+    }
+    anio   = ahora.strftime('%Y')
+    mes    = meses_es[ahora.month]
+    dia    = ahora.strftime('%d')
+    hora   = ahora.strftime('%H-%M-%S')
+
+    carpeta = os.path.join('facturas', anio, mes, dia)
     os.makedirs(carpeta, exist_ok=True)
 
-    nombre_archivo = f"recepcion_{orden['numero_orden'].replace('-', '_')}.pdf"
-    ruta = os.path.join(carpeta, nombre_archivo)
+    # Mantener también la carpeta facturas_pdf para compatibilidad
+    os.makedirs('facturas_pdf', exist_ok=True)
+
+    nombre_archivo = f"recepcion_{orden['numero_orden'].replace('-', '_')}_{hora}.pdf"
+    ruta           = os.path.join(carpeta, nombre_archivo)
+    ruta_legacy    = os.path.join('facturas_pdf', nombre_archivo)
 
     doc = SimpleDocTemplate(ruta, pagesize=A4,
                             rightMargin=2*cm, leftMargin=2*cm,
@@ -156,6 +172,14 @@ def generar_pdf_recepcion(orden, cliente, negocio):
         estilo_nota))
 
     doc.build(contenido)
+
+    # Copiar también a facturas_pdf para compatibilidad con el resto del sistema
+    import shutil
+    try:
+        shutil.copy2(ruta, ruta_legacy)
+    except Exception:
+        pass
+
     return ruta, nombre_archivo
 
 
@@ -360,10 +384,10 @@ def confirmar_recepcion(id):
     # Generar PDF
     ruta_pdf, nombre_archivo = generar_pdf_recepcion(orden, cliente, negocio)
 
-    # Abrir carpeta en Windows Explorer
-    carpeta = os.path.abspath('facturas_pdf')
+    # Abrir la carpeta organizada por fecha en Windows Explorer
+    carpeta_fecha = os.path.abspath(os.path.dirname(ruta_pdf))
     if platform.system() == 'Windows':
-        subprocess.Popen(['explorer', carpeta])
+        subprocess.Popen(['explorer', carpeta_fecha])
 
     # Construir mensaje WhatsApp
     numero = limpiar_telefono(cliente['telefono'])

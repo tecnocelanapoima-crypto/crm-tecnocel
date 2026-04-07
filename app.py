@@ -256,7 +256,23 @@ def cliente_por_telefono():
 @app.route('/abrir-carpeta-facturas')
 def abrir_carpeta_facturas():
     import subprocess, platform, os
-    carpeta = os.path.abspath('facturas_pdf')
+    from datetime import datetime
+    ahora = datetime.now()
+    meses_es = {
+        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+        5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+        9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+    }
+    # Abrir la carpeta del día actual dentro de facturas/
+    carpeta_hoy = os.path.abspath(os.path.join(
+        'facturas',
+        ahora.strftime('%Y'),
+        meses_es[ahora.month],
+        ahora.strftime('%d')
+    ))
+    # Si no existe todavía la carpeta de hoy, abrir la raíz de facturas
+    carpeta = carpeta_hoy if os.path.exists(carpeta_hoy) else os.path.abspath('facturas')
+    os.makedirs(carpeta, exist_ok=True)
     if platform.system() == 'Windows':
         subprocess.Popen(['explorer', carpeta])
     return '', 204
