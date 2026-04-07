@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin — Tecnocel CRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #0a0e1a; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
+        .navbar-admin { background: #0d1117; border-bottom: 1px solid rgba(0,229,255,0.2);
+                        padding: 12px 24px; display: flex; align-items: center;
+                        justify-content: space-between; }
+        .navbar-admin h5 { color: #00e5ff; margin: 0; font-weight: 700; }
+        .stat-card { background: #111827; border-radius: 12px; padding: 1.2rem 1.5rem;
+                     border-left: 4px solid; text-align: center; }
+        .stat-card.total   { border-color: #00e5ff; }
+        .stat-card.activo  { border-color: #00c853; }
+        .stat-card.vencido { border-color: #ff6b35; }
+        .stat-card.inactivo{ border-color: #888; }
+        .stat-num { font-size: 2rem; font-weight: 800; }
+        .stat-label { color: #aaa; font-size: 0.85rem; }
+        .table-dark-custom { background: #111827; border-radius: 12px; overflow: hidden; }
+        .table-dark-custom table { margin: 0; }
+        .table-dark-custom thead th { background: #1a2035; color: #00e5ff;
+                                       border-color: #333; font-size: 0.85rem; }
+        .table-dark-custom tbody tr { border-color: #1e2a3a; }
+        .table-dark-custom tbody tr:hover { background: rgba(0,229,255,0.03); }
+        .badge-plan { border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; }
+        .badge-prueba  { background: rgba(255,193,7,0.15); color: #ffc107; border: 1px solid #ffc107; }
+        .badge-basico  { background: rgba(0,229,255,0.1); color: #00e5ff; border: 1px solid #00e5ff; }
+        .badge-taller  { background: rgba(0,200,83,0.1); color: #00c853; border: 1px solid #00c853; }
+        .badge-vencido { background: rgba(255,68,68,0.15); color: #ff4444; border: 1px solid #ff4444; }
+        .badge-ok      { background: rgba(0,200,83,0.1); color: #00c853; border: 1px solid #00c853; }
+        .btn-sm-cyan { background: rgba(0,229,255,0.1); border: 1px solid #00e5ff;
+                       color: #00e5ff; border-radius: 6px; padding: 4px 10px;
+                       font-size: 0.8rem; cursor: pointer; }
+        .btn-sm-cyan:hover { background: rgba(0,229,255,0.2); }
+        .btn-sm-red { background: rgba(255,68,68,0.1); border: 1px solid #ff4444;
+                      color: #ff4444; border-radius: 6px; padding: 4px 10px;
+                      font-size: 0.8rem; cursor: pointer; }
+        .btn-sm-green { background: rgba(0,200,83,0.1); border: 1px solid #00c853;
+                        color: #00c853; border-radius: 6px; padding: 4px 10px;
+                        font-size: 0.8rem; cursor: pointer; }
+        .modal-content { background: #111827; border: 1px solid rgba(0,229,255,0.3); color: #e0e0e0; }
+        .modal-header { border-color: #333; }
+        .modal-footer { border-color: #333; }
+        .form-control, .form-select { background: #1a2035; border: 1px solid #333;
+                                       color: #e0e0e0; border-radius: 8px; }
+        .form-control:focus, .form-select:focus { background: #1a2035; border-color: #00e5ff;
+                                                   color: #e0e0e0; box-shadow: none; }
+        .form-select option { background: #1a2035; }
+        .dias-venc { font-size: 0.8rem; }
+        .dias-venc.ok { color: #00c853; }
+        .dias-venc.warn { color: #ffc107; }
+        .dias-venc.vencido { color: #ff4444; }
+        a { color: #00e5ff; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar-admin">
+    <h5><i class="fas fa-tools me-2"></i>Tecnocel CRM — Panel Admin</h5>
+    <a href="{{ url_for('admin.logout_admin') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-sign-out-alt me-1"></i> Salir
+    </a>
+</div>
+
+<div class="container-fluid px-4 py-4">
+
+    <!-- Alertas -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+            <div class="alert alert-{{ 'success' if cat == 'success' else 'warning' }} alert-dismissible fade show py-2">
+                {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    <!-- Estadísticas -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card total">
+                <div class="stat-num" style="color:#00e5ff;">{{ total }}</div>
+                <div class="stat-label">Total negocios</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card activo">
+                <div class="stat-num" style="color:#00c853;">{{ activos }}</div>
+                <div class="stat-label">Activos</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card vencido">
+                <div class="stat-num" style="color:#ff6b35;">{{ vencidos }}</div>
+                <div class="stat-label">Vencidos</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card inactivo">
+                <div class="stat-num" style="color:#888;">{{ inactivos }}</div>
+                <div class="stat-label">Desactivados</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de negocios -->
+    <div class="table-dark-custom">
+        <div class="p-3 d-flex align-items-center justify-content-between"
+             style="border-bottom:1px solid #333;">
+            <h6 class="mb-0" style="color:#00e5ff;">
+                <i class="fas fa-store me-2"></i>Negocios registrados
+            </h6>
+            <span style="color:#aaa; font-size:0.85rem;">{{ hoy }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-borderless align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Negocio</th>
+                        <th>Contacto</th>
+                        <th>Plan</th>
+                        <th>Vencimiento</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for n in negocios %}
+                {% set vencido = n.fecha_vencimiento and n.fecha_vencimiento < hoy %}
+                {% set dias_restantes = ((n.fecha_vencimiento | string)[:10] if n.fecha_vencimiento else '9999-12-31') %}
+                <tr>
+                    <td>
+                        <div style="font-weight:600;">{{ n.nombre_negocio }}</div>
+                        <div style="color:#aaa; font-size:0.8rem;">ID {{ n.id }}</div>
+                    </td>
+                    <td>
+                        <div style="font-size:0.85rem;">{{ n.email }}</div>
+                        <div style="color:#aaa; font-size:0.8rem;">{{ n.telefono or '—' }}</div>
+                    </td>
+                    <td>
+                        {% if n.plan_nombre == 'prueba' %}
+                            <span class="badge-plan badge-prueba">Prueba</span>
+                        {% elif n.plan_nombre == 'taller' %}
+                            <span class="badge-plan badge-taller">Taller</span>
+                        {% else %}
+                            <span class="badge-plan badge-basico">Básico</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if n.fecha_vencimiento %}
+                            <div style="font-size:0.9rem;">{{ n.fecha_vencimiento }}</div>
+                            {% if vencido %}
+                                <div class="dias-venc vencido"><i class="fas fa-times-circle me-1"></i>Vencido</div>
+                            {% elif n.fecha_vencimiento <= (hoy[:8] ~ (hoy[8:10] | int + 7) | string) %}
+                                <div class="dias-venc warn"><i class="fas fa-exclamation-triangle me-1"></i>Por vencer</div>
+                            {% else %}
+                                <div class="dias-venc ok"><i class="fas fa-check-circle me-1"></i>Vigente</div>
+                            {% endif %}
+                        {% else %}
+                            <span style="color:#aaa;">Sin fecha</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if n.activo %}
+                            <span class="badge-plan badge-ok">Activo</span>
+                        {% else %}
+                            <span class="badge-plan badge-vencido">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <!-- Renovar -->
+                            <button class="btn-sm-cyan"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalRenovar{{ n.id }}">
+                                <i class="fas fa-sync-alt me-1"></i>Renovar
+                            </button>
+                            <!-- Activar/Desactivar -->
+                            <form method="POST"
+                                  action="{{ url_for('admin.activar', negocio_id=n.id) }}"
+                                  style="display:inline;">
+                                {% if n.activo %}
+                                    <input type="hidden" name="accion" value="desactivar">
+                                    <button type="submit" class="btn-sm-red"
+                                            onclick="return confirm('¿Desactivar este negocio?')">
+                                        <i class="fas fa-ban me-1"></i>Bloquear
+                                    </button>
+                                {% else %}
+                                    <input type="hidden" name="accion" value="activar">
+                                    <button type="submit" class="btn-sm-green">
+                                        <i class="fas fa-check me-1"></i>Activar
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Modal Renovar -->
+                <div class="modal fade" id="modalRenovar{{ n.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-sm">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title" style="color:#00e5ff;">
+                                    <i class="fas fa-sync-alt me-2"></i>Renovar suscripción
+                                </h6>
+                                <button type="button" class="btn-close btn-close-white"
+                                        data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST"
+                                  action="{{ url_for('admin.renovar', negocio_id=n.id) }}">
+                                <div class="modal-body">
+                                    <p style="color:#aaa; font-size:0.9rem;">
+                                        <strong style="color:#e0e0e0;">{{ n.nombre_negocio }}</strong>
+                                    </p>
+                                    <div class="mb-3">
+                                        <label class="form-label" style="color:#aaa; font-size:0.85rem;">Plan</label>
+                                        <select name="plan" class="form-select form-select-sm">
+                                            <option value="prueba" {% if n.plan_nombre == 'prueba' %}selected{% endif %}>Prueba gratis</option>
+                                            <option value="basico" {% if n.plan_nombre == 'basico' %}selected{% endif %}>Básico — $15.000/mes</option>
+                                            <option value="taller" {% if n.plan_nombre == 'taller' %}selected{% endif %}>Taller — $30.000/mes</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label" style="color:#aaa; font-size:0.85rem;">Días a agregar</label>
+                                        <select name="dias" class="form-select form-select-sm">
+                                            <option value="14">14 días (prueba)</option>
+                                            <option value="30" selected>30 días (1 mes)</option>
+                                            <option value="60">60 días (2 meses)</option>
+                                            <option value="90">90 días (3 meses)</option>
+                                            <option value="365">365 días (1 año)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-sm btn-secondary"
+                                            data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-sm"
+                                            style="background:#00e5ff; color:#000; font-weight:700;">
+                                        <i class="fas fa-check me-1"></i>Renovar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

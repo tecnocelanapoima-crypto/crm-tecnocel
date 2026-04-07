@@ -24,6 +24,7 @@ from routes.whatsapp  import whatsapp_bp
 from routes.inventario import inventario_bp
 from routes.finanzas  import finanzas_bp
 from routes.ordenes   import ordenes_bp
+from routes.admin     import admin_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(clientes_bp,  url_prefix='/clientes')
@@ -33,6 +34,7 @@ app.register_blueprint(whatsapp_bp,  url_prefix='/whatsapp')
 app.register_blueprint(inventario_bp, url_prefix='/inventario')
 app.register_blueprint(finanzas_bp,  url_prefix='/finanzas')
 app.register_blueprint(ordenes_bp,  url_prefix='/ordenes')
+app.register_blueprint(admin_bp,    url_prefix='/admin')
 
 
 # ── Filtro de moneda Jinja2 ──────────────────────────────────────────────

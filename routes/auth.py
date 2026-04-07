@@ -1,35 +1,48 @@
 """
-Autenticación — registro, login y logout.
-Usa werkzeug.security para hashing seguro de contraseñas (PBKDF2/SHA-256).
+Autenticación — registro, login y logout
 """
 
-from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from database.db import get_db
 from werkzeug.security import generate_password_hash, check_password_hash
-from database.db import get_db, negocio_existe
 
 auth_bp = Blueprint('auth', __name__)
 
 
 def login_required(f):
-    """
-    Decorador: redirige al login si no hay sesión activa o si el negocio
-    ya no existe en la base de datos (por ejemplo, tras un reinicio del
-    servidor con almacenamiento efímero en Railway).
-    """
+    """Decorador: redirige al login si no hay sesión activa.
+       También verifica que la suscripción esté vigente."""
+    from functools import wraps
+    from datetime import date
     @wraps(f)
     def decorated(*args, **kwargs):
-        negocio_id = session.get('negocio_id')
-        if not negocio_id:
+        if not session.get('negocio_id'):
             flash('Debes iniciar sesión para continuar.', 'warning')
             return redirect(url_for('auth.login'))
 
-        # Verificar que el negocio aún existe en la BD
-        # (protege contra reinicios del servidor con BD efímera)
-        if not negocio_existe(negocio_id):
-            session.clear()
-            flash('Tu sesión ha expirado. Por favor inicia sesión nuevamente.', 'warning')
-            return redirect(url_for('auth.login'))
+        # ── Verificar suscripción ───────────────────────────────────────
+        db = get_db()
+        negocio = db.execute(
+            'SELECT fecha_vencimiento, plan_nombre, dias_gracia, activo FROM negocios WHERE id = ?',
+            (session['negocio_id'],)
+        ).fetchone()
+
+        if negocio:
+            if not negocio['activo']:
+                session.clear()
+                flash('Tu cuenta ha sido desactivada. Contacta al administrador.', 'danger')
+                return redirect(url_for('auth.login'))
+
+            fecha_venc = negocio['fecha_vencimiento']
+            if fecha_venc:
+                hoy = date.today().isoformat()
+                dias_gracia = negocio['dias_gracia'] or 3
+                # Calcular fecha límite con días de gracia
+                from datetime import datetime, timedelta
+                fecha_limite = (datetime.strptime(fecha_venc, '%Y-%m-%d') +
+                                timedelta(days=dias_gracia)).strftime('%Y-%m-%d')
+                if hoy > fecha_limite:
+                    return redirect(url_for('auth.suscripcion_vencida'))
 
         return f(*args, **kwargs)
     return decorated
@@ -49,14 +62,10 @@ def registro():
         ciudad         = request.form.get('ciudad', '').strip()
 
         errores = []
-        if not nombre_negocio:
-            errores.append('El nombre del negocio es obligatorio.')
-        if not email or '@' not in email:
-            errores.append('Ingresa un correo electrónico válido.')
-        if len(password) < 8:
-            errores.append('La contraseña debe tener al menos 8 caracteres.')
-        if password != confirmar:
-            errores.append('Las contraseñas no coinciden.')
+        if not nombre_negocio: errores.append('El nombre del negocio es obligatorio.')
+        if not email:          errores.append('El correo es obligatorio.')
+        if len(password) < 6:  errores.append('La contraseña debe tener al menos 6 caracteres.')
+        if password != confirmar: errores.append('Las contraseñas no coinciden.')
 
         if errores:
             for e in errores:
@@ -66,27 +75,25 @@ def registro():
         db = get_db()
         existente = db.execute('SELECT id FROM negocios WHERE email = ?', (email,)).fetchone()
         if existente:
-            db.close()
-            flash('Ese correo ya está registrado. Inicia sesión.', 'danger')
+            flash('Este correo electrónico ya está registrado. Por favor, inicia sesión.', 'warning')
             return render_template('auth/registro.html', form=request.form)
 
-        # Usar hashing seguro con werkzeug (PBKDF2-SHA256)
-        password_hash = generate_password_hash(password)
+        from datetime import date, timedelta
+        fecha_venc = (date.today() + timedelta(days=14)).isoformat()
 
         db.execute('''
-            INSERT INTO negocios (nombre_negocio, email, password_hash, telefono, ciudad)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (nombre_negocio, email, password_hash, telefono, ciudad))
+            INSERT INTO negocios (nombre_negocio, email, password_hash, telefono, ciudad, fecha_vencimiento, plan_nombre)
+            VALUES (?, ?, ?, ?, ?, ?, 'prueba')
+        ''', (nombre_negocio, email, generate_password_hash(password), telefono, ciudad, fecha_venc))
         db.commit()
 
         negocio = db.execute('SELECT id FROM negocios WHERE email = ?', (email,)).fetchone()
-        db.close()
 
         session['negocio_id']     = negocio['id']
         session['negocio_nombre'] = nombre_negocio
         session['negocio_email']  = email
 
-        flash(f'¡Bienvenido a Tecnocel CRM, {nombre_negocio}!', 'success')
+        flash(f'¡Bienvenido a Tecnocel CRM, {nombre_negocio}! 🎉', 'success')
         return redirect(url_for('index'))
 
     return render_template('auth/registro.html', form={})
@@ -103,34 +110,30 @@ def login():
 
         db = get_db()
         negocio = db.execute(
-            'SELECT * FROM negocios WHERE email = ? AND activo = 1',
+            'SELECT * FROM negocios WHERE email = ?',
             (email,)
         ).fetchone()
-        db.close()
 
-        # check_password_hash es compatible con hashes generados por generate_password_hash
-        # También se mantiene compatibilidad con hashes SHA-256 anteriores
-        password_valida = False
-        if negocio:
-            stored_hash = negocio['password_hash']
-            if stored_hash.startswith('pbkdf2:') or stored_hash.startswith('scrypt:'):
-                # Hash moderno de werkzeug
-                password_valida = check_password_hash(stored_hash, password)
+        if not negocio:
+            flash('El correo electrónico no está registrado.', 'danger')
+            return render_template('auth/login.html', email=email)
+        
+        if not check_password_hash(negocio['password_hash'], password):
+            # Soporte para migración: Verificar si es un hash SHA-256 antiguo
+            import hashlib
+            legacy_hash = hashlib.sha256(password.encode()).hexdigest()
+            
+            if negocio['password_hash'] == legacy_hash:
+                # ¡Es una cuenta antigua! La actualizamos al nuevo formato de seguridad
+                new_hash = generate_password_hash(password)
+                db.execute('UPDATE negocios SET password_hash = ? WHERE id = ?', (new_hash, negocio['id']))
+                db.commit()
             else:
-                # Hash SHA-256 legado (migración automática)
-                import hashlib
-                password_valida = (stored_hash == hashlib.sha256(password.encode()).hexdigest())
-                if password_valida:
-                    # Migrar al nuevo hash seguro automáticamente
-                    nuevo_hash = generate_password_hash(password)
-                    db2 = get_db()
-                    db2.execute('UPDATE negocios SET password_hash = ? WHERE id = ?',
-                                (nuevo_hash, negocio['id']))
-                    db2.commit()
-                    db2.close()
+                flash('La contraseña es incorrecta.', 'danger')
+                return render_template('auth/login.html', email=email)
 
-        if not negocio or not password_valida:
-            flash('Correo o contraseña incorrectos.', 'danger')
+        if not negocio['activo']:
+            flash('Tu cuenta está desactivada. Contacta al soporte.', 'warning')
             return render_template('auth/login.html', email=email)
 
         session['negocio_id']     = negocio['id']
@@ -148,3 +151,16 @@ def logout():
     session.clear()
     flash('Sesión cerrada correctamente.', 'info')
     return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/suscripcion-vencida')
+def suscripcion_vencida():
+    """Página que se muestra cuando la suscripción ha vencido."""
+    if not session.get('negocio_id'):
+        return redirect(url_for('auth.login'))
+    db = get_db()
+    negocio = db.execute(
+        'SELECT nombre_negocio, email, fecha_vencimiento, plan_nombre FROM negocios WHERE id = ?',
+        (session['negocio_id'],)
+    ).fetchone()
+    return render_template('auth/suscripcion_vencida.html', negocio=negocio)
