@@ -450,22 +450,8 @@ def cambiar_estado(id):
         WHERE id=? AND negocio_id=?
     ''', (nuevo_estado, fecha_listo, fecha_entregado, costo_f, id, nid))
     db.commit()
-
-    # Si se entrega, registrar automáticamente como una venta
-    if nuevo_estado == 'entregado' and costo_f:
-        db.execute('''
-            INSERT INTO ventas 
-            (negocio_id, cliente_id, producto, precio, tipo_pago, fecha, notas)
-            VALUES (?, ?, ?, ?, 'contado', ?, ?)
-        ''', (
-            nid,
-            orden['cliente_id'],
-            'Servicio: ' + orden['marca_modelo'] + ' - ' + orden['problema'],
-            costo_f,
-            fecha_entregado,
-            'Orden ' + orden['numero_orden']
-        ))
-        db.commit()
+    # NOTA: Las órdenes entregadas se registran únicamente en la tabla ordenes.
+    # No se crea venta automática para evitar duplicados en Trabajos Completos.
 
     estados = {'recibido': 'Recibido', 'listo': 'Listo para retirar', 'entregado': 'Entregado'}
     flash(f'Estado cambiado a "{estados[nuevo_estado]}".', 'success')
