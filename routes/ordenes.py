@@ -300,6 +300,12 @@ def crear():
         orden_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
 
         flash(f'Orden {numero_orden} creada exitosamente.', 'success')
+
+        # Si el técnico presionó "Crear + PDF + WhatsApp", generar PDF y abrir WA directamente
+        accion = request.form.get('accion', 'solo_crear')
+        if accion == 'crear_y_confirmar':
+            return redirect(url_for('ordenes.confirmar_recepcion', id=orden_id))
+
         return redirect(url_for('ordenes.detalle', id=orden_id))
 
     return render_template('ordenes/form.html',
