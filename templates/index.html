@@ -94,9 +94,9 @@
         </div>
         <div class="mt-2 pt-2 border-top border-success border-opacity-10 text-muted small" style="font-size: .65rem;">
           <i class="bi bi-info-circle me-1"></i>
-          {{ ingresos_ventas_hoy | moneda }} Ventas + {{ ingresos_abonos_hoy | moneda }} Abonos
-          {% if ingresos_ordenes_hoy > 0 %} + {{ ingresos_ordenes_hoy | moneda }} Entregas{% endif %}
-          &nbsp;(acumulado total)
+          {{ ingresos_ventas_hoy | moneda }} Ventas
+          {% if ingresos_ordenes_hoy > 0 %} + {{ ingresos_ordenes_hoy | moneda }} Entregas de servicio{% endif %}
+          &nbsp;(solo efectivos)
         </div>
       </div>
     </div>

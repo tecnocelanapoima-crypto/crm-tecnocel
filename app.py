@@ -91,21 +91,22 @@ def index():
         "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ?", (nid,)
     ).fetchone()[0]
 
-    # Total abonos recibidos en todas las órdenes
+    # Total abonos recibidos en todas las órdenes (solo informativo, no se suma al recaudado)
     try:
         ingresos_abonos_hoy = db.execute(
             "SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)
         ).fetchone()[0]
     except Exception: ingresos_abonos_hoy = 0
 
-    # Total cobrado en órdenes entregadas (Costo Final - Abono Inicial)
+    # Total cobrado en órdenes entregadas (Costo Final completo de servicios efectivos)
     try:
         ingresos_ordenes_hoy = db.execute(
-            "SELECT COALESCE(SUM(costo_final - abono), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)
+            "SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)
         ).fetchone()[0]
     except Exception: ingresos_ordenes_hoy = 0
 
-    recaudado_hoy = ingresos_ventas_hoy + ingresos_abonos_hoy + ingresos_ordenes_hoy
+    # Total recaudado = solo ventas efectivas + costo total de entregas de servicio efectivas
+    recaudado_hoy = ingresos_ventas_hoy + ingresos_ordenes_hoy
 
     # ── Datos detallados (SaaS safe) ────────────────────────────────────────
 
@@ -221,8 +222,9 @@ def dashboard_stats():
         ventas_hoy = db.execute("SELECT COUNT(*) FROM ventas WHERE negocio_id = ?", (nid,)).fetchone()[0]
         ingresos_ventas = db.execute("SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ?", (nid,)).fetchone()[0]
         ingresos_abonos = db.execute("SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
-        ingresos_ordenes = db.execute("SELECT COALESCE(SUM(costo_final - abono), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)).fetchone()[0]
-        recaudado = ingresos_ventas + ingresos_abonos + ingresos_ordenes
+        ingresos_ordenes = db.execute("SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)).fetchone()[0]
+        # Total recaudado = solo ventas efectivas + costo total de entregas de servicio efectivas
+        recaudado = ingresos_ventas + ingresos_ordenes
         return jsonify({
             'equipos_hoy': equipos_hoy,
             'equipos_listos': equipos_listos,
