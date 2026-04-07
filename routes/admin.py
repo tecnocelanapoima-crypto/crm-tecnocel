@@ -12,8 +12,8 @@ import os
 admin_bp = Blueprint('admin', __name__)
 
 # ── Credenciales del administrador (cambiar antes de producción) ──────────
-ADMIN_USER = os.environ.get('ADMIN_USER', 'tecnocel_admin')
-ADMIN_PASS = os.environ.get('ADMIN_PASS', 'TecnoAdmin2026!')
+ADMIN_USER = os.environ.get('ADMIN_USER', 'tecnocelcrm')
+ADMIN_PASS = os.environ.get('ADMIN_PASS', '80254768Andres.')
 
 
 def admin_required(f):
