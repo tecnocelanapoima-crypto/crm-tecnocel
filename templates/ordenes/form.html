@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Nueva Orden de Trabajo — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-7">
+
+        <div class="d-flex align-items-center mb-4">
+            <a href="{{ url_for('ordenes.lista') }}" class="btn btn-outline-secondary btn-sm me-3">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Nueva Orden de Trabajo
+                </h2>
+                <p class="text-muted mb-0 small">Registra el equipo del cliente</p>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" enctype="multipart/form-data">
+
+                    <!-- Cliente -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="bi bi-person-fill me-2"></i>Cliente
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del cliente</label>
+                            <input type="text" name="cliente_nombre" class="form-control" 
+                                   placeholder="Ej: Andrés Urrego" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" name="cliente_telefono" class="form-control"
+                                   placeholder="Ej: 3001234567" maxlength="10" required>
+                        </div>
+                    </div>
+
+                    <hr class="border-secondary opacity-25">
+
+                    <!-- Equipo -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="bi bi-phone-fill me-2"></i>Equipo
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Marca y Modelo <span class="text-danger">*</span></label>
+                            <input type="text" name="marca_modelo" class="form-control"
+                                   placeholder="Ej: Samsung Galaxy A54, iPhone 13..."
+                                   value="{{ form.get('marca_modelo', '') }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Problema reportado <span class="text-danger">*</span></label>
+                            <textarea name="problema" class="form-control" rows="3"
+                                      placeholder="Ej: Pantalla rota, no enciende, micrófono dañado..."
+                                      required>{{ form.get('problema', '') }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Foto del equipo</label>
+                            <input type="file" name="foto" class="form-control" accept="image/*">
+                            <div class="form-text">Opcional — Toma una foto del estado actual del equipo</div>
+                        </div>
+                    </div>
+
+                    <hr class="border-secondary opacity-25">
+
+                    <!-- Datos técnicos -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="bi bi-wrench-adjustable me-2"></i>Datos del servicio
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Costo estimado</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="costo_estimado" class="form-control"
+                                           placeholder="0" min="0" step="1000"
+                                           value="{{ form.get('costo_estimado', '') }}">
+                                </div>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label fw-semibold">Abono inicial</label>
+                              <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="abono" class="form-control" 
+                                       placeholder="0" id="abono" oninput="calcularSaldo()">
+                              </div>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label fw-semibold">Tipo de pago abono</label>
+                              <select name="tipo_pago_abono" class="form-select">
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Nequi">Nequi</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Daviplata">Daviplata</option>
+                              </select>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label fw-semibold">Saldo pendiente</label>
+                              <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" id="saldo_pendiente_display" class="form-control bg-body-secondary" 
+                                       readonly placeholder="Se calcula automáticamente">
+                              </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Fecha de recepción</label>
+                                <input type="date" name="fecha_recibido" class="form-control"
+                                       value="{{ form.get('fecha_recibido', hoy) }}">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label fw-semibold">Notas del técnico</label>
+                            <textarea name="notas_tecnico" class="form-control" rows="2"
+                                      placeholder="Notas internas, observaciones...">{{ form.get('notas_tecnico', '') }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-check-circle me-1"></i>Crear Orden
+                        </button>
+                        <a href="{{ url_for('ordenes.lista') }}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calcularSaldo() {
+  var costo = parseFloat(document.querySelector('[name=costo_estimado]').value) || 0;
+  var abono = parseFloat(document.getElementById('abono').value) || 0;
+  var saldo = costo - abono;
+  document.getElementById('saldo_pendiente_display').value = saldo > 0 ? saldo : 0;
+}
+document.querySelector('[name=costo_estimado]').addEventListener('input', calcularSaldo);
+</script>
+{% endblock %}

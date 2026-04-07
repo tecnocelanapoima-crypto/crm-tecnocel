@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}Orden {{ orden.numero_orden }} — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+
+        <!-- Cabecera -->
+        <div class="d-flex align-items-center mb-4 flex-wrap gap-2">
+            <a href="{{ url_for('ordenes.lista') }}" class="btn btn-outline-secondary btn-sm me-2">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-tools me-2"></i>{{ orden.numero_orden }}
+                </h2>
+                <p class="text-muted mb-0 small">{{ orden.marca_modelo }}</p>
+            </div>
+            <div class="ms-auto">
+                {% if orden.estado == 'recibido' %}
+                    <span class="badge bg-primary fs-6">📥 Recibido</span>
+                {% elif orden.estado == 'listo' %}
+                    <span class="badge bg-success fs-6">✅ Listo para retirar</span>
+                {% else %}
+                    <span class="badge bg-secondary fs-6">📦 Entregado</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Botones WhatsApp -->
+        <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #25D366 !important;">
+            <div class="card-body p-3">
+                <h6 class="fw-bold mb-3" style="color:#25D366;">
+                    <i class="bi bi-whatsapp me-2"></i>Enviar por WhatsApp
+                </h6>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if orden.estado == 'recibido' %}
+                    <a href="{{ url_for('ordenes.confirmar_recepcion', id=orden.id) }}"
+                       class="btn btn-primary btn-sm"
+                       onclick="return confirm('¿Confirmar recepción y notificar al cliente?')">
+                        <i class="bi bi-check-circle me-1"></i>Confirmar recepción (PDF + WA)
+                    </a>
+                    {% endif %}
+                    {% if orden.estado in ['listo', 'entregado'] %}
+                    <a href="{{ url_for('ordenes.whatsapp', id=orden.id, tipo='listo') }}"
+                       class="btn btn-sm btn-success" target="_blank">
+                        <i class="bi bi-whatsapp me-1"></i>Avisar que está listo
+                    </a>
+                    {% endif %}
+                    {% if orden.estado == 'entregado' %}
+                    <a href="{{ url_for('ordenes.whatsapp', id=orden.id, tipo='factura') }}"
+                       class="btn btn-sm btn-outline-success" target="_blank">
+                        <i class="bi bi-whatsapp me-1"></i>Enviar factura
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+
+            <!-- Info del cliente -->
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent border-bottom fw-bold">
+                        <i class="bi bi-person-fill me-2 text-primary"></i>Cliente
+                    </div>
+                    <div class="card-body">
+                        <p class="fw-bold fs-5 mb-1">{{ orden.cliente_nombre }}</p>
+                        <p class="text-muted mb-1"><i class="bi bi-telephone me-1"></i>{{ orden.cliente_telefono or '—' }}</p>
+                        <p class="text-muted mb-0"><i class="bi bi-geo-alt me-1"></i>{{ orden.cliente_ciudad or '—' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info del equipo -->
+            <div class="col-12 col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent border-bottom fw-bold">
+                        <i class="bi bi-phone-fill me-2 text-primary"></i>Equipo
+                    </div>
+                    <div class="card-body">
+                        <p class="fw-bold fs-5 mb-1">{{ orden.marca_modelo }}</p>
+                        <p class="text-muted mb-1"><strong>Problema:</strong> {{ orden.problema }}</p>
+                        {% if orden.notas_tecnico %}
+                        <p class="text-muted mb-0"><strong>Notas:</strong> {{ orden.notas_tecnico }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Foto del equipo -->
+            {% if orden.foto %}
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent border-bottom fw-bold">
+                        <i class="bi bi-camera-fill me-2 text-primary"></i>Foto del equipo
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="{{ url_for('static', filename='uploads/ordenes/' + orden.foto) }}"
+                             class="img-fluid rounded" style="max-height:300px;" alt="Foto del equipo">
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Timeline y costos -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-transparent border-bottom fw-bold">
+                        <i class="bi bi-clock-history me-2 text-primary"></i>Estado y Fechas
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-4 text-center">
+                                <div class="p-2 rounded" style="background:rgba(13,110,253,0.1)">
+                                    <i class="bi bi-inbox-fill text-primary fs-4 d-block"></i>
+                                    <small class="text-muted">Recibido</small>
+                                    <p class="fw-bold mb-0 small">{{ orden.fecha_recibido }}</p>
+                                </div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="p-2 rounded" style="background:{% if orden.fecha_listo %}rgba(25,135,84,0.1){% else %}rgba(108,117,125,0.05){% endif %}">
+                                    <i class="bi bi-check-circle-fill fs-4 d-block {% if orden.fecha_listo %}text-success{% else %}text-muted{% endif %}"></i>
+                                    <small class="text-muted">Listo</small>
+                                    <p class="fw-bold mb-0 small">{{ orden.fecha_listo or '—' }}</p>
+                                </div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="p-2 rounded" style="background:{% if orden.fecha_entregado %}rgba(108,117,125,0.15){% else %}rgba(108,117,125,0.05){% endif %}">
+                                    <i class="bi bi-bag-check-fill fs-4 d-block {% if orden.fecha_entregado %}text-secondary{% else %}text-muted{% endif %}"></i>
+                                    <small class="text-muted">Entregado</small>
+                                    <p class="fw-bold mb-0 small">{{ orden.fecha_entregado or '—' }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="bg-light rounded p-3">
+                                    <small class="text-muted">Costo estimado</small>
+                                    <p class="fw-bold mb-0">{% if orden.costo_estimado %}$ {{ "{:,.0f}".format(orden.costo_estimado) }}{% else %}—{% endif %}</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="bg-light rounded p-3">
+                                    <small class="text-muted">Costo final</small>
+                                    <p class="fw-bold mb-0 text-success">{% if orden.costo_final %}$ {{ "{:,.0f}".format(orden.costo_final) }}{% else %}—{% endif %}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cambiar estado -->
+            {% if orden.estado != 'entregado' %}
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-warning border-opacity-50">
+                    <div class="card-header bg-transparent border-bottom fw-bold">
+                        <i class="bi bi-arrow-right-circle me-2 text-warning"></i>Cambiar Estado
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('ordenes.cambiar_estado', id=orden.id) }}">
+                            <div class="row g-3 align-items-end">
+                                {% if orden.estado == 'recibido' %}
+                                <input type="hidden" name="estado" value="listo">
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check-circle me-1"></i>Marcar como Listo para retirar
+                                    </button>
+                                </div>
+                                {% elif orden.estado == 'listo' %}
+                                <input type="hidden" name="estado" value="entregado">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Costo final cobrado</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" name="costo_final" class="form-control"
+                                               placeholder="0" min="0" step="1000"
+                                               value="{{ orden.costo_estimado or '' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-secondary">
+                                        <i class="bi bi-bag-check me-1"></i>Marcar como Entregado
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

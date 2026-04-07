@@ -1,107 +1,142 @@
-{% extends "base.html" %}
-
-{% block title %}Inventario - Tecnocel CRM{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Órdenes de Trabajo — Tecnocel CRM{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
-    <div>
-        <h2 class="h4 mb-0"><i class="bi bi-box-seam-fill me-2 text-primary"></i>Inventario de Productos</h2>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
-        <button class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAccesorio">
-            <i class="bi bi-bag-plus me-1"></i>+ Venta de accesorio
-        </button>
-        <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalRecepcionRapida">
-            <i class="bi bi-phone-vibrate me-1"></i>+ Recibir equipo (Rápido)
-        </button>
-        <a href="{{ url_for('ordenes.crear') }}" class="btn btn-outline-primary btn-sm px-3">
-            <i class="bi bi-plus-circle me-1"></i>+ Formulario completo
-        </a>
-        <a href="{{ url_for('inventario.crear') }}" class="btn btn-outline-secondary btn-sm px-3">
-            <i class="bi bi-plus-circle me-1"></i>Nuevo Producto
-        </a>
-    </div>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div>
+    <h4 class="mb-1 fw-semibold">Órdenes de trabajo</h4>
+    <p class="text-muted mb-0" style="font-size:.875rem;">Reparaciones y ventas de accesorios</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAccesorio">
+      <i class="bi bi-bag-plus me-1"></i>+ Venta de accesorio
+    </button>
+    <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalRecepcionRapida">
+      <i class="bi bi-phone-vibrate me-1"></i>+ Recibir equipo (Rápido)
+    </button>
+    <a href="{{ url_for('ordenes.crear') }}" class="btn btn-outline-primary btn-sm px-3">
+      <i class="bi bi-plus-circle me-1"></i>+ Formulario completo
+    </a>
+  </div>
 </div>
 
-<div class="card bg-dark border-light mb-4 shadow">
-    <div class="card-body">
-        <form method="GET" action="{{ url_for('inventario.lista') }}" class="d-flex gap-2 mb-0">
-            <input type="text" name="q" class="form-control bg-dark text-white border-secondary" 
-                   placeholder="Buscar por nombre, marca o categoría..." value="{{ busqueda }}">
-            <button type="submit" class="btn btn-outline-info">Buscar</button>
-            {% if busqueda %}
-                <a href="{{ url_for('inventario.lista') }}" class="btn btn-outline-secondary">Limpiar</a>
-            {% endif %}
+<!-- Filtros y Búsqueda -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body p-3">
+    <div class="row g-2">
+      <!-- Filtros de Estado -->
+      <div class="col-12">
+        <div class="d-flex gap-2 flex-wrap">
+          <a href="{{ url_for('ordenes.lista') }}" class="btn btn-sm {% if not estado_filtro %}btn-primary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+            <i class="bi bi-list me-1"></i>Todas
+          </a>
+          <a href="?estado=recibido" class="btn btn-sm {% if estado_filtro=='recibido' %}btn-info{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+            <i class="bi bi-inbox me-1"></i>Recibidos
+          </a>
+          <a href="?estado=listo" class="btn btn-sm {% if estado_filtro=='listo' %}btn-success{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+            <i class="bi bi-check-circle me-1"></i>Listos
+          </a>
+          <a href="?estado=entregado" class="btn btn-sm {% if estado_filtro=='entregado' %}btn-secondary{% else %}btn-outline-secondary{% endif %} rounded-pill px-3">
+            <i class="bi bi-box-seam me-1"></i>Entregados
+          </a>
+        </div>
+      </div>
+      
+      <!-- Búsqueda por Teléfono o Cliente -->
+      <div class="col-12">
+        <form method="GET" class="d-flex gap-2">
+          <input type="text" name="buscar" class="form-control form-control-sm" 
+                 placeholder="Buscar por teléfono o nombre del cliente..." 
+                 value="{{ request.args.get('buscar', '') }}">
+          <button type="submit" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-search"></i> Buscar
+          </button>
+          {% if request.args.get('buscar') %}
+          <a href="{{ url_for('ordenes.lista') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-x-lg"></i> Limpiar
+          </a>
+          {% endif %}
         </form>
+      </div>
     </div>
+  </div>
 </div>
 
-<div class="card bg-dark border-light shadow">
+<!-- Lista de órdenes -->
+<div class="card border-0 shadow-sm">
     <div class="card-body p-0">
+        {% if ordenes %}
         <div class="table-responsive">
-            <table class="table table-dark table-hover mb-0 align-middle">
-                <thead>
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-dark">
                     <tr>
-                        <th width="70" class="text-center">Foto</th>
-                        <th>Producto</th>
-                        <th>Marca</th>
-                        <th>Categoría</th>
-                        <th>Precio</th>
-                        <th>Stock</th>
+                        <th>Orden</th>
+                        <th>Tipo</th>
+                        <th>Cliente</th>
+                        <th>Equipo / Producto</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th>Costo</th>
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for p in productos %}
+                    {% for o in ordenes %}
                     <tr>
-                        <td class="text-center">
-                            {% if p['foto'] %}
-                                <img src="{{ url_for('static', filename='uploads/productos/' ~ p['foto']) }}" 
-                                     alt="Foto" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(0,212,255,0.2);">
+                        <td>
+                            <span class="fw-bold text-primary">{{ o.numero_orden }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info-subtle text-info fw-normal">Reparación</span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ o.cliente_nombre }}</div>
+                            <small class="text-muted">{{ o.cliente_telefono }}</small>
+                        </td>
+                        <td>{{ o.marca_modelo }}</td>
+                        <td>
+                            {% if o.estado == 'recibido' %}
+                                <span class="badge bg-primary">📥 Recibido</span>
+                            {% elif o.estado == 'listo' %}
+                                <span class="badge bg-success">✅ Listo</span>
                             {% else %}
-                                <div style="width: 48px; height: 48px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(0,212,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto;">
-                                    📦
-                                </div>
+                                <span class="badge bg-secondary">📦 Entregado</span>
                             {% endif %}
                         </td>
-                        <td class="fw-semibold">{{ p['nombre'] }}</td>
-                        <td>{{ p['marca'] or '-' }}</td>
-                        <td><span class="badge text-bg-info">{{ p['categoria'] or 'General' }}</span></td>
-                        <td class="text-success fw-bold">$ {{ "{:,.0f}".format(p['precio']).replace(',', '.') }}</td>
+                        <td class="text-muted small">{{ o.fecha_recibido }}</td>
                         <td>
-                            <span class="badge {% if p['stock'] > 5 %}text-bg-success{% elif p['stock'] > 0 %}text-bg-warning{% else %}text-bg-danger{% endif %}">
-                                {{ p['stock'] }}
-                            </span>
+                            {% if o.costo_final %}
+                                <span class="text-success fw-bold">$ {{ "{:,.0f}".format(o.costo_final) }}</span>
+                            {% elif o.costo_estimado %}
+                                <span class="text-muted">~ $ {{ "{:,.0f}".format(o.costo_estimado) }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
                         </td>
                         <td class="text-center">
-                            <a href="{{ url_for('inventario.editar', id=p['id']) }}" class="btn btn-sm btn-outline-info me-1">
-                                <i class="bi bi-pencil"></i>
+                            <a href="{{ url_for('ordenes.detalle', id=o.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
                             </a>
-                            <form action="{{ url_for('inventario.eliminar', id=p['id']) }}" method="post" class="d-inline"
-                                  onsubmit="return confirm('¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
-                            <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-50"></i>
-                            <h5 class="fw-normal">No hay productos registrados</h5>
-                            <p class="small mb-0">Agrega productos al inventario para comenzar</p>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-tools fs-1 d-block mb-3"></i>
+            <p>No hay órdenes de trabajo registradas.</p>
+            <a href="{{ url_for('ordenes.crear') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>Crear primera orden
+            </a>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- Modal de Venta de Accesorio -->
-<div class="modal fade" id="modalAccesorio" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalAccesorio" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header border-0 pb-0">
@@ -166,6 +201,7 @@
       </div>
       <form method="POST" action="{{ url_for('ordenes.recepcion_rapida') }}" novalidate>
         <div class="modal-body p-4">
+          <!-- Nombre del Cliente -->
           <div class="mb-3">
             <label for="nombre_cliente_rapida" class="form-label fw-semibold">
               Nombre del Cliente <span class="text-danger">*</span>
@@ -179,6 +215,7 @@
                    autofocus>
           </div>
           
+          <!-- Teléfono -->
           <div class="mb-3">
             <label for="telefono_cliente_rapida" class="form-label fw-semibold">
               Teléfono <span class="text-danger">*</span>
@@ -191,6 +228,7 @@
                    required>
           </div>
           
+          <!-- Marca/Modelo -->
           <div class="mb-3">
             <label for="marca_modelo_rapida" class="form-label fw-semibold">
               Marca/Modelo <span class="text-danger">*</span>
@@ -203,6 +241,7 @@
                    required>
           </div>
           
+          <!-- Problema -->
           <div class="mb-3">
             <label for="problema_rapida" class="form-label fw-semibold">
               Problema <span class="text-danger">*</span>
@@ -210,11 +249,12 @@
             <textarea class="form-control form-control-lg" 
                       id="problema_rapida" 
                       name="problema_rapida" 
-                      placeholder="Ej: Pantalla rota, No carga..." 
-                      rows="3" 
+                      placeholder="Ej: Pantalla rota, No carga..."
+                      rows="3"
                       required></textarea>
           </div>
           
+          <!-- Costo Estimado (Opcional) -->
           <div class="mb-3">
             <label for="costo_estimado_rapida" class="form-label fw-semibold">
               Costo Estimado (Opcional)
@@ -225,8 +265,8 @@
                      class="form-control" 
                      id="costo_estimado_rapida" 
                      name="costo_estimado_rapida" 
-                     placeholder="0" 
-                     min="0" 
+                     placeholder="0"
+                     min="0"
                      step="1000">
             </div>
           </div>
@@ -243,5 +283,4 @@
     </div>
   </div>
 </div>
-
 {% endblock %}
