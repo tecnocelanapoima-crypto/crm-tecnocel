@@ -187,18 +187,24 @@ def completos():
     nid = session['negocio_id']
     db  = get_db()
     
-    # 1. Obtener Ventas de accesorios/productos (la tabla ventas ya no contiene servicios de órdenes)
+    # 1. Ventas de accesorios/productos — excluye duplicados históricos generados al entregar órdenes
     ventas = db.execute('''
         SELECT v.id as id, 'Venta' as tipo, v.producto as concepto, v.precio as valor,
                v.fecha as fecha_fin, c.nombre as cliente_nombre, 'success' as color
         FROM ventas v JOIN clientes c ON v.cliente_id = c.id
         WHERE v.negocio_id = ?
+          AND (v.notas IS NULL OR v.notas NOT LIKE 'Orden %')
     ''', (nid,)).fetchall()
 
-    # 2. Obtener Reparaciones Entregadas (fuente única para los servicios)
+    # 2. Reparaciones entregadas — concepto unificado: marca_modelo + problema
     entregas = db.execute('''
-        SELECT o.id as id, 'Reparación' as tipo, o.marca_modelo as concepto, o.costo_final as valor,
-               o.fecha_entregado as fecha_fin, c.nombre as cliente_nombre, 'primary' as color
+        SELECT o.id as id,
+               'Reparación' as tipo,
+               (o.marca_modelo || ' — ' || o.problema) as concepto,
+               o.costo_final as valor,
+               o.fecha_entregado as fecha_fin,
+               c.nombre as cliente_nombre,
+               'primary' as color
         FROM ordenes o JOIN clientes c ON o.cliente_id = c.id
         WHERE o.negocio_id = ? AND o.estado = 'entregado'
     ''', (nid,)).fetchall()
@@ -299,12 +305,11 @@ def eliminar_completo():
     if tipo == 'Venta':
         db.execute('DELETE FROM ventas WHERE id = ? AND negocio_id = ?', (item_id, nid))
     elif tipo == 'Reparación':
-        # Obtener el número de orden para borrar la venta asociada que se creó al entregar
+        # Borrar también cualquier venta duplicada histórica asociada a esta orden
         orden = db.execute(
             'SELECT numero_orden FROM ordenes WHERE id = ? AND negocio_id = ?', (item_id, nid)
         ).fetchone()
         if orden:
-            # Borrar la venta que se generó automáticamente al marcar como entregado
             db.execute(
                 "DELETE FROM ventas WHERE negocio_id = ? AND notas = ?",
                 (nid, 'Orden ' + orden['numero_orden'])
