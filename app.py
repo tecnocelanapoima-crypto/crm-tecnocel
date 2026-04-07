@@ -81,14 +81,14 @@ def index():
         ).fetchone()[0]
     except Exception: equipos_listos = 0
 
-    # Total ventas (conteo acumulado)
+    # Total ventas (excluye ventas automáticas generadas al entregar órdenes)
     ventas_hoy = db.execute(
-        "SELECT COUNT(*) FROM ventas WHERE negocio_id = ?", (nid,)
+        "SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND (notas IS NULL OR notas NOT LIKE 'Orden %')", (nid,)
     ).fetchone()[0]
 
-    # Total ingresos por ventas de accesorios
+    # Total ingresos por ventas de accesorios/productos (excluye ventas automáticas de servicios)
     ingresos_ventas_hoy = db.execute(
-        "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ?", (nid,)
+        "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND (notas IS NULL OR notas NOT LIKE 'Orden %')", (nid,)
     ).fetchone()[0]
 
     # Total abonos recibidos en todas las órdenes (solo informativo, no se suma al recaudado)
@@ -145,16 +145,20 @@ def index():
         LIMIT 5
     ''', (nid,)).fetchall()
 
-    # Entregas recientes (Servicios terminados)
-    entregas_recientes = db.execute('''
-        SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha_creacion,
-               c.nombre AS cliente_nombre
-        FROM ventas v
-        JOIN clientes c ON v.cliente_id = c.id
-        WHERE v.negocio_id = ? AND v.producto LIKE 'Servicio: %'
-        ORDER BY v.fecha_creacion DESC
-        LIMIT 5
-    ''', (nid,)).fetchall()
+    # Entregas recientes (Servicios terminados) - tomados directamente de órdenes entregadas
+    try:
+        entregas_recientes = db.execute('''
+            SELECT o.id, o.marca_modelo as producto, o.costo_final as precio,
+                   'contado' as tipo_pago, o.fecha_entregado as fecha_creacion,
+                   c.nombre AS cliente_nombre
+            FROM ordenes o
+            JOIN clientes c ON o.cliente_id = c.id
+            WHERE o.negocio_id = ? AND o.estado = 'entregado'
+            ORDER BY o.fecha_entregado DESC
+            LIMIT 5
+        ''', (nid,)).fetchall()
+    except Exception:
+        entregas_recientes = []
 
     return render_template(
         'index.html',
@@ -183,15 +187,16 @@ def completos():
     nid = session['negocio_id']
     db  = get_db()
     
-    # 1. Obtener Ventas
+    # 1. Obtener solo Ventas de accesorios/productos (excluir las ventas automáticas generadas al entregar órdenes)
     ventas = db.execute('''
         SELECT v.id as id, 'Venta' as tipo, v.producto as concepto, v.precio as valor,
                v.fecha as fecha_fin, c.nombre as cliente_nombre, 'success' as color
         FROM ventas v JOIN clientes c ON v.cliente_id = c.id
         WHERE v.negocio_id = ?
+          AND (v.notas IS NULL OR v.notas NOT LIKE 'Orden %')
     ''', (nid,)).fetchall()
 
-    # 2. Obtener Reparaciones Entregadas
+    # 2. Obtener Reparaciones Entregadas (fuente única para los servicios)
     entregas = db.execute('''
         SELECT o.id as id, 'Reparación' as tipo, o.marca_modelo as concepto, o.costo_final as valor,
                o.fecha_entregado as fecha_fin, c.nombre as cliente_nombre, 'primary' as color
@@ -219,8 +224,8 @@ def dashboard_stats():
     try:
         equipos_hoy = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
         equipos_listos = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ? AND estado = 'listo'", (nid,)).fetchone()[0]
-        ventas_hoy = db.execute("SELECT COUNT(*) FROM ventas WHERE negocio_id = ?", (nid,)).fetchone()[0]
-        ingresos_ventas = db.execute("SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        ventas_hoy = db.execute("SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND (notas IS NULL OR notas NOT LIKE 'Orden %')", (nid,)).fetchone()[0]
+        ingresos_ventas = db.execute("SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND (notas IS NULL OR notas NOT LIKE 'Orden %')", (nid,)).fetchone()[0]
         ingresos_abonos = db.execute("SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
         ingresos_ordenes = db.execute("SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)).fetchone()[0]
         # Total recaudado = solo ventas efectivas + costo total de entregas de servicio efectivas
