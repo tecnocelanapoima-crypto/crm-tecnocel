@@ -56,11 +56,21 @@ def generar_pdf(venta, cliente, negocio=None):
     nombre_archivo = f'{producto_limpio}_{venta["id"]:04d}.pdf'
     ruta_pdf       = os.path.join(FACTURAS_DIR, nombre_archivo)
 
+    # Eliminar PDF cacheado para forzar regeneración con el logo actualizado
+    if os.path.exists(ruta_pdf):
+        try:
+            os.remove(ruta_pdf)
+        except Exception:
+            pass
+
     # Datos del negocio para personalizar
     neg_nombre   = (negocio['nombre_negocio'] if negocio and negocio['nombre_negocio'] else 'TECNOCEL')
     neg_slogan   = (negocio['slogan'] if negocio and negocio['slogan'] else 'Venta y soporte de celulares')
     neg_email    = (negocio['email'] if negocio and negocio['email'] else 'tecnocel.negocio@gmail.com')
     neg_logo_b64 = (negocio['logo_base64'] if negocio and negocio['logo_base64'] else None)
+    # Debug: verificar si el logo llega
+    import sys
+    print(f'[PDF] negocio={neg_nombre} | logo_b64={"SI" if neg_logo_b64 else "NO"}', file=sys.stderr)
 
     doc = SimpleDocTemplate(ruta_pdf, pagesize=A4,
                             rightMargin=1.8*cm, leftMargin=1.8*cm,
@@ -86,13 +96,21 @@ def generar_pdf(venta, cliente, negocio=None):
         # Logo desde base64 almacenado en la BD
         try:
             # Extraer la parte base64 pura (quitar 'data:image/xxx;base64,')
-            b64_data = neg_logo_b64.split(',', 1)[1] if ',' in neg_logo_b64 else neg_logo_b64
+            if ',' in neg_logo_b64:
+                b64_data = neg_logo_b64.split(',', 1)[1]
+            else:
+                b64_data = neg_logo_b64
             img_bytes = base64.b64decode(b64_data)
-            logo_cell = Image(io.BytesIO(img_bytes), width=8.5*cm, height=2.2*cm)
-        except Exception:
+            img_stream = io.BytesIO(img_bytes)
+            logo_cell = Image(img_stream, width=8.5*cm, height=2.2*cm)
+            logo_cell.hAlign = 'CENTER'
+            print(f'[PDF] Logo cargado desde base64 correctamente ({len(img_bytes)} bytes)', file=sys.stderr)
+        except Exception as e:
+            print(f'[PDF] Error cargando logo base64: {e}', file=sys.stderr)
             logo_cell = Paragraph(f'<b><font color="#00CFFF" size="22">{neg_nombre}</font></b>', estilos['Title'])
     elif os.path.exists(LOGO_PATH):
         logo_cell = Image(LOGO_PATH, width=8.5*cm, height=2.2*cm)
+        print(f'[PDF] Usando logo de archivo: {LOGO_PATH}', file=sys.stderr)
     else:
         logo_cell = Paragraph(f'<b><font color="#00CFFF" size="22">{neg_nombre}</font></b>', estilos['Title'])
 
