@@ -81,7 +81,7 @@ def index():
         ).fetchone()[0]
     except Exception: equipos_listos = 0
 
-    # Total ventas de accesorios/productos — excluye cualquier venta de tipo servicio
+    # Total ventas de accesorios/productos — excluye ventas de tipo servicio
     ventas_hoy = db.execute(
         "SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)
     ).fetchone()[0]
@@ -91,21 +91,21 @@ def index():
         "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)
     ).fetchone()[0]
 
-    # Total abonos recibidos en todas las órdenes (solo informativo, no se suma al recaudado)
+    # Total abonos recibidos en todas las órdenes (solo informativo)
     try:
         ingresos_abonos_hoy = db.execute(
             "SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)
         ).fetchone()[0]
     except Exception: ingresos_abonos_hoy = 0
 
-    # Total cobrado en órdenes entregadas (Costo Final completo de servicios efectivos)
+    # Total cobrado en órdenes entregadas (costo_final completo)
     try:
         ingresos_ordenes_hoy = db.execute(
             "SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)
         ).fetchone()[0]
     except Exception: ingresos_ordenes_hoy = 0
 
-    # Total recaudado = solo ventas efectivas + costo total de entregas de servicio efectivas
+    # Total recaudado = ventas reales de accesorios + entregas de servicio efectivas (sin duplicados)
     recaudado_hoy = ingresos_ventas_hoy + ingresos_ordenes_hoy
 
     # ── Datos detallados (SaaS safe) ────────────────────────────────────────
@@ -146,11 +146,14 @@ def index():
         LIMIT 5
     ''', (nid,)).fetchall()
 
-    # Entregas recientes (Servicios terminados) - tomados directamente de órdenes entregadas
+    # Entregas recientes — tomadas directamente de órdenes entregadas (fuente única, sin duplicados)
     try:
         entregas_recientes = db.execute('''
-            SELECT o.id, o.marca_modelo as producto, o.costo_final as precio,
-                   'contado' as tipo_pago, o.fecha_entregado as fecha_creacion,
+            SELECT o.id,
+                   (o.marca_modelo || ' - ' || o.problema) as producto,
+                   o.costo_final as precio,
+                   'contado' as tipo_pago,
+                   o.fecha_entregado as fecha_creacion,
                    c.nombre AS cliente_nombre
             FROM ordenes o
             JOIN clientes c ON o.cliente_id = c.id
@@ -187,17 +190,15 @@ def completos():
 
     nid = session['negocio_id']
     db  = get_db()
-    
-    # 1. Ventas de accesorios/productos — excluye TODOS los duplicados de servicios:
-    #    - por notas: registros con notas='Orden XXXX' (generados automáticamente)
-    #    - por producto: registros con producto='Servicio: ...' (mismo origen)
+
+    # 1. Ventas de accesorios/productos — excluye TODOS los duplicados de servicios
     ventas = db.execute('''
         SELECT v.id as id, 'Venta' as tipo, v.producto as concepto, v.precio as valor,
                v.fecha as fecha_fin, c.nombre as cliente_nombre, 'success' as color
         FROM ventas v JOIN clientes c ON v.cliente_id = c.id
         WHERE v.negocio_id = ?
-          AND (v.notas IS NULL OR v.notas NOT LIKE 'Orden %')
           AND v.producto NOT LIKE 'Servicio: %'
+          AND (v.notas IS NULL OR v.notas NOT LIKE 'Orden %')
     ''', (nid,)).fetchall()
 
     # 2. Reparaciones entregadas — concepto unificado: marca_modelo + problema
@@ -231,19 +232,19 @@ def dashboard_stats():
     nid = session['negocio_id']
     db  = get_db()
     try:
-        equipos_hoy = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        equipos_hoy    = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
         equipos_listos = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ? AND estado = 'listo'", (nid,)).fetchone()[0]
-        ventas_hoy = db.execute("SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)).fetchone()[0]
-        ingresos_ventas = db.execute("SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)).fetchone()[0]
-        ingresos_abonos = db.execute("SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        ventas_hoy     = db.execute("SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)).fetchone()[0]
+        ingresos_ventas  = db.execute("SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)).fetchone()[0]
+        ingresos_abonos  = db.execute("SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
         ingresos_ordenes = db.execute("SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)).fetchone()[0]
-        # Total recaudado = solo ventas efectivas + costo total de entregas de servicio efectivas
+        # Total recaudado = ventas reales + entregas efectivas (sin duplicados)
         recaudado = ingresos_ventas + ingresos_ordenes
         return jsonify({
-            'equipos_hoy': equipos_hoy,
-            'equipos_listos': equipos_listos,
-            'ventas_hoy': ventas_hoy,
-            'recaudado': f'$ {int(recaudado):,}'.replace(',', '.'),
+            'equipos_hoy':     equipos_hoy,
+            'equipos_listos':  equipos_listos,
+            'ventas_hoy':      ventas_hoy,
+            'recaudado':       f'$ {int(recaudado):,}'.replace(',', '.'),
             'ingresos_ventas': f'$ {int(ingresos_ventas):,}'.replace(',', '.'),
             'ingresos_abonos': f'$ {int(ingresos_abonos):,}'.replace(',', '.'),
         })
@@ -281,14 +282,12 @@ def abrir_carpeta_facturas():
         5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
         9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
     }
-    # Abrir la carpeta del día actual dentro de facturas/
     carpeta_hoy = os.path.abspath(os.path.join(
         'facturas',
         ahora.strftime('%Y'),
         meses_es[ahora.month],
         ahora.strftime('%d')
     ))
-    # Si no existe todavía la carpeta de hoy, abrir la raíz de facturas
     carpeta = carpeta_hoy if os.path.exists(carpeta_hoy) else os.path.abspath('facturas')
     os.makedirs(carpeta, exist_ok=True)
     if platform.system() == 'Windows':
@@ -301,10 +300,10 @@ def eliminar_completo():
     if not session.get('negocio_id'):
         return redirect(url_for('auth.login'))
 
-    nid   = session['negocio_id']
-    tipo  = request.form.get('tipo')
+    nid     = session['negocio_id']
+    tipo    = request.form.get('tipo')
     item_id = request.form.get('id', type=int)
-    db    = get_db()
+    db      = get_db()
 
     if tipo == 'Venta':
         db.execute('DELETE FROM ventas WHERE id = ? AND negocio_id = ?', (item_id, nid))
@@ -315,10 +314,9 @@ def eliminar_completo():
         ).fetchone()
         if orden:
             db.execute(
-                "DELETE FROM ventas WHERE negocio_id = ? AND notas = ?",
+                "DELETE FROM ventas WHERE negocio_id = ? AND (notas = ? OR producto LIKE 'Servicio: %')",
                 (nid, 'Orden ' + orden['numero_orden'])
             )
-        # Eliminar la orden completamente
         db.execute('DELETE FROM ordenes WHERE id = ? AND negocio_id = ?', (item_id, nid))
 
     db.commit()
