@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Configuración — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+
+    <!-- Encabezado -->
+    <div class="d-flex align-items-center mb-4 gap-3">
+      <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <h4 class="mb-0 fw-bold"><i class="bi bi-gear-fill me-2 text-info"></i>Configuración del negocio</h4>
+        <p class="text-muted small mb-0">Personaliza el logo y los datos que aparecen en tus facturas</p>
+      </div>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('configuracion.perfil') }}">
+      <input type="hidden" name="accion" value="guardar">
+
+      <div class="row g-4">
+
+        <!-- ── Columna izquierda: Logo ── -->
+        <div class="col-12 col-md-5">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-4 text-center d-flex flex-column align-items-center justify-content-between gap-3">
+
+              <div>
+                <h6 class="fw-bold mb-3"><i class="bi bi-image me-2 text-info"></i>Logo del negocio</h6>
+
+                <!-- Vista previa del logo -->
+                <div id="logo-preview-wrap"
+                     style="width:160px;height:160px;border-radius:50%;border:2px solid rgba(0,207,255,0.4);
+                            display:flex;align-items:center;justify-content:center;
+                            background:rgba(0,207,255,0.05);margin:0 auto 16px;overflow:hidden;
+                            box-shadow:0 0 18px rgba(0,207,255,0.2);">
+                  {% if negocio.logo_base64 %}
+                    <img id="logo-preview" src="{{ negocio.logo_base64 }}"
+                         alt="Logo" style="width:100%;height:100%;object-fit:cover;">
+                  {% else %}
+                    <img id="logo-preview" src="{{ url_for('static', filename='img/logo.png') }}"
+                         alt="Logo" style="width:100%;height:100%;object-fit:cover;">
+                  {% endif %}
+                </div>
+
+                <p class="text-muted small mb-3">
+                  PNG, JPG, GIF, WEBP o SVG<br>Máximo 2 MB
+                </p>
+              </div>
+
+              <!-- Input de archivo -->
+              <div class="w-100">
+                <label for="logo-input" class="btn btn-outline-info w-100 mb-2">
+                  <i class="bi bi-upload me-2"></i>Seleccionar imagen
+                </label>
+                <input type="file" id="logo-input" name="logo" accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                       class="d-none" onchange="previewLogo(this)">
+
+                {% if negocio.logo_base64 %}
+                <form method="POST" action="{{ url_for('configuracion.perfil') }}" class="d-inline w-100">
+                  <input type="hidden" name="accion" value="eliminar_logo">
+                  <button type="submit" class="btn btn-outline-danger btn-sm w-100"
+                          onclick="return confirm('¿Eliminar el logo actual?')">
+                    <i class="bi bi-trash me-1"></i>Eliminar logo
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Columna derecha: Datos del negocio ── -->
+        <div class="col-12 col-md-7">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+              <h6 class="fw-bold mb-4"><i class="bi bi-shop me-2 text-info"></i>Datos del negocio</h6>
+
+              <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold">Nombre del negocio</label>
+                <input type="text" name="nombre_negocio" class="form-control"
+                       value="{{ negocio.nombre_negocio }}" required
+                       placeholder="Ej: Tecnocel Anapoima">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold">Slogan <span class="text-muted fw-normal">(aparece en facturas)</span></label>
+                <input type="text" name="slogan" class="form-control"
+                       value="{{ negocio.slogan or '' }}"
+                       placeholder="Ej: Venta y soporte de celulares">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold">Teléfono</label>
+                <input type="text" name="telefono" class="form-control"
+                       value="{{ negocio.telefono or '' }}"
+                       placeholder="3001234567">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold">Ciudad</label>
+                <input type="text" name="ciudad" class="form-control"
+                       value="{{ negocio.ciudad or '' }}"
+                       placeholder="Ej: Anapoima, Cundinamarca">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label text-muted small fw-semibold">Correo electrónico</label>
+                <input type="email" class="form-control" value="{{ negocio.email }}" disabled
+                       style="opacity:.6">
+                <div class="form-text text-muted">El correo no se puede cambiar.</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /row -->
+
+      <!-- Vista previa de factura -->
+      <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-transparent border-bottom py-3 px-4">
+          <h6 class="fw-bold mb-0"><i class="bi bi-receipt me-2 text-success"></i>Vista previa en factura</h6>
+        </div>
+        <div class="card-body p-4">
+          <div style="background:#050D1A;border-radius:10px;padding:20px 24px;text-align:center;border:1px solid rgba(0,207,255,0.2);">
+            <div id="factura-logo-preview" style="margin:0 auto 10px;width:120px;height:60px;display:flex;align-items:center;justify-content:center;">
+              {% if negocio.logo_base64 %}
+                <img src="{{ negocio.logo_base64 }}" alt="Logo" style="max-width:120px;max-height:60px;object-fit:contain;">
+              {% else %}
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" style="max-width:120px;max-height:60px;object-fit:contain;">
+              {% endif %}
+            </div>
+            <div id="factura-nombre-preview" style="color:#00CFFF;font-weight:700;font-size:1.1rem;">{{ negocio.nombre_negocio }}</div>
+            <div id="factura-slogan-preview" style="color:rgba(160,196,216,0.7);font-size:.85rem;margin-top:2px;">{{ negocio.slogan or 'Venta y soporte de celulares' }}</div>
+            <div style="color:rgba(160,196,216,0.5);font-size:.75rem;margin-top:2px;">{{ negocio.email }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón guardar -->
+      <div class="d-flex gap-2 justify-content-end mt-4 mb-5">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary px-4">Cancelar</a>
+        <button type="submit" class="btn btn-info px-5 fw-semibold">
+          <i class="bi bi-check-lg me-2"></i>Guardar configuración
+        </button>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+<script>
+function previewLogo(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const src = e.target.result;
+            document.getElementById('logo-preview').src = src;
+            // Actualizar vista previa de factura
+            const fp = document.getElementById('factura-logo-preview');
+            fp.innerHTML = '<img src="' + src + '" alt="Logo" style="max-width:120px;max-height:60px;object-fit:contain;">';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Actualizar vista previa en tiempo real al escribir
+document.querySelector('input[name="nombre_negocio"]').addEventListener('input', function() {
+    document.getElementById('factura-nombre-preview').textContent = this.value || 'Nombre del negocio';
+});
+document.querySelector('input[name="slogan"]').addEventListener('input', function() {
+    document.getElementById('factura-slogan-preview').textContent = this.value || 'Slogan del negocio';
+});
+</script>
+{% endblock %}

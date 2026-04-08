@@ -24,7 +24,8 @@ from routes.whatsapp  import whatsapp_bp
 from routes.inventario import inventario_bp
 from routes.finanzas  import finanzas_bp
 from routes.ordenes   import ordenes_bp
-from routes.admin     import admin_bp
+from routes.admin          import admin_bp
+from routes.configuracion  import configuracion_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(clientes_bp,  url_prefix='/clientes')
@@ -34,7 +35,8 @@ app.register_blueprint(whatsapp_bp,  url_prefix='/whatsapp')
 app.register_blueprint(inventario_bp, url_prefix='/inventario')
 app.register_blueprint(finanzas_bp,  url_prefix='/finanzas')
 app.register_blueprint(ordenes_bp,  url_prefix='/ordenes')
-app.register_blueprint(admin_bp,    url_prefix='/admin')
+app.register_blueprint(admin_bp,         url_prefix='/admin')
+app.register_blueprint(configuracion_bp, url_prefix='/configuracion')
 
 
 # ── Filtro de moneda Jinja2 ──────────────────────────────────────────────
@@ -49,10 +51,29 @@ def formato_moneda(valor):
 @app.context_processor
 def inject_negocio():
     """Disponible en todos los templates."""
+    nid = session.get('negocio_id')
+    logo_base64 = None
+    negocio_slogan = ''
+    negocio_telefono = ''
+    if nid:
+        try:
+            db = get_db()
+            row = db.execute(
+                'SELECT logo_base64, slogan, telefono FROM negocios WHERE id = ?', (nid,)
+            ).fetchone()
+            if row:
+                logo_base64 = row['logo_base64']
+                negocio_slogan = row['slogan'] or ''
+                negocio_telefono = row['telefono'] or ''
+        except Exception:
+            pass
     return {
-        'negocio_nombre': session.get('negocio_nombre', ''),
-        'negocio_email':  session.get('negocio_email',  ''),
-        'negocio_id':     session.get('negocio_id'),
+        'negocio_nombre':   session.get('negocio_nombre', ''),
+        'negocio_email':    session.get('negocio_email',  ''),
+        'negocio_id':       nid,
+        'negocio_logo':     logo_base64,
+        'negocio_slogan':   negocio_slogan,
+        'negocio_telefono': negocio_telefono,
     }
 
 

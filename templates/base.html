@@ -135,7 +135,11 @@
             <button class="logo-dropdown-toggle dropdown-toggle d-flex align-items-center gap-2"
                     type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                 <div class="logo-btn-wrap">
+                    {% if negocio_logo %}
+                    <img src="{{ negocio_logo }}" alt="{{ negocio_nombre }}" class="logo-img-btn" style="border-radius:50%;object-fit:cover;width:36px;height:36px;">
+                    {% else %}
                     <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Tecnocel" class="logo-img-btn">
+                    {% endif %}
                 </div>
                 <i class="bi bi-chevron-down logo-caret"></i>
             </button>
@@ -189,6 +193,7 @@
                 <!-- Cuenta -->
                 <div class="logo-dropdown-section">
                     <div class="logo-dropdown-section-title">Cuenta</div>
+                    <a class="logo-dropdown-item" href="{{ url_for('configuracion.perfil') }}"><i class="bi bi-gear-fill text-info"></i>Configuración del negocio</a>
                     <button class="logo-dropdown-item" onclick="resetConfig()"><i class="bi bi-arrow-counterclockwise"></i>Restablecer configuración</button>
                     <a class="logo-dropdown-item danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i>Cerrar sesión</a>
                 </div>

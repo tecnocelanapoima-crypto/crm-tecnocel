@@ -109,6 +109,8 @@ def init_db():
         "ALTER TABLE negocios ADD COLUMN fecha_vencimiento TEXT DEFAULT NULL",
         "ALTER TABLE negocios ADD COLUMN plan_nombre TEXT DEFAULT 'basico'",
         "ALTER TABLE negocios ADD COLUMN dias_gracia INTEGER DEFAULT 3",
+        "ALTER TABLE negocios ADD COLUMN logo_base64 TEXT DEFAULT NULL",
+        "ALTER TABLE negocios ADD COLUMN slogan TEXT DEFAULT NULL",
     ]
     for sql in migraciones:
         try:
