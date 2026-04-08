@@ -277,7 +277,7 @@
         {% for e in entregas_recientes %}
         <div class="d-flex align-items-center justify-content-between gap-2 px-3 py-2 border-bottom border-opacity-50">
           <div class="overflow-hidden">
-            <div class="fw-semibold text-truncate" style="font-size:.875rem;">{{ e.producto | replace('Servicio: ', '') }}</div>
+            <div class="fw-semibold text-truncate" style="font-size:.875rem;">{{ e.producto }}</div>
             <div class="text-muted" style="font-size:.78rem;">
               {{ e.cliente_nombre | title }}
               <span class="badge text-bg-info bg-opacity-10 text-info fw-normal ms-1" style="font-size:.7rem;">Entregado</span>
