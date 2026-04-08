@@ -187,13 +187,16 @@ def completos():
     nid = session['negocio_id']
     db  = get_db()
     
-    # 1. Ventas de accesorios/productos — excluye duplicados históricos generados al entregar órdenes
+    # 1. Ventas de accesorios/productos — excluye TODOS los duplicados de servicios:
+    #    - por notas: registros con notas='Orden XXXX' (generados automáticamente)
+    #    - por producto: registros con producto='Servicio: ...' (mismo origen)
     ventas = db.execute('''
         SELECT v.id as id, 'Venta' as tipo, v.producto as concepto, v.precio as valor,
                v.fecha as fecha_fin, c.nombre as cliente_nombre, 'success' as color
         FROM ventas v JOIN clientes c ON v.cliente_id = c.id
         WHERE v.negocio_id = ?
           AND (v.notas IS NULL OR v.notas NOT LIKE 'Orden %')
+          AND v.producto NOT LIKE 'Servicio: %'
     ''', (nid,)).fetchall()
 
     # 2. Reparaciones entregadas — concepto unificado: marca_modelo + problema
