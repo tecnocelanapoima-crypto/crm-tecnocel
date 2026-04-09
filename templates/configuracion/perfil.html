@@ -138,9 +138,9 @@
               <label class="form-label text-muted small fw-semibold">Plantilla</label>
               <select name="plantilla" class="form-select">
                 {% set plantilla_actual = cfg_pdf.plantilla if cfg_pdf else 'moderno' %}
-                <option value="moderno"      {% if plantilla_actual == 'moderno' %}selected{% endif %}>Moderno (fondo negro)</option>
-                <option value="clasico"      {% if plantilla_actual == 'clasico' %}selected{% endif %}>Clásico (línea de color)</option>
-                <option value="minimalista"  {% if plantilla_actual == 'minimalista' %}selected{% endif %}>Minimalista</option>
+                <option value="moderno"      {% if plantilla_actual == 'moderno' %}selected{% endif %}>Moderno (fondo negro + color de marca)</option>
+                <option value="clasico"      {% if plantilla_actual == 'clasico' %}selected{% endif %}>Clásico (líneas y bordes elegantes)</option>
+                <option value="minimalista"  {% if plantilla_actual == 'minimalista' %}selected{% endif %}>Minimalista (blanco y negro limpio)</option>
               </select>
             </div>
 
@@ -159,10 +159,9 @@
             </div>
 
             <div class="col-12">
-              <label class="form-label text-muted small fw-semibold">Mensaje al pie del PDF</label>
-              <input type="text" name="mensaje_pie" class="form-control"
-                     value="{{ cfg_pdf.mensaje_pie if cfg_pdf else 'Gracias por confiar en nosotros. No nos hacemos responsables por daños previos no reportados.' }}"
-                     placeholder="Mensaje de garantía o despedida">
+              <label class="form-label text-muted small fw-semibold">Mensaje de garantía o pie de página</label>
+              <textarea name="mensaje_pie" class="form-control" rows="2"
+                        placeholder="Ej: Gracias por confiar en nosotros. No nos hacemos responsables por daños previos no reportados.">{{ cfg_pdf.mensaje_pie if cfg_pdf else 'Gracias por confiar en Tecnocel Anapoima. No nos hacemos responsables por daños previos no reportados.' }}</textarea>
             </div>
 
           </div>
