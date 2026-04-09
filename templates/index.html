@@ -469,7 +469,7 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
             const data = new FormData(form);
-            fetch("{{ url_for('ventas.venta_rapida') }}", { method: 'POST', body: data })
+            fetch("{{ url_for('ventas.crear') }}", { method: 'POST', body: data })
                 .then(r => r.json())
                 .then(res => {
                     // 1. Cerrar modal de forma robusta
