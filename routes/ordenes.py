@@ -482,6 +482,7 @@ def whatsapp(id, tipo):
         return redirect(url_for('ordenes.detalle', id=id))
 
     if tipo == 'recibido':
+        linea_costo = f"Costo estimado: $ {orden['costo_estimado']:,.0f}\n\n" if orden['costo_estimado'] else "\n\n"
         mensaje = (
             f"Hola {orden['cliente_nombre']} 👋\n\n"
             f"✅ Hemos recibido tu equipo en *{negocio_nombre}*.\n\n"
@@ -489,16 +490,17 @@ def whatsapp(id, tipo):
             f"📱 *Equipo:* {orden['marca_modelo']}\n"
             f"🔧 *Problema reportado:* {orden['problema']}\n"
             f"📅 *Fecha de recepción:* {orden['fecha_recibido']}\n"
-            f"{'Costo estimado: $ ' + '{:,.0f}'.format(orden['costo_estimado']) + '\n\n' if orden['costo_estimado'] else '\n\n'}"
-            f"Te notificaremos cuando esté listo. ¡Gracias por confiar en nosotros! 🙏"
+            + linea_costo +
+            "Te notificaremos cuando esté listo. ¡Gracias por confiar en nosotros! 🙏"
         )
     elif tipo == 'listo':
+        linea_valor = f"Valor a pagar: $ {orden['costo_final']:,.0f}\n\n" if orden['costo_final'] else "\n\n"
         mensaje = (
             f"Hola {orden['cliente_nombre']} 👋\n\n"
             f"🎉 ¡Tu equipo está *LISTO* para retirar!\n\n"
             f"📋 *Orden:* {orden['numero_orden']}\n"
             f"📱 *Equipo:* {orden['marca_modelo']}\n"
-            f"{'Valor a pagar: $ ' + '{:,.0f}'.format(orden['costo_final']) + '\n\n' if orden['costo_final'] else '\n\n'}"
+            + linea_valor +
             f"Puedes pasar a recogerlo en *{negocio_nombre}*.\n"
             f"¡Te esperamos! 😊"
         )
