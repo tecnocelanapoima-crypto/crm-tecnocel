@@ -389,17 +389,22 @@
         function buscarClientePorTelefono(telefonoInput, nombreInput) {
             const tel = telefonoInput.value.trim();
             if (tel.length < 7) return;
+            // Indicador de carga
+            const orig = telefonoInput.style.backgroundImage;
+            telefonoInput.style.backgroundImage = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2300CFFF' viewBox='0 0 16 16'%3E%3Cpath d='M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z'/%3E%3C/svg%3E\")";
+            telefonoInput.style.backgroundRepeat = 'no-repeat';
+            telefonoInput.style.backgroundPosition = 'right 10px center';
             fetch('/api/cliente-por-telefono?telefono=' + encodeURIComponent(tel))
                 .then(r => r.json())
                 .then(data => {
+                    telefonoInput.style.backgroundImage = orig || '';
                     if (data.found && data.nombre) {
                         nombreInput.value = data.nombre;
-                        nombreInput.style.borderColor = '#20c997';
-                        nombreInput.title = 'Cliente encontrado: ' + data.nombre;
+                        nombreInput.style.borderColor = 'var(--tc-success, #20c997)';
                         setTimeout(() => { nombreInput.style.borderColor = ''; }, 2000);
                     }
                 })
-                .catch(() => {});
+                .catch(() => { telefonoInput.style.backgroundImage = orig || ''; });
         }
 
         // Inicializar estado activo del botón Accesorio y autocompletado

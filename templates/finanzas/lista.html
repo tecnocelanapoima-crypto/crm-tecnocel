@@ -1,341 +1,207 @@
 {% extends "base.html" %}
-
-{% block title %}Finanzas y Caja - Tecnocel CRM{% endblock %}
+{% block title %}Finanzas y Caja — Tecnocel CRM{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
-    <div>
-        <h2 class="h4 mb-0"><i class="bi bi-calculator-fill me-2 text-primary"></i>Calculadora de Finanzas</h2>
-        <span class="text-muted small">Fecha actual: {{ hoy }}</span>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
-        <button class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAccesorio">
-            <i class="bi bi-bag-plus me-1"></i>+ Venta de accesorio
-        </button>
-        <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalRecepcionRapida">
-            <i class="bi bi-phone-vibrate me-1"></i>+ Recibir equipo (Rápido)
-        </button>
-        <a href="{{ url_for('ordenes.crear') }}" class="btn btn-outline-primary btn-sm px-3">
-            <i class="bi bi-plus-circle me-1"></i>+ Formulario completo
-        </a>
-    </div>
+  <div>
+    <h4 class="mb-1 fw-semibold"><i class="bi bi-calculator-fill me-2 text-primary"></i>Finanzas</h4>
+    <span class="text-muted small">{{ hoy }}</span>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalRecepcionRapida">
+      <i class="bi bi-phone-vibrate me-1"></i>+ Recibir equipo
+    </button>
+    <button class="btn btn-success btn-sm px-3" data-bs-toggle="modal" data-bs-target="#modalAccesorio">
+      <i class="bi bi-bag-plus me-1"></i>+ Venta
+    </button>
+  </div>
 </div>
 
-<div class="row g-4 mb-4">
-    <!-- Ingresos Totales -->
-    <div class="col-md-4">
-        <div class="card bg-dark border-success border-opacity-50 shadow h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="text-success text-uppercase mb-1" style="letter-spacing: 1px; font-weight: 700;">Ingresos Totales</h6>
-                        <h3 class="mb-0 text-white">$ {{ "{:,.0f}".format(ingresos_total).replace(',', '.') }}</h3>
-                    </div>
-                    <div class="p-3 bg-success bg-opacity-10 rounded text-success">
-                        <i class="bi bi-graph-up-arrow fs-3"></i>
-                    </div>
-                </div>
-                <div class="mt-3 text-muted small">
-                    <i class="bi bi-check-circle-fill text-success me-1"></i>
-                    Calculado automáticamente sumando todas tus ventas.
-                </div>
-            </div>
-        </div>
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-4">
+    <div class="card border-0 h-100">
+      <div class="card-body p-3">
+        <div class="text-success fw-semibold" style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;">Ingresos</div>
+        <div class="fw-bold text-success fs-5">$ {{ "{:,.0f}".format(ingresos_total).replace(',', '.') }}</div>
+      </div>
     </div>
-    
-    <!-- Egresos Totales -->
-    <div class="col-md-4">
-        <div class="card bg-dark border-danger border-opacity-50 shadow h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="text-danger text-uppercase mb-1" style="letter-spacing: 1px; font-weight: 700;">Egresos Totales</h6>
-                        <h3 class="mb-0 text-white">$ {{ "{:,.0f}".format(egresos_total).replace(',', '.') }}</h3>
-                    </div>
-                    <div class="p-3 bg-danger bg-opacity-10 rounded text-danger">
-                        <i class="bi bi-graph-down-arrow fs-3"></i>
-                    </div>
-                </div>
-                <div class="mt-3 text-muted small">
-                    <i class="bi bi-info-circle-fill text-danger me-1"></i>
-                    Suma total de los gastos registrados abajo.
-                </div>
-            </div>
-        </div>
+  </div>
+  <div class="col-4">
+    <div class="card border-0 h-100">
+      <div class="card-body p-3">
+        <div class="text-danger fw-semibold" style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;">Egresos</div>
+        <div class="fw-bold text-danger fs-5">$ {{ "{:,.0f}".format(egresos_total).replace(',', '.') }}</div>
+      </div>
     </div>
-
-    <!-- Balance -->
-    <div class="col-md-4">
-        <div class="card bg-dark border-info border-opacity-50 shadow h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="text-info text-uppercase mb-1" style="letter-spacing: 1px; font-weight: 700;">Balance</h6>
-                        <h3 class="mb-0 text-white">$ {{ "{:,.0f}".format(balance_total).replace(',', '.') }}</h3>
-                    </div>
-                    <div class="p-3 bg-info bg-opacity-10 rounded text-info">
-                        <i class="bi bi-wallet2 fs-3"></i>
-                    </div>
-                </div>
-                <div class="mt-3 text-muted small">
-                    <i class="bi bi-calculator-fill text-info me-1"></i>
-                    Ingresos menos egresos.
-                </div>
-            </div>
-        </div>
+  </div>
+  <div class="col-4">
+    <div class="card border-0 h-100">
+      <div class="card-body p-3">
+        <div class="text-primary fw-semibold" style="font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;">Balance</div>
+        <div class="fw-bold text-primary fs-5">$ {{ "{:,.0f}".format(balance_total).replace(',', '.') }}</div>
+      </div>
     </div>
+  </div>
 </div>
 
 <div class="row g-4">
-    <!-- Columna Ingresos -->
-    <div class="col-lg-6">
-        <div class="card bg-dark border-light shadow">
-            <div class="card-header bg-dark border-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 text-success">📈 Ingresos (Ventas)</h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover mb-0 align-middle">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Producto</th>
-                                <th>Cliente</th>
-                                <th class="text-end">Monto</th>
-                                <th class="text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if ventas %}
-                                {% for venta in ventas %}
-                                <tr>
-                                    <td class="fw-semibold">{{ venta['producto'] }}</td>
-                                    <td class="text-muted">{{ venta['cliente_nombre'] }}</td>
-                                    <td class="text-success fw-bold text-end" style="white-space: nowrap;">
-                                        + {{ "{:,.0f}".format(venta['precio']).replace(',', '.') }}
-                                    </td>
-                                    <td class="text-center">
-                                        <form action="{{ url_for('finanzas.eliminar_venta', id=venta['id']) }}" method="POST"
-                                              onsubmit="return confirm('¿Seguro que deseas eliminar esta venta? Esto devolverá el dinero al balance.');">
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Eliminar esta venta">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-5">
-                                    <i class="bi bi-inbox fs-1 d-block mb-3 opacity-50"></i>
-                                    <p class="mb-0">Aún no hay ventas registradas.</p>
-                                </td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Columna Egresos -->
-    <div class="col-lg-6">
-        <div class="card bg-dark border-light shadow">
-            <div class="card-header bg-dark border-light d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 text-danger">📉 Egresos (Gastos)</h6>
-                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEgreso">
-                    <i class="bi bi-plus-circle me-1"></i>Agregar gasto
+  <!-- Ingresos -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-2 px-3">
+        <span class="fw-semibold text-success" style="font-size:.9rem;">📈 Ingresos (Ventas)</span>
+      </div>
+      <div class="card-body p-0">
+
+        {% if ventas %}
+
+        {# ── Vista móvil: tarjetas ─────────────────────────── #}
+        <div class="d-md-none">
+          {% for venta in ventas %}
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-opacity-50">
+            <div class="overflow-hidden">
+              <div class="fw-semibold text-truncate" style="font-size:.875rem;">{{ venta['producto'] }}</div>
+              <div class="text-muted" style="font-size:.78rem;">{{ venta['cliente_nombre'] }}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-2">
+              <span class="fw-bold text-success" style="font-size:.875rem; white-space:nowrap;">+ {{ "{:,.0f}".format(venta['precio']).replace(',', '.') }}</span>
+              <form action="{{ url_for('finanzas.eliminar_venta', id=venta['id']) }}" method="POST"
+                    onsubmit="return confirm('¿Eliminar esta venta?');">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Eliminar">
+                  <i class="bi bi-trash"></i>
                 </button>
+              </form>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-dark table-hover mb-0 align-middle">
-                        <thead class="table-dark">
-                            <tr>
-                                <th>Concepto</th>
-                                <th>Categoría</th>
-                                <th class="text-end">Monto</th>
-                                <th class="text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if egresos %}
-                                {% for egreso in egresos %}
-                                <tr>
-                                    <td class="fw-semibold">{{ egreso['concepto'] }}</td>
-                                    <td class="text-muted">{{ egreso['categoria'] }}</td>
-                                    <td class="text-danger fw-bold text-end" style="white-space: nowrap;">
-                                        - {{ "{:,.0f}".format(egreso['monto']).replace(',', '.') }}
-                                    </td>
-                                    <td class="text-center">
-                                        <form action="{{ url_for('finanzas.eliminar_egreso', id=egreso['id']) }}" method="POST"
-                                              onsubmit="return confirm('¿Seguro que deseas eliminar este gasto? Esto devolverá el dinero al balance.');">
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Eliminar este gasto">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-5">
-                                    <i class="bi bi-piggy-bank fs-1 d-block mb-3 opacity-50"></i>
-                                    <p class="mb-0">Aún no hay salidas de dinero documentadas.</p>
-                                </td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+          </div>
+          {% endfor %}
         </div>
-    </div>
-</div>
 
-<!-- Modal de Venta de Accesorio -->
-<div class="modal fade" id="modalAccesorio" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-semibold">Venta de accesorio</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        {# ── Vista desktop: tabla ────────────────────────── #}
+        <div class="table-responsive d-none d-md-block">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>Producto</th>
+                <th>Cliente</th>
+                <th class="text-end">Monto</th>
+                <th class="text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for venta in ventas %}
+              <tr>
+                <td class="fw-semibold">{{ venta['producto'] }}</td>
+                <td class="text-muted">{{ venta['cliente_nombre'] }}</td>
+                <td class="text-success fw-bold text-end" style="white-space:nowrap;">
+                  + {{ "{:,.0f}".format(venta['precio']).replace(',', '.') }}
+                </td>
+                <td class="text-center">
+                  <form action="{{ url_for('finanzas.eliminar_venta', id=venta['id']) }}" method="POST"
+                        onsubmit="return confirm('¿Seguro que deseas eliminar esta venta?');">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Eliminar">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-inbox fs-1 d-block mb-3 opacity-50"></i>
+          <p class="mb-0 small">Aún no hay ventas registradas.</p>
+        </div>
+        {% endif %}
+
       </div>
-      <div class="modal-body">
-        <form method="POST" action="{{ url_for('ventas.venta_rapida') }}">
-          <input type="hidden" name="origen" value="modal">
-          <div class="mb-3">
-            <label class="form-label text-muted" style="font-size:.85rem;">Producto</label>
-            <input type="text" name="producto" class="form-control"
-                   placeholder="Ej: Vidrio templado Samsung A55" required>
+    </div>
+  </div>
+
+  <!-- Egresos -->
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-2 px-3">
+        <span class="fw-semibold text-danger" style="font-size:.9rem;">📉 Egresos (Gastos)</span>
+        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEgreso">
+          <i class="bi bi-plus-circle me-1"></i>Agregar gasto
+        </button>
+      </div>
+      <div class="card-body p-0">
+
+        {% if egresos %}
+
+        {# ── Vista móvil: tarjetas ─────────────────────────── #}
+        <div class="d-md-none">
+          {% for egreso in egresos %}
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-opacity-50">
+            <div class="overflow-hidden">
+              <div class="fw-semibold text-truncate" style="font-size:.875rem;">{{ egreso['concepto'] }}</div>
+              <div class="text-muted" style="font-size:.78rem;">{{ egreso['categoria'] }}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-2">
+              <span class="fw-bold text-danger" style="font-size:.875rem; white-space:nowrap;">- {{ "{:,.0f}".format(egreso['monto']).replace(',', '.') }}</span>
+              <form action="{{ url_for('finanzas.eliminar_egreso', id=egreso['id']) }}" method="POST"
+                    onsubmit="return confirm('¿Eliminar este gasto?');">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Eliminar">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label text-muted" style="font-size:.85rem;">Precio</label>
-            <input type="number" name="precio" class="form-control"
-                   placeholder="15000" min="1" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-muted" style="font-size:.85rem;">Tipo de pago</label>
-            <select name="tipo_pago" class="form-select">
-              <option value="Efectivo">Efectivo</option>
-              <option value="Nequi">Nequi</option>
-              <option value="Transferencia">Transferencia</option>
-              <option value="Daviplata">Daviplata</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-muted" style="font-size:.85rem;">Nombre del cliente</label>
-            <input type="text" name="cliente_nombre" class="form-control"
-                   placeholder="Dejar vacío para Cliente Exprés">
-          </div>
-          <div class="mb-3">
-            <label class="form-label text-muted" style="font-size:.85rem;">Teléfono</label>
-            <input type="text" name="cliente_telefono" class="form-control"
-                   placeholder="3001234567" maxlength="10">
-          </div>
-          <input type="hidden" name="fecha" value="{{ hoy }}">
-          <div class="d-flex gap-2 mt-4">
-            <button type="button" class="btn btn-outline-secondary flex-fill"
-                    data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-success flex-fill">
-              <i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp
-            </button>
-          </div>
-        </form>
+          {% endfor %}
+        </div>
+
+        {# ── Vista desktop: tabla ────────────────────────── #}
+        <div class="table-responsive d-none d-md-block">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-dark">
+              <tr>
+                <th>Concepto</th>
+                <th>Categoría</th>
+                <th class="text-end">Monto</th>
+                <th class="text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for egreso in egresos %}
+              <tr>
+                <td class="fw-semibold">{{ egreso['concepto'] }}</td>
+                <td class="text-muted">{{ egreso['categoria'] }}</td>
+                <td class="text-danger fw-bold text-end" style="white-space:nowrap;">
+                  - {{ "{:,.0f}".format(egreso['monto']).replace(',', '.') }}
+                </td>
+                <td class="text-center">
+                  <form action="{{ url_for('finanzas.eliminar_egreso', id=egreso['id']) }}" method="POST"
+                        onsubmit="return confirm('¿Seguro que deseas eliminar este gasto?');">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Eliminar">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-piggy-bank fs-1 d-block mb-3 opacity-50"></i>
+          <p class="mb-0 small">Aún no hay gastos documentados.</p>
+        </div>
+        {% endif %}
+
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal de Recepción Rápida de Equipos -->
-<div class="modal fade" id="modalRecepcionRapida" tabindex="-1" aria-labelledby="modalRecepcionRapidaLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-primary bg-opacity-10 border-primary border-bottom">
-        <h5 class="modal-title fw-bold text-primary" id="modalRecepcionRapidaLabel">
-          <i class="bi bi-phone-vibrate me-2"></i>Recepción Rápida de Equipo
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form method="POST" action="{{ url_for('ordenes.recepcion_rapida') }}" novalidate>
-        <div class="modal-body p-4">
-          <div class="mb-3">
-            <label for="nombre_cliente_rapida" class="form-label fw-semibold">
-              Nombre del Cliente <span class="text-danger">*</span>
-            </label>
-            <input type="text" 
-                   class="form-control form-control-lg" 
-                   id="nombre_cliente_rapida" 
-                   name="nombre_cliente_rapida" 
-                   placeholder="Ej: Juan Pérez"
-                   required
-                   autofocus>
-          </div>
-          
-          <div class="mb-3">
-            <label for="telefono_cliente_rapida" class="form-label fw-semibold">
-              Teléfono <span class="text-danger">*</span>
-            </label>
-            <input type="tel" 
-                   class="form-control form-control-lg" 
-                   id="telefono_cliente_rapida" 
-                   name="telefono_cliente_rapida" 
-                   placeholder="Ej: 3001234567"
-                   required>
-          </div>
-          
-          <div class="mb-3">
-            <label for="marca_modelo_rapida" class="form-label fw-semibold">
-              Marca/Modelo <span class="text-danger">*</span>
-            </label>
-            <input type="text" 
-                   class="form-control form-control-lg" 
-                   id="marca_modelo_rapida" 
-                   name="marca_modelo_rapida" 
-                   placeholder="Ej: Samsung A55, iPhone 15..."
-                   required>
-          </div>
-          
-          <div class="mb-3">
-            <label for="problema_rapida" class="form-label fw-semibold">
-              Problema <span class="text-danger">*</span>
-            </label>
-            <textarea class="form-control form-control-lg" 
-                      id="problema_rapida" 
-                      name="problema_rapida" 
-                      placeholder="Ej: Pantalla rota, No carga..." 
-                      rows="3" 
-                      required></textarea>
-          </div>
-          
-          <div class="mb-3">
-            <label for="costo_estimado_rapida" class="form-label fw-semibold">
-              Costo Estimado (Opcional)
-            </label>
-            <div class="input-group input-group-lg">
-              <span class="input-group-text fw-bold">$</span>
-              <input type="number" 
-                     class="form-control" 
-                     id="costo_estimado_rapida" 
-                     name="costo_estimado_rapida" 
-                     placeholder="0" 
-                     min="0" 
-                     step="1000">
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer border-top">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            <i class="bi bi-x-lg me-1"></i>Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-lg me-1"></i>Registrar Equipo
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+{% include 'partials/_modales_rapidos.html' %}
 
 <!-- Modal Agregar Gasto -->
 <div class="modal fade" id="modalEgreso" tabindex="-1" aria-labelledby="modalEgresoLabel" aria-hidden="true">
@@ -343,31 +209,28 @@
     <div class="modal-content border-0 shadow-lg">
       <div class="modal-header bg-danger bg-opacity-10 border-danger border-bottom">
         <h5 class="modal-title fw-bold text-danger" id="modalEgresoLabel">
-          <i class="bi bi-dash-circle me-2"></i>Registrar Gasto / Egreso
+          <i class="bi bi-dash-circle me-2"></i>Registrar Gasto
         </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" action="{{ url_for('finanzas.crear_egreso') }}">
         <div class="modal-body p-4">
           <div class="mb-3">
             <label class="form-label fw-semibold">Concepto <span class="text-danger">*</span></label>
             <input type="text" name="concepto" class="form-control form-control-lg"
-                   placeholder="Ej: Compra de repuestos, Arriendo, Servicios..."
-                   required autofocus>
+                   placeholder="Ej: Compra de repuestos, Arriendo..." required autofocus>
           </div>
           <div class="row g-3 mb-3">
             <div class="col-sm-6">
               <label class="form-label fw-semibold">Monto <span class="text-danger">*</span></label>
               <div class="input-group input-group-lg">
                 <span class="input-group-text fw-bold">$</span>
-                <input type="number" name="monto" class="form-control"
-                       placeholder="0" min="1" step="1" required>
+                <input type="number" name="monto" class="form-control" placeholder="0" min="1" step="1" required>
               </div>
             </div>
             <div class="col-sm-6">
               <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
-              <input type="date" name="fecha" class="form-control form-control-lg"
-                     value="{{ hoy }}" required>
+              <input type="date" name="fecha" class="form-control form-control-lg" value="{{ hoy }}" required>
             </div>
           </div>
           <div class="mb-3">

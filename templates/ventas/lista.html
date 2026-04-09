@@ -3,162 +3,183 @@
 
 {% block content %}
 <div class="d-flex align-items-center mb-4 flex-wrap gap-2">
-    <div>
-        <h2 class="mb-1 fw-bold" style="color:var(--tc-cyan,#00CFFF)">
-            <i class="bi bi-cart-fill me-2"></i>Ventas
-        </h2>
-        <p class="text-muted mb-0">Historial de todas las ventas de productos y servicios</p>
-    </div>
+  <div>
+    <h4 class="mb-1 fw-semibold"><i class="bi bi-cart-fill me-2 text-primary"></i>Ventas</h4>
+    <p class="text-muted mb-0" style="font-size:.875rem;">Historial de ventas de productos y servicios</p>
+  </div>
 </div>
 
 <!-- Resumen de ingresos -->
 <div class="row g-3 mb-4">
-    <div class="col-12 col-md-4">
-        <div class="card border-0 shadow-sm h-100" style="background:rgba(0,207,255,0.06);border:1px solid rgba(0,207,255,0.2)!important;">
-            <div class="card-body d-flex align-items-center gap-3">
-                <i class="bi bi-cash-coin fs-2" style="color:var(--tc-cyan,#00CFFF)"></i>
-                <div>
-                    <div class="small text-muted">Total ingresos</div>
-                    <div class="fw-bold fs-5" style="color:var(--tc-cyan,#00CFFF)">$ {{ "{:,.0f}".format(total_ingresos) }}</div>
-                </div>
-            </div>
-        </div>
+  <div class="col-4">
+    <div class="card border-0 h-100">
+      <div class="card-body p-3 text-center">
+        <div class="text-muted" style="font-size:.72rem;">Total ingresos</div>
+        <div class="fw-bold text-primary" style="font-size:.95rem;">$ {{ "{:,.0f}".format(total_ingresos) }}</div>
+      </div>
     </div>
-    <div class="col-12 col-md-4">
-        <div class="card border-0 shadow-sm h-100" style="background:rgba(0,230,118,0.06);border:1px solid rgba(0,230,118,0.2)!important;">
-            <div class="card-body d-flex align-items-center gap-3">
-                <i class="bi bi-bag-check-fill fs-2 text-success"></i>
-                <div>
-                    <div class="small text-muted">Total ventas</div>
-                    <div class="fw-bold fs-5 text-success">{{ ventas|length }} venta(s)</div>
-                </div>
-            </div>
-        </div>
+  </div>
+  <div class="col-4">
+    <div class="card border-0 h-100">
+      <div class="card-body p-3 text-center">
+        <div class="text-muted" style="font-size:.72rem;">Total ventas</div>
+        <div class="fw-bold text-success" style="font-size:.95rem;">{{ ventas|length }}</div>
+      </div>
     </div>
-    <div class="col-12 col-md-4">
-        <div class="card border-0 shadow-sm h-100" style="background:rgba(255,215,64,0.06);border:1px solid rgba(255,215,64,0.2)!important;">
-            <div class="card-body d-flex align-items-center gap-3">
-                <i class="bi bi-calendar-check fs-2 text-warning"></i>
-                <div>
-                    <div class="small text-muted">Fecha actual</div>
-                    <div class="fw-bold fs-6 text-warning">{{ ventas[0].fecha if ventas else '—' }}</div>
-                </div>
-            </div>
-        </div>
+  </div>
+  <div class="col-4">
+    <div class="card border-0 h-100">
+      <div class="card-body p-3 text-center">
+        <div class="text-muted" style="font-size:.72rem;">Última fecha</div>
+        <div class="fw-bold text-warning" style="font-size:.85rem;">{{ ventas[0].fecha if ventas else '—' }}</div>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Filtros rápidos -->
 <div class="d-flex gap-2 mb-3 flex-wrap">
-    <a href="{{ url_for('ventas.lista') }}" class="btn btn-sm {% if not request.args.get('tipo') %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-        <i class="bi bi-list-ul me-1"></i>Todas
-    </a>
-    <a href="{{ url_for('ventas.lista', tipo='accesorio') }}" class="btn btn-sm {% if request.args.get('tipo') == 'accesorio' %}btn-success{% else %}btn-outline-success{% endif %}">
-        <i class="bi bi-bag-fill me-1"></i>Accesorios
-    </a>
-    <a href="{{ url_for('ventas.lista', tipo='servicio') }}" class="btn btn-sm {% if request.args.get('tipo') == 'servicio' %}btn-info{% else %}btn-outline-info{% endif %}">
-        <i class="bi bi-tools me-1"></i>Servicios
-    </a>
+  <a href="{{ url_for('ventas.lista') }}" class="btn btn-sm rounded-pill {% if not request.args.get('tipo') %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    Todas
+  </a>
+  <a href="{{ url_for('ventas.lista', tipo='accesorio') }}" class="btn btn-sm rounded-pill {% if request.args.get('tipo') == 'accesorio' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-bag-fill me-1"></i>Accesorios
+  </a>
+  <a href="{{ url_for('ventas.lista', tipo='servicio') }}" class="btn btn-sm rounded-pill {% if request.args.get('tipo') == 'servicio' %}btn-info{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-tools me-1"></i>Servicios
+  </a>
 </div>
 
-<!-- Tabla de ventas -->
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
-        {% if ventas %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
-                    <tr style="background:rgba(0,207,255,0.07);color:rgba(160,196,216,0.8);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;">
-                        <th class="ps-3">#</th>
-                        <th>Cliente</th>
-                        <th>Producto / Servicio</th>
-                        <th>Tipo</th>
-                        <th>Estado</th>
-                        <th>Monto</th>
-                        <th>Pago</th>
-                        <th>Fecha</th>
-                        <th class="text-center pe-3">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for v in ventas %}
-                    <tr>
-                        <td class="ps-3">
-                            <span class="badge" style="background:rgba(0,207,255,0.15);color:var(--tc-cyan,#00CFFF);border:1px solid rgba(0,207,255,0.3)">
-                                #{{ "%04d"|format(v.id) }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="fw-semibold">{{ v.cliente_nombre }}</span>
-                            {% if v.cliente_telefono %}
-                            <br><small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ v.cliente_telefono }}</small>
-                            {% endif %}
-                        </td>
-                        <td class="fw-semibold">{{ v.producto }}</td>
-                        <td>
-                            {% if v.notas and 'servicio' in v.notas|lower %}
-                                <span class="badge bg-info bg-opacity-20 text-info border border-info border-opacity-25">
-                                    <i class="bi bi-tools me-1"></i>Servicio
-                                </span>
-                            {% else %}
-                                <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-25">
-                                    <i class="bi bi-bag-fill me-1"></i>Accesorio
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if v.tipo_pago == 'crédito' or v.tipo_pago == 'credito' %}
-                                <span class="badge" style="background:rgba(255,215,64,0.15);color:#FFD740;border:1px solid rgba(255,215,64,0.3)">
-                                    <i class="bi bi-hourglass-split me-1"></i>Pendiente
-                                </span>
-                            {% else %}
-                                <span class="badge" style="background:rgba(0,230,118,0.15);color:#00E676;border:1px solid rgba(0,230,118,0.3)">
-                                    <i class="bi bi-check-circle-fill me-1"></i>Pagado
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td class="fw-bold" style="color:var(--tc-cyan,#00CFFF)">
-                            $ {{ "{:,.0f}".format(v.precio) }}
-                        </td>
-                        <td>
-                            <span class="badge {% if v.tipo_pago == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                                <i class="bi bi-{% if v.tipo_pago == 'contado' %}cash{% else %}credit-card{% endif %} me-1"></i>
-                                {{ v.tipo_pago|title }}
-                            </span>
-                        </td>
-                        <td class="text-muted small">{{ v.fecha }}</td>
-                        <td class="pe-3">
-                            <div class="d-flex gap-1 justify-content-center">
-                                <a href="{{ url_for('facturas.generar', venta_id=v.id) }}"
-                                   class="btn btn-sm btn-outline-primary" title="Ver factura">
-                                    <i class="bi bi-receipt"></i>
-                                </a>
-                                <a href="{{ url_for('facturas.descargar', venta_id=v.id) }}"
-                                   class="btn btn-sm btn-outline-success" title="Descargar PDF">
-                                    <i class="bi bi-file-earmark-pdf"></i>
-                                </a>
-                                <form method="POST"
-                                      action="{{ url_for('ventas.eliminar', id=v.id) }}"
-                                      class="d-inline"
-                                      onsubmit="return confirm('¿Eliminar la venta de {{ v.producto }}?')">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+{% if ventas %}
+
+{# ── Vista móvil: tarjetas ─────────────────────────────────────────────────── #}
+<div class="d-md-none">
+  {% for v in ventas %}
+  <div class="card mb-2 border-0">
+    <div class="card-body p-3">
+      <div class="d-flex justify-content-between align-items-start mb-1">
+        <div class="fw-semibold" style="font-size:.95rem; max-width:65%;">{{ v.producto }}</div>
+        <div class="fw-bold text-primary text-nowrap ms-2">$ {{ "{:,.0f}".format(v.precio) }}</div>
+      </div>
+      <div class="d-flex gap-2 align-items-center mb-2">
+        <span class="text-muted" style="font-size:.82rem;">{{ v.cliente_nombre }}</span>
+        <span class="badge {% if v.tipo_pago == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %}" style="font-size:.7rem;">
+          {{ v.tipo_pago|title }}
+        </span>
+        {% if v.notas and 'servicio' in v.notas|lower %}
+          <span class="badge bg-info bg-opacity-20 text-info" style="font-size:.7rem;">Servicio</span>
         {% else %}
-        <div class="text-center py-5 text-muted">
-            <i class="bi bi-cart-x fs-1 d-block mb-3 text-secondary"></i>
-            <h5 class="text-secondary">No hay ventas registradas aún</h5>
-            <p class="small text-muted">Las ventas aparecerán aquí cuando registres accesorios o servicios desde el Dashboard.</p>
-        </div>
+          <span class="badge bg-success bg-opacity-20 text-success" style="font-size:.7rem;">Accesorio</span>
         {% endif %}
+      </div>
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="text-muted" style="font-size:.78rem;">{{ v.fecha }}</span>
+        <div class="d-flex gap-1">
+          <a href="{{ url_for('facturas.generar', venta_id=v.id) }}"
+             class="btn btn-outline-primary btn-sm" title="Ver factura">
+            <i class="bi bi-receipt"></i>
+          </a>
+          <a href="{{ url_for('facturas.descargar', venta_id=v.id) }}"
+             class="btn btn-outline-success btn-sm" title="Descargar PDF">
+            <i class="bi bi-file-earmark-pdf"></i>
+          </a>
+          <form method="POST" action="{{ url_for('ventas.eliminar', id=v.id) }}"
+                class="d-inline" onsubmit="return confirm('¿Eliminar la venta de {{ v.producto }}?')">
+            <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
+  </div>
+  {% endfor %}
 </div>
+
+{# ── Vista desktop: tabla ──────────────────────────────────────────────────── #}
+<div class="card border-0 shadow-sm d-none d-md-block">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Producto / Servicio</th>
+            <th>Tipo</th>
+            <th>Monto</th>
+            <th>Pago</th>
+            <th>Fecha</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in ventas %}
+          <tr>
+            <td>
+              <span class="badge" style="background:rgba(0,207,255,0.15);color:var(--tc-cyan,#00CFFF);border:1px solid rgba(0,207,255,0.3)">
+                #{{ "%04d"|format(v.id) }}
+              </span>
+            </td>
+            <td>
+              <span class="fw-semibold">{{ v.cliente_nombre }}</span>
+              {% if v.cliente_telefono %}
+              <br><small class="text-muted">{{ v.cliente_telefono }}</small>
+              {% endif %}
+            </td>
+            <td class="fw-semibold">{{ v.producto }}</td>
+            <td>
+              {% if v.notas and 'servicio' in v.notas|lower %}
+                <span class="badge bg-info bg-opacity-20 text-info border border-info border-opacity-25">
+                  <i class="bi bi-tools me-1"></i>Servicio
+                </span>
+              {% else %}
+                <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-25">
+                  <i class="bi bi-bag-fill me-1"></i>Accesorio
+                </span>
+              {% endif %}
+            </td>
+            <td class="fw-bold text-primary">$ {{ "{:,.0f}".format(v.precio) }}</td>
+            <td>
+              <span class="badge {% if v.tipo_pago == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                {{ v.tipo_pago|title }}
+              </span>
+            </td>
+            <td class="text-muted small">{{ v.fecha }}</td>
+            <td>
+              <div class="d-flex gap-1 justify-content-center">
+                <a href="{{ url_for('facturas.generar', venta_id=v.id) }}"
+                   class="btn btn-sm btn-outline-primary" title="Ver factura">
+                  <i class="bi bi-receipt"></i>
+                </a>
+                <a href="{{ url_for('facturas.descargar', venta_id=v.id) }}"
+                   class="btn btn-sm btn-outline-success" title="Descargar PDF">
+                  <i class="bi bi-file-earmark-pdf"></i>
+                </a>
+                <form method="POST" action="{{ url_for('ventas.eliminar', id=v.id) }}"
+                      class="d-inline" onsubmit="return confirm('¿Eliminar la venta de {{ v.producto }}?')">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="card border-0 shadow-sm">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-cart-x fs-1 d-block mb-3"></i>
+    <h5>No hay ventas registradas aún</h5>
+    <p class="small">Las ventas aparecerán aquí cuando registres accesorios o servicios desde el Dashboard.</p>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}

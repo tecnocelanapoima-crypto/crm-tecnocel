@@ -1,0 +1,132 @@
+{# ──────────────────────────────────────────────────────────────────────────────
+   Partial compartido: Modal Venta de Accesorio + Modal Recepción Rápida
+   Uso: {% include 'partials/_modales_rapidos.html' %}
+   Nota: index.html usa sus propias versiones con lógica AJAX avanzada.
+   ────────────────────────────────────────────────────────────────────────────── #}
+
+<!-- Modal: Venta de Accesorio -->
+<div class="modal fade" id="modalAccesorio" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-success bg-opacity-10 border-success border-bottom">
+        <h5 class="modal-title fw-bold text-success">
+          <i class="bi bi-bag-plus me-2"></i>Venta de accesorio
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('ventas.venta_rapida') }}">
+        <input type="hidden" name="origen" value="modal">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Producto <span class="text-danger">*</span></label>
+            <input type="text" name="producto" class="form-control form-control-lg"
+                   placeholder="Ej: Vidrio templado Samsung A55" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Precio <span class="text-danger">*</span></label>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text fw-bold">$</span>
+              <input type="number" name="precio" class="form-control" placeholder="15000" min="1" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Tipo de pago</label>
+            <select name="tipo_pago" class="form-select form-select-lg">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Nequi">Nequi</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Daviplata">Daviplata</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Cliente (opcional)</label>
+            <input type="text" name="cliente_nombre" class="form-control form-control-lg"
+                   placeholder="Dejar vacío para Cliente Exprés">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Teléfono</label>
+            <input type="text" name="cliente_telefono" class="form-control form-control-lg"
+                   placeholder="3001234567" maxlength="10">
+          </div>
+          <input type="hidden" name="fecha" value="{{ hoy }}">
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-success px-4">
+            <i class="bi bi-check-lg me-1"></i>Guardar venta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Recepción Rápida de Equipo -->
+<div class="modal fade" id="modalRecepcionRapida" tabindex="-1" aria-labelledby="modalRecepcionRapidaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary bg-opacity-10 border-primary border-bottom">
+        <h5 class="modal-title fw-bold text-primary" id="modalRecepcionRapidaLabel">
+          <i class="bi bi-phone-vibrate me-2"></i>Recepción Rápida de Equipo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('ordenes.recepcion_rapida') }}" novalidate>
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Nombre del Cliente <span class="text-danger">*</span>
+            </label>
+            <input type="text" class="form-control form-control-lg"
+                   name="nombre_cliente_rapida"
+                   placeholder="Ej: Juan Pérez" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Teléfono <span class="text-danger">*</span>
+            </label>
+            <input type="tel" class="form-control form-control-lg"
+                   name="telefono_cliente_rapida"
+                   placeholder="Ej: 3001234567" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Marca / Modelo <span class="text-danger">*</span>
+            </label>
+            <input type="text" class="form-control form-control-lg"
+                   name="marca_modelo_rapida"
+                   placeholder="Ej: Samsung A55, iPhone 15..." required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Problema <span class="text-danger">*</span>
+            </label>
+            <textarea class="form-control form-control-lg"
+                      name="problema_rapida"
+                      placeholder="Ej: Pantalla rota, No carga..."
+                      rows="3" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Costo Estimado (Opcional)</label>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text fw-bold">$</span>
+              <input type="number" class="form-control"
+                     name="costo_estimado_rapida"
+                     placeholder="0" min="0" step="1000">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-lg me-1"></i>Registrar Equipo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
