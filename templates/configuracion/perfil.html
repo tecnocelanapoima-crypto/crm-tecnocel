@@ -58,13 +58,11 @@
                        class="d-none" onchange="previewLogo(this)">
 
                 {% if negocio.logo_base64 %}
-                <form method="POST" action="{{ url_for('configuracion.perfil') }}" class="d-inline w-100">
-                  <input type="hidden" name="accion" value="eliminar_logo">
-                  <button type="submit" class="btn btn-outline-danger btn-sm w-100"
-                          onclick="return confirm('¿Eliminar el logo actual?')">
-                    <i class="bi bi-trash me-1"></i>Eliminar logo
-                  </button>
-                </form>
+                <button type="submit" form="form-eliminar-logo"
+                        class="btn btn-outline-danger btn-sm w-100"
+                        onclick="return confirm('¿Eliminar el logo actual?')">
+                  <i class="bi bi-trash me-1"></i>Eliminar logo
+                </button>
                 {% endif %}
               </div>
 
@@ -232,4 +230,10 @@ document.querySelector('input[name="slogan"]').addEventListener('input', functio
     document.getElementById('factura-slogan-preview').textContent = this.value || 'Slogan del negocio';
 });
 </script>
+
+{% if negocio.logo_base64 %}
+<form id="form-eliminar-logo" method="POST" action="{{ url_for('configuracion.perfil') }}">
+  <input type="hidden" name="accion" value="eliminar_logo">
+</form>
+{% endif %}
 {% endblock %}
