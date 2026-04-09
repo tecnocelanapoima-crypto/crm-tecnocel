@@ -32,11 +32,16 @@
         <div class="card border-0 shadow factura-preview">
             <!-- Header de la factura -->
             <div class="card-header text-white py-4 text-center factura-header">
+                {% if negocio and negocio.logo_base64 %}
+                <img src="{{ negocio.logo_base64 }}" alt="{{ negocio.nombre_negocio }}"
+                     style="max-height:70px;max-width:200px;object-fit:contain;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;">
+                {% else %}
                 <h2 class="fw-bold mb-1">
-                    <i class="bi bi-phone-fill me-2"></i>TECNOCEL
+                    <i class="bi bi-phone-fill me-2"></i>{{ negocio.nombre_negocio if negocio else 'TECNOCEL' }}
                 </h2>
-                <p class="mb-0 opacity-75">Venta y soporte de celulares</p>
-                <p class="mb-0 opacity-75 small">tecnocel.negocio@gmail.com</p>
+                {% endif %}
+                <p class="mb-0 opacity-75">{{ negocio.slogan if negocio and negocio.slogan else 'Venta y soporte de celulares' }}</p>
+                <p class="mb-0 opacity-75 small">{{ negocio.email if negocio else 'tecnocel.negocio@gmail.com' }}</p>
             </div>
 
             <div class="card-body p-4">
@@ -146,7 +151,7 @@
                 <div class="text-center py-3 border-top">
                     <p class="text-muted mb-1">
                         <i class="bi bi-heart-fill text-danger me-1"></i>
-                        ¡Gracias por comprar en <strong>Tecnocel</strong>!
+                        ¡Gracias por comprar en <strong>{{ negocio.nombre_negocio if negocio else 'Tecnocel' }}</strong>!
                     </p>
                     <small class="text-muted">
                         Este comprobante es válido para reclamaciones. Consérvelo.

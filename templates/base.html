@@ -51,6 +51,78 @@
         .logo-caret{color:rgba(0,207,255,0.5);font-size:.7rem;transition:transform .2s}
         .logo-dropdown-toggle.show .logo-caret{transform:rotate(180deg)}
         .color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+        /* ===== NAVBAR LINKS GLOW ===== */
+        .navbar-nav .nav-link {
+            color: rgba(160,196,216,0.75);
+            font-weight: 600;
+            font-size: .875rem;
+            letter-spacing: .03em;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: color .25s, border-color .25s, box-shadow .25s, background .25s, text-shadow .25s;
+            position: relative;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #00CFFF;
+            border-color: rgba(0,207,255,0.45);
+            background: rgba(0,207,255,0.07);
+            box-shadow: 0 0 10px rgba(0,207,255,0.45), 0 0 22px rgba(0,207,255,0.2);
+            text-shadow: 0 0 8px rgba(0,207,255,0.8);
+            animation: nav-glow-pulse 1.8s ease-in-out infinite;
+        }
+        .navbar-nav .nav-link.active {
+            color: #00CFFF;
+            border-color: rgba(0,207,255,0.6);
+            background: rgba(0,207,255,0.10);
+            box-shadow: 0 0 14px rgba(0,207,255,0.6), 0 0 32px rgba(0,207,255,0.3), inset 0 0 10px rgba(0,207,255,0.08);
+            text-shadow: 0 0 10px rgba(0,207,255,0.9);
+            animation: nav-glow-pulse 1.8s ease-in-out infinite;
+        }
+        .navbar-nav .nav-link i {
+            transition: filter .25s;
+        }
+        .navbar-nav .nav-link:hover i,
+        .navbar-nav .nav-link.active i {
+            filter: drop-shadow(0 0 6px rgba(0,207,255,0.9));
+        }
+        @keyframes nav-glow-pulse {
+            0%,100% { box-shadow: 0 0 10px rgba(0,207,255,0.5), 0 0 22px rgba(0,207,255,0.2); }
+            50%      { box-shadow: 0 0 18px rgba(0,207,255,0.85), 0 0 40px rgba(0,207,255,0.4), inset 0 0 12px rgba(0,207,255,0.12); }
+        }
+
+        /* ===== BOTÓN RETROCESO ===== */
+        .btn-back-crm {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(0,207,255,0.07);
+            color: rgba(160,196,216,0.85);
+            border: 1px solid rgba(0,207,255,0.3);
+            border-radius: 8px;
+            padding: 6px 16px 6px 12px;
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color .2s, border-color .2s, box-shadow .2s, background .2s, text-shadow .2s;
+            letter-spacing: .02em;
+        }
+        .btn-back-crm:hover {
+            color: #00CFFF;
+            border-color: rgba(0,207,255,0.6);
+            background: rgba(0,207,255,0.12);
+            box-shadow: 0 0 10px rgba(0,207,255,0.45), 0 0 22px rgba(0,207,255,0.2);
+            text-shadow: 0 0 8px rgba(0,207,255,0.7);
+        }
+        .btn-back-crm i {
+            font-size: 1.1rem;
+            transition: filter .2s, transform .2s;
+        }
+        .btn-back-crm:hover i {
+            filter: drop-shadow(0 0 6px rgba(0,207,255,0.9));
+            transform: translateX(-2px);
+        }
     </style>
 </head>
 <body>
@@ -63,7 +135,11 @@
             <button class="logo-dropdown-toggle dropdown-toggle d-flex align-items-center gap-2"
                     type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                 <div class="logo-btn-wrap">
+                    {% if negocio_logo %}
+                    <img src="{{ negocio_logo }}" alt="{{ negocio_nombre }}" class="logo-img-btn" style="border-radius:50%;object-fit:cover;width:36px;height:36px;">
+                    {% else %}
                     <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Tecnocel" class="logo-img-btn">
+                    {% endif %}
                 </div>
                 <i class="bi bi-chevron-down logo-caret"></i>
             </button>
@@ -117,6 +193,7 @@
                 <!-- Cuenta -->
                 <div class="logo-dropdown-section">
                     <div class="logo-dropdown-section-title">Cuenta</div>
+                    <a class="logo-dropdown-item" href="{{ url_for('configuracion.perfil') }}"><i class="bi bi-gear-fill text-info"></i>Configuración del negocio</a>
                     <button class="logo-dropdown-item" onclick="resetConfig()"><i class="bi bi-arrow-counterclockwise"></i>Restablecer configuración</button>
                     <a class="logo-dropdown-item danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right"></i>Cerrar sesión</a>
                 </div>
@@ -188,6 +265,16 @@
 </nav>
 
 <div class="container-fluid py-4 px-4">
+    <!-- BOTÓN DE RETROCESO -->
+    {% if request.endpoint != 'index' and request.endpoint != 'auth.login' and request.endpoint != 'auth.registro' %}
+    <div class="mb-3">
+        <button onclick="history.back()" class="btn-back-crm">
+            <i class="bi bi-arrow-left-circle-fill"></i>
+            <span>Volver</span>
+        </button>
+    </div>
+    {% endif %}
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="mb-3">

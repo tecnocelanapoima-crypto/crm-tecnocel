@@ -4,7 +4,7 @@ Sistema multi-tenant: cada negocio ve solo sus datos
 """
 
 import os
-from flask import Flask, render_template, redirect, url_for, session
+from flask import Flask, render_template, redirect, url_for, session, request, flash, jsonify
 from database.db import init_db, get_db, close_db
 from datetime import date
 
@@ -24,6 +24,8 @@ from routes.whatsapp  import whatsapp_bp
 from routes.inventario import inventario_bp
 from routes.finanzas  import finanzas_bp
 from routes.ordenes   import ordenes_bp
+from routes.admin          import admin_bp
+from routes.configuracion  import configuracion_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(clientes_bp,  url_prefix='/clientes')
@@ -33,6 +35,8 @@ app.register_blueprint(whatsapp_bp,  url_prefix='/whatsapp')
 app.register_blueprint(inventario_bp, url_prefix='/inventario')
 app.register_blueprint(finanzas_bp,  url_prefix='/finanzas')
 app.register_blueprint(ordenes_bp,  url_prefix='/ordenes')
+app.register_blueprint(admin_bp,         url_prefix='/admin')
+app.register_blueprint(configuracion_bp, url_prefix='/configuracion')
 
 
 # ── Filtro de moneda Jinja2 ──────────────────────────────────────────────
@@ -47,10 +51,29 @@ def formato_moneda(valor):
 @app.context_processor
 def inject_negocio():
     """Disponible en todos los templates."""
+    nid = session.get('negocio_id')
+    logo_base64 = None
+    negocio_slogan = ''
+    negocio_telefono = ''
+    if nid:
+        try:
+            db = get_db()
+            row = db.execute(
+                'SELECT logo_base64, slogan, telefono FROM negocios WHERE id = ?', (nid,)
+            ).fetchone()
+            if row:
+                logo_base64 = row['logo_base64']
+                negocio_slogan = row['slogan'] or ''
+                negocio_telefono = row['telefono'] or ''
+        except Exception:
+            pass
     return {
-        'negocio_nombre': session.get('negocio_nombre', ''),
-        'negocio_email':  session.get('negocio_email',  ''),
-        'negocio_id':     session.get('negocio_id'),
+        'negocio_nombre':   session.get('negocio_nombre', ''),
+        'negocio_email':    session.get('negocio_email',  ''),
+        'negocio_id':       nid,
+        'negocio_logo':     logo_base64,
+        'negocio_slogan':   negocio_slogan,
+        'negocio_telefono': negocio_telefono,
     }
 
 
@@ -63,12 +86,12 @@ def index():
     db  = get_db()
     hoy = date.today().isoformat()
 
-    # ── Tarjetas de resumen (Seguro SaaS) ───────────────────────────────────
+    # ── Tarjetas de resumen — TOTALES ACUMULADOS ───────────────────────────────
 
-    # Equipos recibidos hoy
+    # Total equipos recibidos (todas las órdenes)
     try:
         equipos_hoy = db.execute(
-            "SELECT COUNT(*) FROM ordenes WHERE negocio_id = ? AND fecha_recibido = ?", (nid, hoy)
+            "SELECT COUNT(*) FROM ordenes WHERE negocio_id = ?", (nid,)
         ).fetchone()[0]
     except Exception: equipos_hoy = 0
 
@@ -79,31 +102,32 @@ def index():
         ).fetchone()[0]
     except Exception: equipos_listos = 0
 
-    # Ventas de hoy (conteo)
+    # Total ventas de accesorios/productos — excluye ventas de tipo servicio
     ventas_hoy = db.execute(
-        "SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND fecha = ?", (nid, hoy)
+        "SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)
     ).fetchone()[0]
 
-    # Plata recaudada hoy: ventas + órdenes entregadas hoy
+    # Total ingresos por ventas de accesorios/productos — excluye ventas de tipo servicio
     ingresos_ventas_hoy = db.execute(
-        "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND fecha = ?", (nid, hoy)
+        "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)
     ).fetchone()[0]
 
-    # Abonos recibidos hoy (dinero que entra al recibir)
+    # Total abonos recibidos en todas las órdenes (solo informativo)
     try:
         ingresos_abonos_hoy = db.execute(
-            "SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ? AND fecha_recibido = ?", (nid, hoy)
+            "SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)
         ).fetchone()[0]
     except Exception: ingresos_abonos_hoy = 0
 
-    # Resto cobrado hoy al entregar (Costo Final - Abono Inicial)
+    # Total cobrado en órdenes entregadas (costo_final completo)
     try:
         ingresos_ordenes_hoy = db.execute(
-            "SELECT COALESCE(SUM(costo_final - abono), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado' AND fecha_entregado = ?", (nid, hoy)
+            "SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)
         ).fetchone()[0]
     except Exception: ingresos_ordenes_hoy = 0
 
-    recaudado_hoy = ingresos_ventas_hoy + ingresos_abonos_hoy + ingresos_ordenes_hoy
+    # Total recaudado = ventas reales de accesorios + entregas de servicio efectivas (sin duplicados)
+    recaudado_hoy = ingresos_ventas_hoy + ingresos_ordenes_hoy
 
     # ── Datos detallados (SaaS safe) ────────────────────────────────────────
 
@@ -131,27 +155,35 @@ def index():
         ordenes_activas = []
         equipos_listos_detalle = []
 
-    # Ventas de accesorios recientes (No servicios)
+    # Ventas de accesorios recientes — excluye ventas de tipo servicio
     ventas_accesorios_recientes = db.execute('''
         SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha_creacion,
                c.nombre AS cliente_nombre
         FROM ventas v
         JOIN clientes c ON v.cliente_id = c.id
-        WHERE v.negocio_id = ? AND v.producto NOT LIKE 'Servicio: %'
+        WHERE v.negocio_id = ?
+          AND v.producto NOT LIKE 'Servicio: %'
         ORDER BY v.fecha_creacion DESC
         LIMIT 5
     ''', (nid,)).fetchall()
 
-    # Entregas recientes (Servicios terminados)
-    entregas_recientes = db.execute('''
-        SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha_creacion,
-               c.nombre AS cliente_nombre
-        FROM ventas v
-        JOIN clientes c ON v.cliente_id = c.id
-        WHERE v.negocio_id = ? AND v.producto LIKE 'Servicio: %'
-        ORDER BY v.fecha_creacion DESC
-        LIMIT 5
-    ''', (nid,)).fetchall()
+    # Entregas recientes — tomadas directamente de órdenes entregadas (fuente única, sin duplicados)
+    try:
+        entregas_recientes = db.execute('''
+            SELECT o.id,
+                   (o.marca_modelo || ' - ' || o.problema) as producto,
+                   o.costo_final as precio,
+                   'contado' as tipo_pago,
+                   o.fecha_entregado as fecha_creacion,
+                   c.nombre AS cliente_nombre
+            FROM ordenes o
+            JOIN clientes c ON o.cliente_id = c.id
+            WHERE o.negocio_id = ? AND o.estado = 'entregado'
+            ORDER BY o.fecha_entregado DESC
+            LIMIT 5
+        ''', (nid,)).fetchall()
+    except Exception:
+        entregas_recientes = []
 
     return render_template(
         'index.html',
@@ -179,19 +211,26 @@ def completos():
 
     nid = session['negocio_id']
     db  = get_db()
-    
-    # 1. Obtener Ventas
+
+    # 1. Ventas de accesorios/productos — excluye TODOS los duplicados de servicios
     ventas = db.execute('''
-        SELECT 'Venta' as tipo, v.producto as concepto, v.precio as valor, 
+        SELECT v.id as id, 'Venta' as tipo, v.producto as concepto, v.precio as valor,
                v.fecha as fecha_fin, c.nombre as cliente_nombre, 'success' as color
         FROM ventas v JOIN clientes c ON v.cliente_id = c.id
         WHERE v.negocio_id = ?
+          AND v.producto NOT LIKE 'Servicio: %'
+          AND (v.notas IS NULL OR v.notas NOT LIKE 'Orden %')
     ''', (nid,)).fetchall()
 
-    # 2. Obtener Reparaciones Entregadas
+    # 2. Reparaciones entregadas — concepto unificado: marca_modelo + problema
     entregas = db.execute('''
-        SELECT 'Reparación' as tipo, o.marca_modelo as concepto, o.costo_final as valor, 
-               o.fecha_entregado as fecha_fin, c.nombre as cliente_nombre, 'primary' as color
+        SELECT o.id as id,
+               'Reparación' as tipo,
+               (o.marca_modelo || ' — ' || o.problema) as concepto,
+               o.costo_final as valor,
+               o.fecha_entregado as fecha_fin,
+               c.nombre as cliente_nombre,
+               'primary' as color
         FROM ordenes o JOIN clientes c ON o.cliente_id = c.id
         WHERE o.negocio_id = ? AND o.estado = 'entregado'
     ''', (nid,)).fetchall()
@@ -203,6 +242,107 @@ def completos():
     total_recaudado = sum(item['valor'] for item in todo if item['valor'])
 
     return render_template('completos.html', lista=todo, total=total_recaudado)
+
+
+# ── API: Stats del Dashboard (AJAX) ─────────────────────────────────────────
+@app.route('/dashboard/stats')
+def dashboard_stats():
+    """Devuelve los contadores del Dashboard en JSON para refresco asíncrono."""
+    if not session.get('negocio_id'):
+        return jsonify({'error': 'no_auth'}), 401
+    nid = session['negocio_id']
+    db  = get_db()
+    try:
+        equipos_hoy    = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        equipos_listos = db.execute("SELECT COUNT(*) FROM ordenes WHERE negocio_id = ? AND estado = 'listo'", (nid,)).fetchone()[0]
+        ventas_hoy     = db.execute("SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)).fetchone()[0]
+        ingresos_ventas  = db.execute("SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)).fetchone()[0]
+        ingresos_abonos  = db.execute("SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
+        ingresos_ordenes = db.execute("SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)).fetchone()[0]
+        # Total recaudado = ventas reales + entregas efectivas (sin duplicados)
+        recaudado = ingresos_ventas + ingresos_ordenes
+        return jsonify({
+            'equipos_hoy':     equipos_hoy,
+            'equipos_listos':  equipos_listos,
+            'ventas_hoy':      ventas_hoy,
+            'recaudado':       f'$ {int(recaudado):,}'.replace(',', '.'),
+            'ingresos_ventas': f'$ {int(ingresos_ventas):,}'.replace(',', '.'),
+            'ingresos_abonos': f'$ {int(ingresos_abonos):,}'.replace(',', '.'),
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ── API: Buscar cliente por teléfono (AJAX autocompletado) ───────────────────
+@app.route('/api/cliente-por-telefono')
+def cliente_por_telefono():
+    """Busca un cliente por teléfono para autocompletar el nombre."""
+    if not session.get('negocio_id'):
+        return jsonify({'error': 'no_auth'}), 401
+    nid = session['negocio_id']
+    telefono = request.args.get('telefono', '').strip()
+    if not telefono or len(telefono) < 7:
+        return jsonify({'found': False})
+    db = get_db()
+    cliente = db.execute(
+        "SELECT nombre FROM clientes WHERE negocio_id = ? AND telefono LIKE ?",
+        (nid, f'%{telefono}%')
+    ).fetchone()
+    if cliente:
+        return jsonify({'found': True, 'nombre': cliente['nombre']})
+    return jsonify({'found': False})
+
+
+@app.route('/abrir-carpeta-facturas')
+def abrir_carpeta_facturas():
+    import subprocess, platform, os
+    from datetime import datetime
+    ahora = datetime.now()
+    meses_es = {
+        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+        5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+        9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+    }
+    carpeta_hoy = os.path.abspath(os.path.join(
+        'facturas',
+        ahora.strftime('%Y'),
+        meses_es[ahora.month],
+        ahora.strftime('%d')
+    ))
+    carpeta = carpeta_hoy if os.path.exists(carpeta_hoy) else os.path.abspath('facturas')
+    os.makedirs(carpeta, exist_ok=True)
+    if platform.system() == 'Windows':
+        subprocess.Popen(['explorer', carpeta])
+    return '', 204
+
+
+@app.route('/completos/eliminar', methods=['POST'])
+def eliminar_completo():
+    if not session.get('negocio_id'):
+        return redirect(url_for('auth.login'))
+
+    nid     = session['negocio_id']
+    tipo    = request.form.get('tipo')
+    item_id = request.form.get('id', type=int)
+    db      = get_db()
+
+    if tipo == 'Venta':
+        db.execute('DELETE FROM ventas WHERE id = ? AND negocio_id = ?', (item_id, nid))
+    elif tipo == 'Reparación':
+        # Borrar también cualquier venta duplicada histórica asociada a esta orden
+        orden = db.execute(
+            'SELECT numero_orden FROM ordenes WHERE id = ? AND negocio_id = ?', (item_id, nid)
+        ).fetchone()
+        if orden:
+            db.execute(
+                "DELETE FROM ventas WHERE negocio_id = ? AND (notas = ? OR producto LIKE 'Servicio: %')",
+                (nid, 'Orden ' + orden['numero_orden'])
+            )
+        db.execute('DELETE FROM ordenes WHERE id = ? AND negocio_id = ?', (item_id, nid))
+
+    db.commit()
+    flash('Registro eliminado correctamente.', 'success')
+    return redirect(url_for('completos'))
 
 
 if __name__ == '__main__':

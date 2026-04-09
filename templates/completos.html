@@ -23,6 +23,7 @@
                     <th class="py-3">Cliente</th>
                     <th class="py-3 text-center" style="width: 150px;">Tipo</th>
                     <th class="py-3 text-end px-4" style="width: 180px;">Valor</th>
+                    <th class="py-3 text-center" style="width: 60px;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -46,6 +47,16 @@
                         </td>
                         <td class="text-end px-4 fw-bold text-success">
                             {{ item.valor | moneda }}
+                        </td>
+                        <td class="text-center">
+                            <form action="/completos/eliminar" method="POST"
+                                  onsubmit="return confirm('¿Eliminar este registro?');">
+                                <input type="hidden" name="id" value="{{ item.id }}">
+                                <input type="hidden" name="tipo" value="{{ item.tipo }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% endfor %}

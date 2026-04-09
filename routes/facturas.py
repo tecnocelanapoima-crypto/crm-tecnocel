@@ -45,11 +45,32 @@ def asegurar_carpeta_facturas():
         os.makedirs(FACTURAS_DIR)
 
 
-def generar_pdf(venta, cliente):
-    """Genera la factura PDF — sin cambios respecto a la versión original."""
+def generar_pdf(venta, cliente, negocio=None):
+    """Genera la factura PDF con el logo y datos del negocio personalizados."""
+    import re, base64, io
     asegurar_carpeta_facturas()
-    nombre_archivo = f'factura_{venta["id"]:04d}.pdf'
+    # Nombre basado en el producto, limpiando caracteres no válidos para nombre de archivo
+    producto_limpio = re.sub(r'[\\/*?:"<>|]', '', venta["producto"] or '').strip().replace(' ', '_')
+    if not producto_limpio:
+        producto_limpio = f'factura_{venta["id"]:04d}'
+    nombre_archivo = f'{producto_limpio}_{venta["id"]:04d}.pdf'
     ruta_pdf       = os.path.join(FACTURAS_DIR, nombre_archivo)
+
+    # Eliminar PDF cacheado para forzar regeneración con el logo actualizado
+    if os.path.exists(ruta_pdf):
+        try:
+            os.remove(ruta_pdf)
+        except Exception:
+            pass
+
+    # Datos del negocio para personalizar
+    neg_nombre   = (negocio['nombre_negocio'] if negocio and negocio['nombre_negocio'] else 'TECNOCEL')
+    neg_slogan   = (negocio['slogan'] if negocio and negocio['slogan'] else 'Venta y soporte de celulares')
+    neg_email    = (negocio['email'] if negocio and negocio['email'] else 'tecnocel.negocio@gmail.com')
+    neg_logo_b64 = (negocio['logo_base64'] if negocio and negocio['logo_base64'] else None)
+    # Debug: verificar si el logo llega
+    import sys
+    print(f'[PDF] negocio={neg_nombre} | logo_b64={"SI" if neg_logo_b64 else "NO"}', file=sys.stderr)
 
     doc = SimpleDocTemplate(ruta_pdf, pagesize=A4,
                             rightMargin=1.8*cm, leftMargin=1.8*cm,
@@ -70,15 +91,32 @@ def generar_pdf(venta, cliente):
 
     contenido = []
 
-    # Encabezado
-    if os.path.exists(LOGO_PATH):
+    # Encabezado — logo personalizado del negocio
+    if neg_logo_b64:
+        # Logo desde base64 almacenado en la BD
+        try:
+            # Extraer la parte base64 pura (quitar 'data:image/xxx;base64,')
+            if ',' in neg_logo_b64:
+                b64_data = neg_logo_b64.split(',', 1)[1]
+            else:
+                b64_data = neg_logo_b64
+            img_bytes = base64.b64decode(b64_data)
+            img_stream = io.BytesIO(img_bytes)
+            logo_cell = Image(img_stream, width=8.5*cm, height=2.2*cm)
+            logo_cell.hAlign = 'CENTER'
+            print(f'[PDF] Logo cargado desde base64 correctamente ({len(img_bytes)} bytes)', file=sys.stderr)
+        except Exception as e:
+            print(f'[PDF] Error cargando logo base64: {e}', file=sys.stderr)
+            logo_cell = Paragraph(f'<b><font color="#00CFFF" size="22">{neg_nombre}</font></b>', estilos['Title'])
+    elif os.path.exists(LOGO_PATH):
         logo_cell = Image(LOGO_PATH, width=8.5*cm, height=2.2*cm)
+        print(f'[PDF] Usando logo de archivo: {LOGO_PATH}', file=sys.stderr)
     else:
-        logo_cell = Paragraph('<b><font color="#00CFFF" size="22">TECNOCEL</font></b>', estilos['Title'])
+        logo_cell = Paragraph(f'<b><font color="#00CFFF" size="22">{neg_nombre}</font></b>', estilos['Title'])
 
     header_data = [[logo_cell],
-                   [Paragraph('Venta y soporte de celulares', st_sub)],
-                   [Paragraph('tecnocel.negocio@gmail.com', st_sub)]]
+                   [Paragraph(neg_slogan, st_sub)],
+                   [Paragraph(neg_email, st_sub)]]
     ht = Table(header_data, colWidths=[W])
     ht.setStyle(TableStyle([
         ('BACKGROUND',(0,0),(-1,-1),C_BLACK),('ALIGN',(0,0),(-1,-1),'CENTER'),
@@ -191,7 +229,7 @@ def generar_pdf(venta, cliente):
     # Pie
     contenido.append(HRFlowable(width='100%', thickness=1.5, color=C_CYAN))
     contenido.append(Spacer(1,0.25*cm))
-    pie_data = [[Paragraph('¡Gracias por comprar en <font color="#00CFFF"><b>Tecnocel</b></font>! — Su satisfacción es nuestra prioridad.', st_foot)],
+    pie_data = [[Paragraph(f'¡Gracias por comprar en <font color="#00CFFF"><b>{neg_nombre}</b></font>! — Su satisfacción es nuestra prioridad.', st_foot)],
                 [Paragraph('Este comprobante es válido para reclamaciones. Consérvelo.',
                            estilo('fp2',fontSize=8,textColor=C_MGRAY,alignment=TA_CENTER))]]
     pie_t = Table(pie_data, colWidths=[W])
@@ -220,7 +258,11 @@ def generar(venta_id):
         flash('Factura no encontrada.', 'danger')
         return redirect(url_for('ventas.lista'))
 
-    return render_template('facturas/previa.html', venta=venta)
+    negocio = db.execute(
+        'SELECT nombre_negocio, email, telefono, ciudad, slogan, logo_base64 FROM negocios WHERE id = ?', (nid,)
+    ).fetchone()
+
+    return render_template('facturas/previa.html', venta=venta, negocio=negocio)
 
 
 @facturas_bp.route('/<int:venta_id>/descargar')
@@ -238,8 +280,12 @@ def descargar(venta_id):
         flash('Factura no encontrada.', 'danger')
         return redirect(url_for('ventas.lista'))
 
+    negocio = db.execute(
+        'SELECT nombre_negocio, email, telefono, ciudad, slogan, logo_base64 FROM negocios WHERE id = ?', (nid,)
+    ).fetchone()
+
     try:
-        ruta_pdf, nombre_archivo = generar_pdf(venta, venta)
+        ruta_pdf, nombre_archivo = generar_pdf(venta, venta, negocio)
         return send_file(ruta_pdf, as_attachment=True,
                          download_name=nombre_archivo, mimetype='application/pdf')
     except Exception as e:

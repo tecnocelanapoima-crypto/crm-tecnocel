@@ -104,6 +104,29 @@ def init_db():
         )
     ''')
 
+    # ── Migraciones seguras para suscripción ──────────────────────────────
+    migraciones = [
+        "ALTER TABLE negocios ADD COLUMN fecha_vencimiento TEXT DEFAULT NULL",
+        "ALTER TABLE negocios ADD COLUMN plan_nombre TEXT DEFAULT 'basico'",
+        "ALTER TABLE negocios ADD COLUMN dias_gracia INTEGER DEFAULT 3",
+        "ALTER TABLE negocios ADD COLUMN logo_base64 TEXT DEFAULT NULL",
+        "ALTER TABLE negocios ADD COLUMN slogan TEXT DEFAULT NULL",
+    ]
+    for sql in migraciones:
+        try:
+            c.execute(sql)
+        except Exception:
+            pass  # La columna ya existe
+
+    # Dar 14 días de prueba gratis a negocios sin fecha_vencimiento
+    from datetime import date, timedelta
+    fecha_prueba = (date.today() + timedelta(days=14)).isoformat()
+    c.execute('''
+        UPDATE negocios
+        SET fecha_vencimiento = ?, plan_nombre = 'prueba'
+        WHERE fecha_vencimiento IS NULL
+    ''', (fecha_prueba,))
+
     conn.commit()
     conn.close()
     print("Base de datos SaaS inicializada con modo WAL.")

@@ -71,7 +71,7 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="text-info text-uppercase mb-1" style="letter-spacing: 1px; font-weight: 700;">Balance</h6>
-                        <h3 class="mb-0 text-white">$ {{ "{:,.0f}".format(balance).replace(',', '.') }}</h3>
+                        <h3 class="mb-0 text-white">$ {{ "{:,.0f}".format(balance_total).replace(',', '.') }}</h3>
                     </div>
                     <div class="p-3 bg-info bg-opacity-10 rounded text-info">
                         <i class="bi bi-wallet2 fs-3"></i>
@@ -330,6 +330,72 @@
           </button>
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-check-lg me-1"></i>Registrar Equipo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Agregar Gasto -->
+<div class="modal fade" id="modalEgreso" tabindex="-1" aria-labelledby="modalEgresoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-danger bg-opacity-10 border-danger border-bottom">
+        <h5 class="modal-title fw-bold text-danger" id="modalEgresoLabel">
+          <i class="bi bi-dash-circle me-2"></i>Registrar Gasto / Egreso
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="POST" action="{{ url_for('finanzas.crear_egreso') }}">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Concepto <span class="text-danger">*</span></label>
+            <input type="text" name="concepto" class="form-control form-control-lg"
+                   placeholder="Ej: Compra de repuestos, Arriendo, Servicios..."
+                   required autofocus>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Monto <span class="text-danger">*</span></label>
+              <div class="input-group input-group-lg">
+                <span class="input-group-text fw-bold">$</span>
+                <input type="number" name="monto" class="form-control"
+                       placeholder="0" min="1" step="1" required>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+              <input type="date" name="fecha" class="form-control form-control-lg"
+                     value="{{ hoy }}" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Categoría</label>
+            <select name="categoria" class="form-select form-select-lg">
+              <option value="">-- Sin categoría --</option>
+              <option value="Repuestos">Repuestos</option>
+              <option value="Arriendo">Arriendo</option>
+              <option value="Servicios">Servicios públicos</option>
+              <option value="Herramientas">Herramientas</option>
+              <option value="Publicidad">Publicidad</option>
+              <option value="Nómina">Nómina</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div class="mb-1">
+            <label class="form-label fw-semibold">Notas (opcional)</label>
+            <textarea name="notas" class="form-control" rows="2"
+                      placeholder="Descripción adicional del gasto..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-danger px-4">
+            <i class="bi bi-check-lg me-1"></i>Registrar Gasto
           </button>
         </div>
       </form>

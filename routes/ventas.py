@@ -15,7 +15,7 @@ def generar_pdf_venta(venta_id, nid):
     try:
         db = get_db()
         venta = db.execute(
-            'SELECT v.*, c.nombre as cliente_nombre, c.cedula, c.telefono, c.direccion, c.ciudad '
+            'SELECT v.*, c.nombre, c.nombre as cliente_nombre, c.cedula, c.telefono, c.telefono as cliente_telefono, c.direccion, c.ciudad '
             'FROM ventas v JOIN clientes c ON v.cliente_id = c.id '
             'WHERE v.id = ? AND v.negocio_id = ?', (venta_id, nid)
         ).fetchone()
@@ -131,9 +131,16 @@ def crear():
         # Generar PDF usando la función existente
         try:
             from routes.facturas import generar_pdf
-            ruta_pdf, nombre_pdf = generar_pdf(venta_obj, venta_obj)
+            venta_obj_pdf = db.execute(
+                'SELECT v.*, c.nombre, c.nombre as cliente_nombre, c.telefono, c.telefono as cliente_telefono, '
+                'c.cedula, c.direccion, c.ciudad '
+                'FROM ventas v JOIN clientes c ON v.cliente_id = c.id WHERE v.id = ?',
+                (venta_id,)
+            ).fetchone()
+            ruta_pdf, nombre_pdf = generar_pdf(venta_obj_pdf, venta_obj_pdf)
             flash(f'Venta registrada. PDF generado: {nombre_pdf}', 'success')
         except Exception:
+            import traceback; traceback.print_exc()
             flash(f'Venta de "{producto}" registrada. (PDF no generado)', 'success')
 
         # Abrir carpeta facturas_pdf en Windows
@@ -311,20 +318,19 @@ def venta_accesorio():
     
     # Si es con factura, genera PDF y envía por WhatsApp
     else:
-        # Obtener datos completos para generar factura
-        venta_obj = db.execute('''
-            SELECT v.*, c.nombre as cliente_nombre, c.telefono as cliente_telefono,
-                   c.cedula, c.direccion, c.ciudad
-            FROM ventas v JOIN clientes c ON v.cliente_id = c.id
-            WHERE v.id = ? AND v.negocio_id = ?
-        ''', (venta_id, nid)).fetchone()
-        
         # Generar PDF
         try:
             from routes.facturas import generar_pdf
-            ruta_pdf, nombre_pdf = generar_pdf(venta_obj, venta_obj)
+            venta_obj_pdf = db.execute(
+                'SELECT v.*, c.nombre, c.nombre as cliente_nombre, c.telefono, c.telefono as cliente_telefono, '
+                'c.cedula, c.direccion, c.ciudad '
+                'FROM ventas v JOIN clientes c ON v.cliente_id = c.id WHERE v.id = ? AND v.negocio_id = ?',
+                (venta_id, nid)
+            ).fetchone()
+            ruta_pdf, nombre_pdf = generar_pdf(venta_obj_pdf, venta_obj_pdf)
             flash(f'Venta registrada. PDF generado: {nombre_pdf}', 'success')
-        except Exception as e:
+        except Exception:
+            import traceback; traceback.print_exc()
             flash(f'Venta registrada. (PDF no generado)', 'success')
 
         # Abrir carpeta facturas_pdf en Windows
@@ -497,41 +503,49 @@ def venta_rapida():
     db.commit()
     venta_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
 
-    # Generar PDF
+    # Generar factura PDF con el sistema existente (nombre = producto)
+    pdf_path = None
     try:
         from routes.facturas import generar_pdf
         venta_obj = db.execute(
-            'SELECT v.*, c.nombre as cliente_nombre, c.telefono as cliente_telefono, '
+            'SELECT v.*, c.nombre, c.nombre as cliente_nombre, c.telefono, c.telefono as cliente_telefono, '
             'c.cedula, c.direccion, c.ciudad '
             'FROM ventas v JOIN clientes c ON v.cliente_id = c.id WHERE v.id = ?',
             (venta_id,)
         ).fetchone()
         if venta_obj:
-            generar_pdf(venta_obj, venta_obj)
+            pdf_path, _ = generar_pdf(venta_obj, venta_obj)
     except Exception:
-        pass
+        import traceback; traceback.print_exc()
 
-    # Abrir carpeta en Windows
+    # Abrir carpeta facturas_pdf en Windows
     import subprocess, platform, os
     carpeta = os.path.abspath('facturas_pdf')
     if platform.system() == 'Windows':
         subprocess.Popen(['explorer', carpeta])
 
-    # WhatsApp
+    # Construir mensaje WhatsApp
     import urllib.parse
     negocio = db.execute('SELECT * FROM negocios WHERE id = ?', (nid,)).fetchone()
     nombre_negocio = negocio['nombre_negocio'] if negocio else 'Tecnocel'
     precio_fmt = '$ ' + f'{int(precio_num):,}'.replace(',', '.')
-    
+
     mensaje = (
         f"Hola {cliente_nombre}, gracias por tu compra en {nombre_negocio}. "
         f"Producto: {producto}. Total: {precio_fmt}. "
         f"Metodo de pago: {tipo_pago}. Que lo disfrutes!"
     )
-    
+
     telefono_limpio = cliente_telefono.replace(' ', '').replace('-', '')
     if not telefono_limpio.startswith('57') and len(telefono_limpio) == 10:
         telefono_limpio = '57' + telefono_limpio
-        
+
     url_wa = f"https://wa.me/{telefono_limpio}?text={urllib.parse.quote(mensaje)}"
+
+    # Si viene del modal, devolver JSON para que JS maneje WhatsApp + reload
+    origen = request.form.get('origen', '')
+    if origen == 'modal':
+        from flask import jsonify
+        return jsonify({'success': True, 'whatsapp_url': url_wa, 'pdf_path': pdf_path})
+
     return redirect(url_wa)

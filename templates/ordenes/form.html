@@ -119,9 +119,14 @@
                         </div>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="bi bi-check-circle me-1"></i>Crear Orden
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" name="accion" value="crear_y_confirmar" 
+                                class="btn btn-success flex-fill px-4">
+                            <i class="bi bi-whatsapp me-1"></i>Crear Orden + PDF + WhatsApp
+                        </button>
+                        <button type="submit" name="accion" value="solo_crear" 
+                                class="btn btn-outline-primary px-4">
+                            <i class="bi bi-check-circle me-1"></i>Solo Crear Orden
                         </button>
                         <a href="{{ url_for('ordenes.lista') }}" class="btn btn-outline-secondary">
                             Cancelar
@@ -144,5 +149,30 @@ function calcularSaldo() {
   document.getElementById('saldo_pendiente_display').value = saldo > 0 ? saldo : 0;
 }
 document.querySelector('[name=costo_estimado]').addEventListener('input', calcularSaldo);
+
+// ── Autocompletado de cliente por teléfono ────────────────────────────────
+const telInput = document.querySelector('input[name="cliente_telefono"]');
+const nomInput = document.querySelector('input[name="cliente_nombre"]');
+if (telInput && nomInput) {
+    function autocompletarCliente() {
+        const tel = telInput.value.trim();
+        if (tel.length < 7) return;
+        fetch('/api/cliente-por-telefono?telefono=' + encodeURIComponent(tel))
+            .then(r => r.json())
+            .then(data => {
+                if (data.found && data.nombre && !nomInput.value.trim()) {
+                    nomInput.value = data.nombre;
+                    nomInput.style.borderColor = '#20c997';
+                    nomInput.placeholder = '✅ Cliente encontrado';
+                    setTimeout(() => { nomInput.style.borderColor = ''; }, 2500);
+                }
+            })
+            .catch(() => {});
+    }
+    telInput.addEventListener('blur', autocompletarCliente);
+    telInput.addEventListener('keyup', function() {
+        if (this.value.length === 10) autocompletarCliente();
+    });
+}
 </script>
 {% endblock %}

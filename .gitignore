@@ -5,3 +5,9 @@ __pycache__/
 tecnocel.db
 facturas_pdf/
 static/uploads/productos/
+*.db 
+*.bat 
+*.ps1 
+facturas/ 
+informes/ 
+static/uploads/ 

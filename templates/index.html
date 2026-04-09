@@ -33,7 +33,7 @@
         <div class="fs-4 mb-2">📥</div>
         <div class="fs-3 fw-semibold lh-1">{{ equipos_hoy }}</div>
         <div class="text-muted mt-2" style="font-size:.78rem;line-height:1.3;">
-          Equipos recibidos hoy
+          Total equipos recibidos
         </div>
       </div>
     </div>
@@ -62,7 +62,7 @@
         <div class="fs-4 mb-2">🛍️</div>
         <div class="fs-3 fw-semibold lh-1">{{ ventas_hoy }}</div>
         <div class="text-muted mt-2" style="font-size:.78rem;line-height:1.3;">
-          Ventas del día
+          Total ventas
         </div>
       </div>
     </div>
@@ -75,7 +75,7 @@
         <div class="fs-4 mb-2">💰</div>
         <div class="fs-4 fw-semibold lh-1 {% if ingresos_abonos_hoy > 0 %}text-info{% endif %}">{{ ingresos_abonos_hoy | moneda }}</div>
         <div class="mt-2 {% if ingresos_abonos_hoy > 0 %}text-info{% else %}text-muted{% endif %}" style="font-size:.78rem;line-height:1.3;">
-          Anticipos/Abonos hoy
+          Total anticipos/abonos
         </div>
       </div>
     </div>
@@ -89,13 +89,14 @@
           <div class="fs-4 mb-1">💵</div>
           <div class="fs-3 fw-bold lh-1 text-success">{{ recaudado_hoy | moneda }}</div>
           <div class="text-success mt-1 fw-semibold" style="font-size:.78rem;">
-            Plata recaudada hoy
+            Total recaudado
           </div>
         </div>
         <div class="mt-2 pt-2 border-top border-success border-opacity-10 text-muted small" style="font-size: .65rem;">
           <i class="bi bi-info-circle me-1"></i>
           {{ ingresos_ventas_hoy | moneda }} Ventas + {{ ingresos_abonos_hoy | moneda }} Abonos
           {% if ingresos_ordenes_hoy > 0 %} + {{ ingresos_ordenes_hoy | moneda }} Entregas{% endif %}
+          &nbsp;(acumulado total)
         </div>
       </div>
     </div>
@@ -308,11 +309,27 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <form method="POST" action="{{ url_for('ventas.venta_rapida') }}">
+        <form id="formAccesorio">
           <input type="hidden" name="origen" value="modal">
           <div class="mb-3">
+            <label class="form-label text-muted" style="font-size:.85rem;">Tipo de producto</label>
+            <div class="d-flex gap-2">
+              <button type="button" id="btnTipoAccesorio"
+                      class="btn btn-outline-success flex-fill active-tipo"
+                      onclick="seleccionarTipo('Accesorio')">
+                <i class="bi bi-bag-fill me-1"></i>Accesorio
+              </button>
+              <button type="button" id="btnTipoCelular"
+                      class="btn btn-outline-primary flex-fill"
+                      onclick="seleccionarTipo('Celular')">
+                <i class="bi bi-phone-fill me-1"></i>Celular
+              </button>
+            </div>
+            <input type="hidden" name="tipo_producto" id="tipo_producto" value="Accesorio">
+          </div>
+          <div class="mb-3">
             <label class="form-label text-muted" style="font-size:.85rem;">Producto</label>
-            <input type="text" name="producto" class="form-control"
+            <input type="text" name="producto" id="inputProducto" class="form-control"
                    placeholder="Ej: Vidrio templado Samsung A55" required>
           </div>
           <div class="mb-3">
@@ -343,11 +360,179 @@
           <div class="d-flex gap-2 mt-4">
             <button type="button" class="btn btn-outline-secondary flex-fill"
                     data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-success flex-fill">
+            <button type="button" class="btn btn-success flex-fill" onclick="guardarAccesorio()">
               <i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp
             </button>
           </div>
         </form>
+        <script>
+        function seleccionarTipo(tipo) {
+            document.getElementById('tipo_producto').value = tipo;
+            const btnAcc = document.getElementById('btnTipoAccesorio');
+            const btnCel = document.getElementById('btnTipoCelular');
+            const inputProd = document.getElementById('inputProducto');
+            if (tipo === 'Accesorio') {
+                btnAcc.classList.add('btn-success');
+                btnAcc.classList.remove('btn-outline-success');
+                btnCel.classList.remove('btn-primary');
+                btnCel.classList.add('btn-outline-primary');
+                inputProd.placeholder = 'Ej: Vidrio templado Samsung A55, Cargador...';
+            } else {
+                btnCel.classList.add('btn-primary');
+                btnCel.classList.remove('btn-outline-primary');
+                btnAcc.classList.remove('btn-success');
+                btnAcc.classList.add('btn-outline-success');
+                inputProd.placeholder = 'Ej: Samsung Galaxy A55 128GB, iPhone 15...';
+            }
+        }
+        // ── Autocompletado de cliente por teléfono ─────────────────────────────────
+        function buscarClientePorTelefono(telefonoInput, nombreInput) {
+            const tel = telefonoInput.value.trim();
+            if (tel.length < 7) return;
+            fetch('/api/cliente-por-telefono?telefono=' + encodeURIComponent(tel))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.found && data.nombre) {
+                        nombreInput.value = data.nombre;
+                        nombreInput.style.borderColor = '#20c997';
+                        nombreInput.title = 'Cliente encontrado: ' + data.nombre;
+                        setTimeout(() => { nombreInput.style.borderColor = ''; }, 2000);
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // Inicializar estado activo del botón Accesorio y autocompletado
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('btnTipoAccesorio').classList.add('btn-success');
+            document.getElementById('btnTipoAccesorio').classList.remove('btn-outline-success');
+
+            // Autocompletado en modal de Venta de Accesorio
+            const telAccesorio = document.querySelector('#formAccesorio input[name="cliente_telefono"]');
+            const nomAccesorio = document.querySelector('#formAccesorio input[name="cliente_nombre"]');
+            if (telAccesorio && nomAccesorio) {
+                telAccesorio.addEventListener('blur', () => buscarClientePorTelefono(telAccesorio, nomAccesorio));
+                telAccesorio.addEventListener('keyup', function() {
+                    if (this.value.length === 10) buscarClientePorTelefono(telAccesorio, nomAccesorio);
+                });
+            }
+
+            // Autocompletado en modal de Recepción Rápida
+            const telRapida = document.getElementById('telefono_cliente_rapida');
+            const nomRapida = document.getElementById('nombre_cliente_rapida');
+            if (telRapida && nomRapida) {
+                telRapida.addEventListener('blur', () => buscarClientePorTelefono(telRapida, nomRapida));
+                telRapida.addEventListener('keyup', function() {
+                    if (this.value.length === 10) buscarClientePorTelefono(telRapida, nomRapida);
+                });
+            }
+        });
+
+        // ── Utilidad: mostrar toast de éxito ──────────────────────────────────
+        function mostrarToast(mensaje, tipo) {
+            const toastId = 'toast_' + Date.now();
+            const color = tipo === 'error' ? 'bg-danger' : 'bg-success';
+            const html = `<div id="${toastId}" class="toast align-items-center text-white ${color} border-0 position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+                <div class="d-flex">
+                  <div class="toast-body fw-semibold">${mensaje}</div>
+                  <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div></div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            const toastEl = document.getElementById(toastId);
+            new bootstrap.Toast(toastEl, { delay: 3000 }).show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+
+        // ── Utilidad: refrescar contadores del Dashboard sin recargar ──────────
+        function refrescarContadores() {
+            fetch('/dashboard/stats')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ventas_hoy !== undefined) {
+                        const els = document.querySelectorAll('[data-stat]');
+                        els.forEach(el => {
+                            const key = el.getAttribute('data-stat');
+                            if (data[key] !== undefined) el.textContent = data[key];
+                        });
+                    }
+                    // Recargar página para actualizar todos los contadores
+                    setTimeout(() => window.location.reload(), 800);
+                })
+                .catch(() => setTimeout(() => window.location.reload(), 800));
+        }
+
+        // ── Guardar venta de accesorio ─────────────────────────────────────────
+        function guardarAccesorio() {
+            const form = document.getElementById('formAccesorio');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const btn = form.querySelector('button[onclick="guardarAccesorio()"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+            const data = new FormData(form);
+            fetch("{{ url_for('ventas.venta_rapida') }}", { method: 'POST', body: data })
+                .then(r => r.json())
+                .then(res => {
+                    // 1. Cerrar modal de forma robusta
+                    const modalEl = document.getElementById('modalAccesorio');
+                    const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInst.hide();
+                    // 2. Limpiar formulario
+                    form.reset();
+                    document.getElementById('btnTipoAccesorio').classList.add('btn-success');
+                    document.getElementById('btnTipoAccesorio').classList.remove('btn-outline-success');
+                    document.getElementById('btnTipoCelular').classList.remove('btn-primary');
+                    document.getElementById('btnTipoCelular').classList.add('btn-outline-primary');
+                    document.getElementById('tipo_producto').value = 'Accesorio';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp';
+                    // 3. Toast de éxito
+                    mostrarToast('✅ Venta registrada correctamente', 'success');
+                    // 4. Abrir WhatsApp
+                    if (res.whatsapp_url) window.open(res.whatsapp_url, '_blank');
+                    // 5. Refrescar contadores
+                    refrescarContadores();
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp';
+                    mostrarToast('❌ Error al guardar la venta', 'error');
+                });
+        }
+
+        // ── Guardar recepción rápida de equipo ─────────────────────────────────
+        function guardarOrden(event) {
+            event.preventDefault();
+            const form = document.getElementById('formRecepcionRapida');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+            const btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+            const data = new FormData(form);
+            fetch("{{ url_for('ordenes.recepcion_rapida') }}", { method: 'POST', body: data })
+                .then(r => r.json())
+                .then(res => {
+                    // 1. Cerrar modal de forma robusta
+                    const modalEl = document.getElementById('modalRecepcionRapida');
+                    const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    modalInst.hide();
+                    // 2. Limpiar formulario
+                    form.reset();
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp';
+                    // 3. Toast de éxito
+                    mostrarToast('📥 Equipo recibido correctamente', 'success');
+                    // 4. Abrir WhatsApp
+                    if (res.whatsapp_url) window.open(res.whatsapp_url, '_blank');
+                    // 5. Refrescar contadores
+                    refrescarContadores();
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp';
+                    mostrarToast('❌ Error al guardar la orden', 'error');
+                });
+        }
+        </script>
       </div>
     </div>
   </div>
@@ -363,7 +548,8 @@
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form method="POST" action="{{ url_for('ordenes.recepcion_rapida') }}" novalidate>
+      <form id="formRecepcionRapida" onsubmit="guardarOrden(event)" novalidate>
+        <input type="hidden" name="origen" value="modal">
         <div class="modal-body p-4">
           <div class="mb-3">
             <label for="nombre_cliente_rapida" class="form-label fw-semibold">
@@ -434,8 +620,8 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
             <i class="bi bi-x-lg me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-lg me-1"></i>Registrar Equipo
+          <button type="submit" class="btn btn-success flex-fill">
+            <i class="bi bi-whatsapp me-1"></i>Guardar y enviar WhatsApp
           </button>
         </div>
       </form>

@@ -10,13 +10,40 @@ auth_bp = Blueprint('auth', __name__)
 
 
 def login_required(f):
-    """Decorador: redirige al login si no hay sesión activa."""
+    """Decorador: redirige al login si no hay sesión activa.
+       También verifica que la suscripción esté vigente."""
     from functools import wraps
+    from datetime import date
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('negocio_id'):
             flash('Debes iniciar sesión para continuar.', 'warning')
             return redirect(url_for('auth.login'))
+
+        # ── Verificar suscripción ───────────────────────────────────────
+        db = get_db()
+        negocio = db.execute(
+            'SELECT fecha_vencimiento, plan_nombre, dias_gracia, activo FROM negocios WHERE id = ?',
+            (session['negocio_id'],)
+        ).fetchone()
+
+        if negocio:
+            if not negocio['activo']:
+                session.clear()
+                flash('Tu cuenta ha sido desactivada. Contacta al administrador.', 'danger')
+                return redirect(url_for('auth.login'))
+
+            fecha_venc = negocio['fecha_vencimiento']
+            if fecha_venc:
+                hoy = date.today().isoformat()
+                dias_gracia = negocio['dias_gracia'] or 3
+                # Calcular fecha límite con días de gracia
+                from datetime import datetime, timedelta
+                fecha_limite = (datetime.strptime(fecha_venc, '%Y-%m-%d') +
+                                timedelta(days=dias_gracia)).strftime('%Y-%m-%d')
+                if hoy > fecha_limite:
+                    return redirect(url_for('auth.suscripcion_vencida'))
+
         return f(*args, **kwargs)
     return decorated
 
@@ -51,10 +78,13 @@ def registro():
             flash('Este correo electrónico ya está registrado. Por favor, inicia sesión.', 'warning')
             return render_template('auth/registro.html', form=request.form)
 
+        from datetime import date, timedelta
+        fecha_venc = (date.today() + timedelta(days=14)).isoformat()
+
         db.execute('''
-            INSERT INTO negocios (nombre_negocio, email, password_hash, telefono, ciudad)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (nombre_negocio, email, generate_password_hash(password), telefono, ciudad))
+            INSERT INTO negocios (nombre_negocio, email, password_hash, telefono, ciudad, fecha_vencimiento, plan_nombre)
+            VALUES (?, ?, ?, ?, ?, ?, 'prueba')
+        ''', (nombre_negocio, email, generate_password_hash(password), telefono, ciudad, fecha_venc))
         db.commit()
 
         negocio = db.execute('SELECT id FROM negocios WHERE email = ?', (email,)).fetchone()
@@ -121,3 +151,16 @@ def logout():
     session.clear()
     flash('Sesión cerrada correctamente.', 'info')
     return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/suscripcion-vencida')
+def suscripcion_vencida():
+    """Página que se muestra cuando la suscripción ha vencido."""
+    if not session.get('negocio_id'):
+        return redirect(url_for('auth.login'))
+    db = get_db()
+    negocio = db.execute(
+        'SELECT nombre_negocio, email, fecha_vencimiento, plan_nombre FROM negocios WHERE id = ?',
+        (session['negocio_id'],)
+    ).fetchone()
+    return render_template('auth/suscripcion_vencida.html', negocio=negocio)
