@@ -522,6 +522,48 @@ def whatsapp(id, tipo):
     return redirect(url_wa)
 
 
+@ordenes_bp.route('/<int:id>/pdf-orden')
+@login_required
+def pdf_orden_personalizado(id):
+    """Descarga el PDF personalizado de una orden usando la plantilla del negocio."""
+    nid = session['negocio_id']
+    db  = get_db()
+
+    orden = db.execute(
+        'SELECT * FROM ordenes WHERE id = ? AND negocio_id = ?', (id, nid)
+    ).fetchone()
+    if not orden:
+        flash('Orden no encontrada.', 'danger')
+        return redirect(url_for('ordenes.lista'))
+
+    cliente = db.execute(
+        'SELECT * FROM clientes WHERE id = ?', (orden['cliente_id'],)
+    ).fetchone()
+    negocio = db.execute(
+        'SELECT * FROM negocios WHERE id = ?', (nid,)
+    ).fetchone()
+    cfg = db.execute(
+        'SELECT * FROM config_negocio WHERE negocio_id = ?', (nid,)
+    ).fetchone()
+
+    config = {
+        'nombre':          negocio['nombre_negocio'] if negocio else 'Tecnocel',
+        'telefono':        (negocio['telefono']   or '') if negocio else '',
+        'logo_base64':     (negocio['logo_base64'] or '') if negocio else '',
+        'direccion':       (cfg['direccion']       or '') if cfg else '',
+        'plantilla':       (cfg['plantilla']       or 'moderno') if cfg else 'moderno',
+        'color_principal': (cfg['color_principal'] or '#00bcd4') if cfg else '#00bcd4',
+        'mensaje_pie':     (cfg['mensaje_pie']     or 'Gracias por confiar en nosotros.') if cfg else 'Gracias por confiar en nosotros.',
+    }
+
+    from utils.pdf_orden import generar_pdf_orden
+    from flask import send_file
+    buffer        = generar_pdf_orden(orden, cliente, config)
+    nombre_pdf    = f"orden_{orden['numero_orden'].replace('-', '_')}.pdf"
+    return send_file(buffer, mimetype='application/pdf',
+                     as_attachment=True, download_name=nombre_pdf)
+
+
 @ordenes_bp.route('/recepcion-rapida', methods=['POST'])
 @login_required
 def recepcion_rapida():

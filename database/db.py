@@ -127,6 +127,19 @@ def init_db():
         WHERE fecha_vencimiento IS NULL
     ''', (fecha_prueba,))
 
+    # ── Tabla de configuración de PDF por negocio ──────────────────────────
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS config_negocio (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            negocio_id       INTEGER NOT NULL UNIQUE,
+            plantilla        TEXT    DEFAULT 'moderno',
+            color_principal  TEXT    DEFAULT '#00bcd4',
+            direccion        TEXT    DEFAULT '',
+            mensaje_pie      TEXT    DEFAULT 'Gracias por confiar en nosotros. No nos hacemos responsables por daños previos no reportados.',
+            FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE
+        )
+    ''')
+
     conn.commit()
     conn.close()
     print("Base de datos SaaS inicializada con modo WAL.")

@@ -27,6 +27,14 @@
             </div>
         </div>
 
+        <!-- Botón PDF personalizado -->
+        <div class="mb-3">
+            <a href="{{ url_for('ordenes.pdf_orden_personalizado', id=orden.id) }}"
+               class="btn btn-outline-danger btn-sm" target="_blank">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF de orden
+            </a>
+        </div>
+
         <!-- Botones WhatsApp -->
         <div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #25D366 !important;">
             <div class="card-body p-3">

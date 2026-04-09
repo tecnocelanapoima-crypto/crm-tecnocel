@@ -119,6 +119,56 @@
 
       </div><!-- /row -->
 
+      <!-- ── Configuración de PDF de órdenes ── -->
+      <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-transparent border-bottom py-3 px-4">
+          <h6 class="fw-bold mb-0"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>PDF de órdenes de servicio</h6>
+        </div>
+        <div class="card-body p-4">
+          <div class="row g-3">
+
+            <div class="col-12 col-md-6">
+              <label class="form-label text-muted small fw-semibold">Dirección del negocio <span class="text-muted fw-normal">(aparece en el encabezado del PDF)</span></label>
+              <input type="text" name="direccion" class="form-control"
+                     value="{{ cfg_pdf.direccion if cfg_pdf else '' }}"
+                     placeholder="Ej: Carrera 5 #5-20, Anapoima">
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label text-muted small fw-semibold">Plantilla</label>
+              <select name="plantilla" class="form-select">
+                {% set plantilla_actual = cfg_pdf.plantilla if cfg_pdf else 'moderno' %}
+                <option value="moderno"      {% if plantilla_actual == 'moderno' %}selected{% endif %}>Moderno (fondo negro)</option>
+                <option value="clasico"      {% if plantilla_actual == 'clasico' %}selected{% endif %}>Clásico (línea de color)</option>
+                <option value="minimalista"  {% if plantilla_actual == 'minimalista' %}selected{% endif %}>Minimalista</option>
+              </select>
+            </div>
+
+            <div class="col-6 col-md-3">
+              <label class="form-label text-muted small fw-semibold">Color de acento</label>
+              <div class="d-flex gap-2 align-items-center">
+                <input type="color" name="color_principal" class="form-control form-control-color"
+                       value="{{ cfg_pdf.color_principal if cfg_pdf else '#00bcd4' }}"
+                       style="width:48px;padding:2px;">
+                <input type="text" id="color-hex-input" class="form-control form-control-sm"
+                       value="{{ cfg_pdf.color_principal if cfg_pdf else '#00bcd4' }}"
+                       maxlength="7" placeholder="#00bcd4"
+                       style="font-family:monospace;"
+                       oninput="document.querySelector('input[name=color_principal]').value=this.value">
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label text-muted small fw-semibold">Mensaje al pie del PDF</label>
+              <input type="text" name="mensaje_pie" class="form-control"
+                     value="{{ cfg_pdf.mensaje_pie if cfg_pdf else 'Gracias por confiar en nosotros. No nos hacemos responsables por daños previos no reportados.' }}"
+                     placeholder="Mensaje de garantía o despedida">
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       <!-- Vista previa de factura -->
       <div class="card border-0 shadow-sm mt-4">
         <div class="card-header bg-transparent border-bottom py-3 px-4">
@@ -166,6 +216,13 @@ function previewLogo(input) {
         };
         reader.readAsDataURL(input.files[0]);
     }
+}
+
+// Sincronizar color picker ↔ input de texto
+const colorPicker = document.querySelector('input[name="color_principal"]');
+const colorHex    = document.getElementById('color-hex-input');
+if (colorPicker && colorHex) {
+    colorPicker.addEventListener('input', function() { colorHex.value = this.value; });
 }
 
 // Actualizar vista previa en tiempo real al escribir

@@ -68,6 +68,21 @@ def perfil():
                 WHERE id = ?
             ''', (nombre_negocio, telefono, ciudad, slogan, nid))
 
+        # Guardar configuración de PDF (upsert)
+        plantilla       = request.form.get('plantilla', 'moderno')
+        color_principal = request.form.get('color_principal', '#00bcd4')
+        direccion       = request.form.get('direccion', '').strip()
+        mensaje_pie     = request.form.get('mensaje_pie', '').strip()
+        db.execute('''
+            INSERT INTO config_negocio (negocio_id, plantilla, color_principal, direccion, mensaje_pie)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(negocio_id) DO UPDATE SET
+                plantilla       = excluded.plantilla,
+                color_principal = excluded.color_principal,
+                direccion       = excluded.direccion,
+                mensaje_pie     = excluded.mensaje_pie
+        ''', (nid, plantilla, color_principal, direccion, mensaje_pie))
+
         db.commit()
 
         # Actualizar nombre en sesión
@@ -80,5 +95,9 @@ def perfil():
         'SELECT nombre_negocio, email, telefono, ciudad, slogan, logo_base64 FROM negocios WHERE id = ?',
         (nid,)
     ).fetchone()
+    cfg_pdf = db.execute(
+        'SELECT plantilla, color_principal, direccion, mensaje_pie FROM config_negocio WHERE negocio_id = ?',
+        (nid,)
+    ).fetchone()
 
-    return render_template('configuracion/perfil.html', negocio=negocio)
+    return render_template('configuracion/perfil.html', negocio=negocio, cfg_pdf=cfg_pdf)
