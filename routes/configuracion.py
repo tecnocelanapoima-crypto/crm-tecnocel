@@ -14,7 +14,38 @@ configuracion_bp = Blueprint('configuracion', __name__)
 logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
-MAX_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB
+MAX_SIZE_BYTES     = 2 * 1024 * 1024  # 2 MB
+
+# Magic bytes → MIME type para validación real del contenido del archivo
+ALLOWED_MIMES = {
+    'image/png', 'image/jpeg', 'image/gif',
+    'image/webp', 'image/svg+xml',
+}
+_MAGIC = [
+    (b'\x89PNG\r\n\x1a\n',  'image/png'),
+    (b'\xff\xd8\xff',        'image/jpeg'),
+    (b'GIF87a',              'image/gif'),
+    (b'GIF89a',              'image/gif'),
+    (b'RIFF',                'image/webp'),   # los 4 primeros; webp tiene RIFF????WEBP
+]
+
+
+def _detectar_mime(data: bytes) -> str:
+    """
+    Detecta el MIME type real del archivo por sus magic bytes.
+    Fallback a image/svg+xml si el contenido parece XML/SVG.
+    """
+    for magic, mime in _MAGIC:
+        if data[:len(magic)] == magic:
+            # Caso especial: RIFF puede no ser WEBP; verificar bytes 8-12
+            if mime == 'image/webp' and data[8:12] != b'WEBP':
+                continue
+            return mime
+    # SVG es XML legible — buscar firma textual
+    snippet = data[:512].lstrip()
+    if snippet.startswith(b'<') and (b'<svg' in snippet or b'<?xml' in snippet):
+        return 'image/svg+xml'
+    return 'application/octet-stream'  # tipo desconocido → será rechazado
 
 # ── Config de factura por defecto ─────────────────────────────────────────────
 DEFAULT_FACTURA_CONFIG = {
@@ -84,9 +115,12 @@ def perfil():
                 if len(contenido) > MAX_SIZE_BYTES:
                     flash('La imagen es demasiado grande. Máximo 2 MB.', 'danger')
                     return redirect(url_for('configuracion.perfil'))
-                ext  = archivo.filename.rsplit('.', 1)[1].lower()
-                mime = 'image/svg+xml' if ext == 'svg' else f'image/{ext}'
-                logo_base64 = f'data:{mime};base64,' + base64.b64encode(contenido).decode('utf-8')
+                # Validar MIME real leyendo los magic bytes del archivo
+                mime_real = _detectar_mime(contenido)
+                if mime_real not in ALLOWED_MIMES:
+                    flash('El archivo no es una imagen válida. Usa PNG, JPG, GIF, WEBP o SVG.', 'danger')
+                    return redirect(url_for('configuracion.perfil'))
+                logo_base64 = f'data:{mime_real};base64,' + base64.b64encode(contenido).decode('utf-8')
 
             if logo_base64:
                 db.execute(
