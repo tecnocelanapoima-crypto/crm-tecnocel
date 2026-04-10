@@ -3,181 +3,524 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-12 col-lg-8">
+  <div class="col-12 col-lg-9">
 
     <!-- Encabezado -->
     <div class="d-flex align-items-center mb-4 gap-3">
-      <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left"></i>
-      </a>
       <div>
         <h4 class="mb-0 fw-bold"><i class="bi bi-gear-fill me-2 text-info"></i>Configuración del negocio</h4>
-        <p class="text-muted small mb-0">Personaliza el logo y los datos que aparecen en tus facturas</p>
+        <p class="text-muted small mb-0">Personaliza los datos y el estilo de tus facturas</p>
       </div>
     </div>
 
-    <form method="POST" enctype="multipart/form-data" action="{{ url_for('configuracion.perfil') }}">
-      <input type="hidden" name="accion" value="guardar">
+    <!-- Pestañas -->
+    <ul class="nav nav-pills mb-4 gap-2" id="config-tabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active px-4" id="tab-negocio-btn"
+                data-bs-toggle="pill" data-bs-target="#tab-negocio"
+                type="button" role="tab">
+          <i class="bi bi-shop me-2"></i>Mi negocio
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link px-4" id="tab-factura-btn"
+                data-bs-toggle="pill" data-bs-target="#tab-factura"
+                type="button" role="tab">
+          <i class="bi bi-receipt me-2"></i>Estilo de factura
+        </button>
+      </li>
+    </ul>
 
-      <div class="row g-4">
+    <div class="tab-content">
 
-        <!-- ── Columna izquierda: Logo ── -->
-        <div class="col-12 col-md-5">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body p-4 text-center d-flex flex-column align-items-center justify-content-between gap-3">
+      {# ═══════════════════════════════════════════════════════════════
+         PESTAÑA 1 — DATOS DEL NEGOCIO
+         ═══════════════════════════════════════════════════════════════ #}
+      <div class="tab-pane fade show active" id="tab-negocio" role="tabpanel">
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('configuracion.perfil') }}">
+          <input type="hidden" name="accion" value="guardar">
 
-              <div>
-                <h6 class="fw-bold mb-3"><i class="bi bi-image me-2 text-info"></i>Logo del negocio</h6>
+          <div class="row g-4">
 
-                <!-- Vista previa del logo -->
-                <div id="logo-preview-wrap"
-                     style="width:160px;height:160px;border-radius:50%;border:2px solid rgba(0,207,255,0.4);
-                            display:flex;align-items:center;justify-content:center;
-                            background:rgba(0,207,255,0.05);margin:0 auto 16px;overflow:hidden;
-                            box-shadow:0 0 18px rgba(0,207,255,0.2);">
+            <!-- Logo -->
+            <div class="col-12 col-md-5">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 text-center d-flex flex-column align-items-center justify-content-between gap-3">
+                  <div>
+                    <h6 class="fw-bold mb-3"><i class="bi bi-image me-2 text-info"></i>Logo del negocio</h6>
+                    <div id="logo-preview-wrap"
+                         style="width:160px;height:160px;border-radius:50%;border:2px solid rgba(0,207,255,0.4);
+                                display:flex;align-items:center;justify-content:center;
+                                background:rgba(0,207,255,0.05);margin:0 auto 16px;overflow:hidden;
+                                box-shadow:0 0 18px rgba(0,207,255,0.2);">
+                      {% if negocio.logo_base64 %}
+                        <img id="logo-preview" src="{{ negocio.logo_base64 }}"
+                             alt="Logo" style="width:100%;height:100%;object-fit:cover;">
+                      {% else %}
+                        <img id="logo-preview" src="{{ url_for('static', filename='img/logo.png') }}"
+                             alt="Logo" style="width:100%;height:100%;object-fit:cover;">
+                      {% endif %}
+                    </div>
+                    <p class="text-muted small mb-3">PNG, JPG, GIF, WEBP o SVG<br>Máximo 2 MB</p>
+                  </div>
+                  <div class="w-100">
+                    <label for="logo-input" class="btn btn-outline-info w-100 mb-2">
+                      <i class="bi bi-upload me-2"></i>Seleccionar imagen
+                    </label>
+                    <input type="file" id="logo-input" name="logo"
+                           accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                           class="d-none" onchange="previewLogo(this)">
+                    {% if negocio.logo_base64 %}
+                    <button type="submit" form="form-eliminar-logo"
+                            class="btn btn-outline-danger btn-sm w-100"
+                            onclick="return confirm('¿Eliminar el logo actual?')">
+                      <i class="bi bi-trash me-1"></i>Eliminar logo
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Datos del negocio -->
+            <div class="col-12 col-md-7">
+              <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                  <h6 class="fw-bold mb-4"><i class="bi bi-shop me-2 text-info"></i>Datos del negocio</h6>
+
+                  <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">Nombre del negocio</label>
+                    <input type="text" name="nombre_negocio" class="form-control"
+                           value="{{ negocio.nombre_negocio }}" required
+                           placeholder="Ej: Tecnocel Anapoima">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">
+                      Slogan <span class="fw-normal">(aparece en facturas)</span>
+                    </label>
+                    <input type="text" name="slogan" class="form-control"
+                           value="{{ negocio.slogan or '' }}"
+                           placeholder="Ej: Venta y soporte de celulares">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">Teléfono</label>
+                    <input type="text" name="telefono" class="form-control"
+                           value="{{ negocio.telefono or '' }}"
+                           placeholder="3001234567">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">Ciudad</label>
+                    <input type="text" name="ciudad" class="form-control"
+                           value="{{ negocio.ciudad or '' }}"
+                           placeholder="Ej: Anapoima, Cundinamarca">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">Correo electrónico</label>
+                    <input type="email" class="form-control" value="{{ negocio.email }}"
+                           disabled style="opacity:.6">
+                    <div class="form-text text-muted">El correo no se puede cambiar.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /row -->
+
+          <!-- Vista previa en factura -->
+          <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-transparent border-bottom py-3 px-4">
+              <h6 class="fw-bold mb-0"><i class="bi bi-receipt me-2 text-success"></i>Vista previa en factura</h6>
+            </div>
+            <div class="card-body p-4">
+              <div style="background:#050D1A;border-radius:10px;padding:20px 24px;text-align:center;border:1px solid rgba(0,207,255,0.2);">
+                <div id="factura-logo-preview" style="margin:0 auto 10px;width:120px;height:60px;display:flex;align-items:center;justify-content:center;">
                   {% if negocio.logo_base64 %}
-                    <img id="logo-preview" src="{{ negocio.logo_base64 }}"
-                         alt="Logo" style="width:100%;height:100%;object-fit:cover;">
+                    <img src="{{ negocio.logo_base64 }}" alt="Logo" style="max-width:120px;max-height:60px;object-fit:contain;">
                   {% else %}
-                    <img id="logo-preview" src="{{ url_for('static', filename='img/logo.png') }}"
-                         alt="Logo" style="width:100%;height:100%;object-fit:cover;">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" style="max-width:120px;max-height:60px;object-fit:contain;">
                   {% endif %}
                 </div>
-
-                <p class="text-muted small mb-3">
-                  PNG, JPG, GIF, WEBP o SVG<br>Máximo 2 MB
-                </p>
+                <div id="factura-nombre-preview" style="color:#00CFFF;font-weight:700;font-size:1.1rem;">{{ negocio.nombre_negocio }}</div>
+                <div id="factura-slogan-preview" style="color:rgba(160,196,216,0.7);font-size:.85rem;margin-top:2px;">{{ negocio.slogan or 'Venta y soporte de celulares' }}</div>
+                <div style="color:rgba(160,196,216,0.5);font-size:.75rem;margin-top:2px;">{{ negocio.email }}</div>
               </div>
-
-              <!-- Input de archivo -->
-              <div class="w-100">
-                <label for="logo-input" class="btn btn-outline-info w-100 mb-2">
-                  <i class="bi bi-upload me-2"></i>Seleccionar imagen
-                </label>
-                <input type="file" id="logo-input" name="logo" accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
-                       class="d-none" onchange="previewLogo(this)">
-
-                {% if negocio.logo_base64 %}
-                <button type="submit" form="form-eliminar-logo"
-                        class="btn btn-outline-danger btn-sm w-100"
-                        onclick="return confirm('¿Eliminar el logo actual?')">
-                  <i class="bi bi-trash me-1"></i>Eliminar logo
-                </button>
-                {% endif %}
-              </div>
-
             </div>
           </div>
-        </div>
 
-        <!-- ── Columna derecha: Datos del negocio ── -->
-        <div class="col-12 col-md-7">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-              <h6 class="fw-bold mb-4"><i class="bi bi-shop me-2 text-info"></i>Datos del negocio</h6>
-
-              <div class="mb-3">
-                <label class="form-label text-muted small fw-semibold">Nombre del negocio</label>
-                <input type="text" name="nombre_negocio" class="form-control"
-                       value="{{ negocio.nombre_negocio }}" required
-                       placeholder="Ej: Tecnocel Anapoima">
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label text-muted small fw-semibold">Slogan <span class="text-muted fw-normal">(aparece en facturas)</span></label>
-                <input type="text" name="slogan" class="form-control"
-                       value="{{ negocio.slogan or '' }}"
-                       placeholder="Ej: Venta y soporte de celulares">
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label text-muted small fw-semibold">Teléfono</label>
-                <input type="text" name="telefono" class="form-control"
-                       value="{{ negocio.telefono or '' }}"
-                       placeholder="3001234567">
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label text-muted small fw-semibold">Ciudad</label>
-                <input type="text" name="ciudad" class="form-control"
-                       value="{{ negocio.ciudad or '' }}"
-                       placeholder="Ej: Anapoima, Cundinamarca">
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label text-muted small fw-semibold">Correo electrónico</label>
-                <input type="email" class="form-control" value="{{ negocio.email }}" disabled
-                       style="opacity:.6">
-                <div class="form-text text-muted">El correo no se puede cambiar.</div>
-              </div>
-
-            </div>
+          <div class="d-flex gap-2 justify-content-end mt-4 mb-5">
+            <button type="submit" class="btn btn-info px-5 fw-semibold">
+              <i class="bi bi-check-lg me-2"></i>Guardar datos del negocio
+            </button>
           </div>
-        </div>
 
-      </div><!-- /row -->
+        </form>
+      </div>{# /tab-negocio #}
 
-      <!-- Vista previa de factura -->
-      <div class="card border-0 shadow-sm mt-4">
-        <div class="card-header bg-transparent border-bottom py-3 px-4">
-          <h6 class="fw-bold mb-0"><i class="bi bi-receipt me-2 text-success"></i>Vista previa en factura</h6>
-        </div>
-        <div class="card-body p-4">
-          <div style="background:#050D1A;border-radius:10px;padding:20px 24px;text-align:center;border:1px solid rgba(0,207,255,0.2);">
-            <div id="factura-logo-preview" style="margin:0 auto 10px;width:120px;height:60px;display:flex;align-items:center;justify-content:center;">
-              {% if negocio.logo_base64 %}
-                <img src="{{ negocio.logo_base64 }}" alt="Logo" style="max-width:120px;max-height:60px;object-fit:contain;">
-              {% else %}
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" style="max-width:120px;max-height:60px;object-fit:contain;">
-              {% endif %}
+      {# ═══════════════════════════════════════════════════════════════
+         PESTAÑA 2 — ESTILO DE FACTURA
+         ═══════════════════════════════════════════════════════════════ #}
+      <div class="tab-pane fade" id="tab-factura" role="tabpanel">
+        <form method="POST" action="{{ url_for('configuracion.perfil') }}" id="form-factura">
+          <input type="hidden" name="accion" value="guardar_factura">
+
+          <div class="row g-4">
+
+            <!-- Columna izquierda: controles -->
+            <div class="col-12 col-lg-5">
+
+              <!-- Selector de modelo -->
+              <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                  <h6 class="fw-bold mb-3"><i class="bi bi-layout-text-window me-2 text-info"></i>Modelo de factura</h6>
+                  <div class="d-flex flex-column gap-2">
+
+                    <label class="modelo-card {% if factura_cfg.modelo == 'clasico' %}activo{% endif %}"
+                           onclick="seleccionarModelo('clasico')">
+                      <input type="radio" name="modelo" value="clasico" class="d-none"
+                             {% if factura_cfg.modelo == 'clasico' %}checked{% endif %}>
+                      <div class="modelo-mini modelo-mini-clasico">
+                        <div class="mini-header"></div>
+                        <div class="mini-body"><div class="mini-line"></div><div class="mini-line short"></div></div>
+                      </div>
+                      <div>
+                        <div class="fw-semibold">Clásico</div>
+                        <div class="text-muted small">Header oscuro, tabla formal</div>
+                      </div>
+                    </label>
+
+                    <label class="modelo-card {% if factura_cfg.modelo == 'moderno' %}activo{% endif %}"
+                           onclick="seleccionarModelo('moderno')">
+                      <input type="radio" name="modelo" value="moderno" class="d-none"
+                             {% if factura_cfg.modelo == 'moderno' %}checked{% endif %}>
+                      <div class="modelo-mini modelo-mini-moderno">
+                        <div class="mini-header mini-color"></div>
+                        <div class="mini-body"><div class="mini-card"></div><div class="mini-card"></div></div>
+                      </div>
+                      <div>
+                        <div class="fw-semibold">Moderno</div>
+                        <div class="text-muted small">Header colorido, tarjetas</div>
+                      </div>
+                    </label>
+
+                    <label class="modelo-card {% if factura_cfg.modelo == 'minimalista' %}activo{% endif %}"
+                           onclick="seleccionarModelo('minimalista')">
+                      <input type="radio" name="modelo" value="minimalista" class="d-none"
+                             {% if factura_cfg.modelo == 'minimalista' %}checked{% endif %}>
+                      <div class="modelo-mini modelo-mini-minimalista">
+                        <div class="mini-header mini-white"><div class="mini-accent-line"></div></div>
+                        <div class="mini-body"><div class="mini-line"></div><div class="mini-divider"></div><div class="mini-line short"></div></div>
+                      </div>
+                      <div>
+                        <div class="fw-semibold">Minimalista</div>
+                        <div class="text-muted small">Limpio, sin distracciones</div>
+                      </div>
+                    </label>
+
+                  </div>
+                </div>
+              </div>
+
+              <!-- Colores -->
+              <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                  <h6 class="fw-bold mb-3"><i class="bi bi-palette me-2 text-info"></i>Colores</h6>
+                  <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">Color principal</label>
+                    <div class="d-flex align-items-center gap-3">
+                      <input type="color" name="color_primario" id="color_primario"
+                             value="{{ factura_cfg.color_primario }}"
+                             class="form-control form-control-color"
+                             style="width:56px;height:40px;padding:2px;"
+                             oninput="actualizarPreview()">
+                      <span class="text-muted small">Botones, títulos, acentos</span>
+                    </div>
+                  </div>
+                  <div id="wrap-color-header" {% if factura_cfg.modelo != 'clasico' %}style="display:none"{% endif %}>
+                    <label class="form-label text-muted small fw-semibold">Color del encabezado</label>
+                    <div class="d-flex align-items-center gap-3">
+                      <input type="color" name="color_header" id="color_header"
+                             value="{{ factura_cfg.color_header }}"
+                             class="form-control form-control-color"
+                             style="width:56px;height:40px;padding:2px;"
+                             oninput="actualizarPreview()">
+                      <span class="text-muted small">Fondo del header (solo Clásico)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Campos visibles -->
+              <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                  <h6 class="fw-bold mb-3"><i class="bi bi-eye me-2 text-info"></i>Mostrar en factura</h6>
+                  <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           name="mostrar_telefono" value="1" id="sw_telefono"
+                           {% if factura_cfg.mostrar_telefono %}checked{% endif %}
+                           onchange="actualizarPreview()">
+                    <label class="form-check-label" for="sw_telefono">Teléfono del cliente</label>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           name="mostrar_ciudad" value="1" id="sw_ciudad"
+                           {% if factura_cfg.mostrar_ciudad %}checked{% endif %}
+                           onchange="actualizarPreview()">
+                    <label class="form-check-label" for="sw_ciudad">Ciudad del cliente</label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Textos de botones -->
+              <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                  <h6 class="fw-bold mb-3"><i class="bi bi-type me-2 text-info"></i>Etiquetas de botones</h6>
+                  <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">
+                      <i class="bi bi-file-earmark-pdf me-1"></i>Botón PDF
+                    </label>
+                    <input type="text" name="btn_pdf_label" class="form-control"
+                           value="{{ factura_cfg.btn_pdf_label }}"
+                           maxlength="40" placeholder="Descargar PDF"
+                           oninput="actualizarPreview()">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">
+                      <i class="bi bi-whatsapp me-1"></i>Botón WhatsApp
+                    </label>
+                    <input type="text" name="btn_wa_label" class="form-control"
+                           value="{{ factura_cfg.btn_wa_label }}"
+                           maxlength="40" placeholder="Enviar por WhatsApp"
+                           oninput="actualizarPreview()">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pie de factura -->
+              <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-4">
+                  <h6 class="fw-bold mb-3"><i class="bi bi-chat-quote me-2 text-info"></i>Texto del pie</h6>
+                  <textarea name="pie_texto" class="form-control" rows="2"
+                            maxlength="200" placeholder="Mensaje al pie de la factura..."
+                            oninput="actualizarPreview()">{{ factura_cfg.pie_texto }}</textarea>
+                  <div class="form-text text-muted">Aparece en la parte inferior de cada factura.</div>
+                </div>
+              </div>
+
+            </div><!-- /columna izquierda -->
+
+            <!-- Columna derecha: preview en vivo -->
+            <div class="col-12 col-lg-7">
+              <div class="sticky-top" style="top:80px;">
+                <div class="card border-0 shadow-sm">
+                  <div class="card-header bg-transparent border-bottom py-3 px-4">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-eye me-2 text-success"></i>Vista previa en vivo</h6>
+                  </div>
+                  <div class="card-body p-3">
+                    <div id="factura-live-preview" style="font-size:.82rem;">
+                      {% include 'configuracion/_factura_preview.html' %}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div id="factura-nombre-preview" style="color:#00CFFF;font-weight:700;font-size:1.1rem;">{{ negocio.nombre_negocio }}</div>
-            <div id="factura-slogan-preview" style="color:rgba(160,196,216,0.7);font-size:.85rem;margin-top:2px;">{{ negocio.slogan or 'Venta y soporte de celulares' }}</div>
-            <div style="color:rgba(160,196,216,0.5);font-size:.75rem;margin-top:2px;">{{ negocio.email }}</div>
+
+          </div><!-- /row -->
+
+          <div class="d-flex gap-2 justify-content-end mt-2 mb-5">
+            <button type="submit" class="btn btn-info px-5 fw-semibold">
+              <i class="bi bi-check-lg me-2"></i>Guardar estilo de factura
+            </button>
           </div>
-        </div>
-      </div>
 
-      <!-- Botón guardar -->
-      <div class="d-flex gap-2 justify-content-end mt-4 mb-5">
-        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary px-4">Cancelar</a>
-        <button type="submit" class="btn btn-info px-5 fw-semibold">
-          <i class="bi bi-check-lg me-2"></i>Guardar configuración
-        </button>
-      </div>
+        </form>
+      </div>{# /tab-factura #}
 
-    </form>
-
-    {% if negocio.logo_base64 %}
-    <form id="form-eliminar-logo" method="POST" action="{{ url_for('configuracion.perfil') }}">
-      <input type="hidden" name="accion" value="eliminar_logo">
-    </form>
-    {% endif %}
+    </div>{# /tab-content #}
 
   </div>
 </div>
 
+<!-- Form independiente para eliminar logo (fuera de cualquier form) -->
+{% if negocio.logo_base64 %}
+<form id="form-eliminar-logo" method="POST" action="{{ url_for('configuracion.perfil') }}">
+  <input type="hidden" name="accion" value="eliminar_logo">
+</form>
+{% endif %}
+
+<style>
+/* ── Tarjetas de selección de modelo ─── */
+.modelo-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 14px; border-radius: 10px;
+  border: 2px solid rgba(0,207,255,0.15);
+  cursor: pointer; transition: border-color .2s, background .2s;
+  background: rgba(0,207,255,0.03);
+}
+.modelo-card:hover { border-color: rgba(0,207,255,0.4); background: rgba(0,207,255,0.06); }
+.modelo-card.activo { border-color: #00CFFF; background: rgba(0,207,255,0.1); }
+
+/* ── Mini previews de modelos ─── */
+.modelo-mini { width: 64px; height: 44px; border-radius: 6px; overflow: hidden; flex-shrink: 0;
+               border: 1px solid rgba(255,255,255,0.1); }
+.mini-header { height: 14px; }
+.mini-body   { padding: 4px 5px; display: flex; flex-direction: column; gap: 3px; }
+.mini-line   { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); }
+.mini-line.short { width: 60%; }
+.mini-card   { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.2); }
+.mini-divider { height: 1px; background: rgba(255,255,255,0.15); }
+.mini-accent-line { height: 2px; background: var(--prev-color, #0088CC); }
+
+/* Clásico */
+.modelo-mini-clasico { background: #0A1628; }
+.modelo-mini-clasico .mini-header { background: linear-gradient(90deg, #050D1A, #0A1E3A); }
+
+/* Moderno */
+.modelo-mini-moderno { background: #f0f4f8; }
+.modelo-mini-moderno .mini-header.mini-color { background: var(--prev-color, #0088CC); }
+.modelo-mini-moderno .mini-card { background: #dce4ed; }
+
+/* Minimalista */
+.modelo-mini-minimalista { background: #fff; border: 1px solid #e0e0e0; }
+.modelo-mini-minimalista .mini-header.mini-white { background: #fff; border-bottom: 2px solid var(--prev-color, #0088CC); }
+.modelo-mini-minimalista .mini-line { background: #ccc; }
+
+/* ── Preview de factura ─── */
+#factura-live-preview .prev-header-clasico {
+  background: linear-gradient(135deg, var(--prev-header, #050D1A) 0%, #0A1E3A 100%);
+  color: #fff; padding: 14px; border-radius: 8px 8px 0 0; text-align: center;
+}
+#factura-live-preview .prev-header-moderno {
+  background: var(--prev-color, #0088CC);
+  color: #fff; padding: 14px; border-radius: 8px 8px 0 0; text-align: center;
+}
+#factura-live-preview .prev-header-minimalista {
+  background: #fff; color: #333; padding: 14px;
+  border-top: 4px solid var(--prev-color, #0088CC);
+  border-radius: 8px 8px 0 0; text-align: center;
+}
+#factura-live-preview .prev-body {
+  background: #fff; color: #222; padding: 14px;
+  border-radius: 0 0 8px 8px; border: 1px solid #e0e0e0; border-top: none;
+}
+#factura-live-preview .prev-btn-pdf {
+  display: inline-block; padding: 5px 12px; border-radius: 6px; font-size: .78rem;
+  background: var(--prev-color, #0088CC); color: #fff; border: none; margin-right: 6px;
+}
+#factura-live-preview .prev-btn-wa {
+  display: inline-block; padding: 5px 12px; border-radius: 6px; font-size: .78rem;
+  background: #25D366; color: #fff; border: none;
+}
+#factura-live-preview .prev-total-row {
+  background: var(--prev-color, #0088CC); color: #fff;
+  padding: 5px 8px; border-radius: 4px; font-weight: 700;
+}
+#factura-live-preview .prev-card-item {
+  background: #f5f7fa; border-radius: 6px; padding: 6px 10px;
+  border-left: 3px solid var(--prev-color, #0088CC); margin-bottom: 4px;
+}
+</style>
+
 <script>
-function previewLogo(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const src = e.target.result;
-            document.getElementById('logo-preview').src = src;
-            // Actualizar vista previa de factura
-            const fp = document.getElementById('factura-logo-preview');
-            fp.innerHTML = '<img src="' + src + '" alt="Logo" style="max-width:120px;max-height:60px;object-fit:contain;">';
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
+const MODELO_ACTUAL = { valor: '{{ factura_cfg.modelo }}' };
+
+function seleccionarModelo(modelo) {
+  MODELO_ACTUAL.valor = modelo;
+  document.querySelectorAll('.modelo-card').forEach(c => c.classList.remove('activo'));
+  const card = document.querySelector(`.modelo-card input[value="${modelo}"]`);
+  if (card) card.closest('.modelo-card').classList.add('activo');
+  // Mostrar/ocultar selector de color del header
+  document.getElementById('wrap-color-header').style.display = modelo === 'clasico' ? '' : 'none';
+  actualizarPreview();
 }
 
-// Actualizar vista previa en tiempo real al escribir
-document.querySelector('input[name="nombre_negocio"]').addEventListener('input', function() {
-    document.getElementById('factura-nombre-preview').textContent = this.value || 'Nombre del negocio';
-});
-document.querySelector('input[name="slogan"]').addEventListener('input', function() {
-    document.getElementById('factura-slogan-preview').textContent = this.value || 'Slogan del negocio';
+function actualizarPreview() {
+  const colorPrimario = document.getElementById('color_primario').value;
+  const colorHeader   = document.getElementById('color_header').value;
+  const modelo        = MODELO_ACTUAL.valor;
+  const mostrarTel    = document.getElementById('sw_telefono').checked;
+  const mostrarCiudad = document.getElementById('sw_ciudad').checked;
+  const pieTxt        = document.querySelector('textarea[name="pie_texto"]').value;
+  const btnPdf        = document.querySelector('input[name="btn_pdf_label"]').value || 'Descargar PDF';
+  const btnWa         = document.querySelector('input[name="btn_wa_label"]').value  || 'Enviar por WhatsApp';
+
+  // Actualizar CSS vars en el preview
+  const prev = document.getElementById('factura-live-preview');
+  prev.style.setProperty('--prev-color',  colorPrimario);
+  prev.style.setProperty('--prev-header', colorHeader);
+
+  // Actualizar mini-previews
+  document.querySelectorAll('.modelo-mini').forEach(m => {
+    m.style.setProperty('--prev-color', colorPrimario);
+  });
+
+  // Generar HTML del preview
+  const logoHtml = `{{ negocio_logo | default('') }}`
+    ? `<img src="{{ negocio_logo }}" alt="Logo" style="max-height:36px;max-width:100px;object-fit:contain;display:block;margin:0 auto 4px;">`
+    : `<div style="font-weight:700;font-size:.95rem;">{{ negocio_nombre }}</div>`;
+
+  let headerHtml = '';
+  if (modelo === 'clasico') {
+    headerHtml = `<div class="prev-header-clasico">
+      ${logoHtml}
+      <div style="opacity:.8;font-size:.75rem;">{{ negocio_slogan or 'Venta y soporte de celulares' }}</div>
+    </div>`;
+  } else if (modelo === 'moderno') {
+    headerHtml = `<div class="prev-header-moderno">
+      ${logoHtml}
+      <div style="opacity:.9;font-size:.75rem;">{{ negocio_slogan or 'Venta y soporte de celulares' }}</div>
+    </div>`;
+  } else {
+    headerHtml = `<div class="prev-header-minimalista">
+      ${logoHtml}
+      <div style="font-size:.75rem;color:#555;">{{ negocio_slogan or 'Venta y soporte de celulares' }}</div>
+    </div>`;
+  }
+
+  let itemsHtml = '';
+  if (modelo === 'moderno') {
+    itemsHtml = `<div class="prev-card-item"><strong>Samsung Galaxy A55</strong><span class="float-end fw-bold">$ 1.200.000</span></div>
+    <div class="prev-card-item"><strong>Vidrio templado</strong><span class="float-end">$ 15.000</span></div>`;
+  } else {
+    itemsHtml = `<table style="width:100%;font-size:.78rem;border-collapse:collapse;">
+      <thead><tr style="background:#f0f4f8;">
+        <th style="padding:4px 6px;text-align:left;">Descripción</th>
+        <th style="padding:4px 6px;text-align:right;">Precio</th>
+      </tr></thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #eee;"><td style="padding:4px 6px;">Samsung Galaxy A55</td><td style="padding:4px 6px;text-align:right;">$ 1.200.000</td></tr>
+        <tr style="border-bottom:1px solid #eee;"><td style="padding:4px 6px;">Vidrio templado</td><td style="padding:4px 6px;text-align:right;">$ 15.000</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="2" style="padding:4px 6px;text-align:right;"><span class="prev-total-row">TOTAL: $ 1.215.000</span></td></tr></tfoot>
+    </table>`;
+  }
+
+  const clienteHtml = `<div style="margin-bottom:8px;">
+    <div style="font-size:.7rem;color:#888;">Cliente</div>
+    <div style="font-weight:600;">Juan García</div>
+    ${mostrarTel ? '<div style="font-size:.72rem;color:#555;"><i class="bi bi-telephone me-1"></i>3001234567</div>' : ''}
+    ${mostrarCiudad ? '<div style="font-size:.72rem;color:#555;"><i class="bi bi-geo-alt me-1"></i>Anapoima</div>' : ''}
+  </div>`;
+
+  const pieHtml = pieTxt
+    ? `<div style="text-align:center;font-size:.7rem;color:#888;padding-top:8px;border-top:1px solid #eee;margin-top:8px;">${pieTxt}</div>`
+    : '';
+
+  const botonesHtml = `<div style="margin-top:10px;">
+    <span class="prev-btn-pdf"><i class="bi bi-file-earmark-pdf me-1"></i>${btnPdf}</span>
+    <span class="prev-btn-wa"><i class="bi bi-whatsapp me-1"></i>${btnWa}</span>
+  </div>`;
+
+  prev.innerHTML = headerHtml
+    + `<div class="prev-body">${clienteHtml}${itemsHtml}${pieHtml}${botonesHtml}</div>`;
+}
+
+// Activar la pestaña correcta según el hash de la URL
+document.addEventListener('DOMContentLoaded', function() {
+  const hash = window.location.hash;
+  if (hash === '#tab-factura') {
+    document.getElementById('tab-factura-btn').click();
+  }
+  actualizarPreview();
 });
 </script>
 {% endblock %}

@@ -1,0 +1,83 @@
+{# Template parcial: preview inicial de la factura en la pestaña de configuración.
+   El JS de perfil.html lo reemplaza en tiempo real al cambiar los controles. #}
+{% set cp = factura_cfg.color_primario %}
+{% set ch = factura_cfg.color_header %}
+{% set modelo = factura_cfg.modelo %}
+
+<div id="factura-live-preview"
+     style="--prev-color:{{ cp }};--prev-header:{{ ch }};font-size:.82rem;">
+
+  {# ── Header según modelo ── #}
+  {% if modelo == 'clasico' %}
+  <div class="prev-header-clasico">
+  {% elif modelo == 'moderno' %}
+  <div class="prev-header-moderno">
+  {% else %}
+  <div class="prev-header-minimalista">
+  {% endif %}
+    {% if negocio_logo %}
+      <img src="{{ negocio_logo }}" alt="Logo"
+           style="max-height:36px;max-width:100px;object-fit:contain;display:block;margin:0 auto 4px;">
+    {% else %}
+      <div style="font-weight:700;font-size:.95rem;">{{ negocio_nombre }}</div>
+    {% endif %}
+    <div style="font-size:.75rem;opacity:.8;">{{ negocio_slogan or 'Venta y soporte de celulares' }}</div>
+  </div>
+
+  {# ── Cuerpo ── #}
+  <div class="prev-body">
+    <div style="margin-bottom:8px;">
+      <div style="font-size:.7rem;color:#888;">Cliente</div>
+      <div style="font-weight:600;">Juan García</div>
+      {% if factura_cfg.mostrar_telefono %}
+      <div style="font-size:.72rem;color:#555;"><i class="bi bi-telephone me-1"></i>3001234567</div>
+      {% endif %}
+      {% if factura_cfg.mostrar_ciudad %}
+      <div style="font-size:.72rem;color:#555;"><i class="bi bi-geo-alt me-1"></i>Anapoima</div>
+      {% endif %}
+    </div>
+
+    {% if modelo == 'moderno' %}
+      <div class="prev-card-item"><strong>Samsung Galaxy A55</strong><span class="float-end fw-bold">$ 1.200.000</span></div>
+      <div class="prev-card-item"><strong>Vidrio templado</strong><span class="float-end">$ 15.000</span></div>
+    {% else %}
+      <table style="width:100%;font-size:.78rem;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f0f4f8;">
+            <th style="padding:4px 6px;text-align:left;">Descripción</th>
+            <th style="padding:4px 6px;text-align:right;">Precio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:4px 6px;">Samsung Galaxy A55</td>
+            <td style="padding:4px 6px;text-align:right;">$ 1.200.000</td>
+          </tr>
+          <tr style="border-bottom:1px solid #eee;">
+            <td style="padding:4px 6px;">Vidrio templado</td>
+            <td style="padding:4px 6px;text-align:right;">$ 15.000</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" style="padding:4px 6px;text-align:right;">
+              <span class="prev-total-row">TOTAL: $ 1.215.000</span>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    {% endif %}
+
+    {% if factura_cfg.pie_texto %}
+    <div style="text-align:center;font-size:.7rem;color:#888;padding-top:8px;border-top:1px solid #eee;margin-top:8px;">
+      {{ factura_cfg.pie_texto }}
+    </div>
+    {% endif %}
+
+    <div style="margin-top:10px;">
+      <span class="prev-btn-pdf"><i class="bi bi-file-earmark-pdf me-1"></i>{{ factura_cfg.btn_pdf_label }}</span>
+      <span class="prev-btn-wa"><i class="bi bi-whatsapp me-1"></i>{{ factura_cfg.btn_wa_label }}</span>
+    </div>
+  </div>
+
+</div>

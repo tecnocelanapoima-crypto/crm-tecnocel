@@ -3,6 +3,7 @@ Tecnocel CRM — Versión SaaS
 Sistema multi-tenant: cada negocio ve solo sus datos
 """
 
+import json
 import os
 from flask import Flask, render_template, redirect, url_for, session, request, flash, jsonify
 from database.db import init_db, get_db, close_db
@@ -50,21 +51,29 @@ def formato_moneda(valor):
 
 @app.context_processor
 def inject_negocio():
-    """Disponible en todos los templates."""
+    """Inyecta datos del negocio y config de factura en todos los templates."""
+    from routes.configuracion import DEFAULT_FACTURA_CONFIG
     nid = session.get('negocio_id')
-    logo_base64 = None
-    negocio_slogan = ''
+    logo_base64      = None
+    negocio_slogan   = ''
     negocio_telefono = ''
+    factura_config   = DEFAULT_FACTURA_CONFIG.copy()
     if nid:
         try:
-            db = get_db()
+            db  = get_db()
             row = db.execute(
-                'SELECT logo_base64, slogan, telefono FROM negocios WHERE id = ?', (nid,)
+                'SELECT logo_base64, slogan, telefono, factura_config FROM negocios WHERE id = ?',
+                (nid,)
             ).fetchone()
             if row:
-                logo_base64 = row['logo_base64']
-                negocio_slogan = row['slogan'] or ''
+                logo_base64      = row['logo_base64']
+                negocio_slogan   = row['slogan'] or ''
                 negocio_telefono = row['telefono'] or ''
+                if row['factura_config']:
+                    try:
+                        factura_config.update(json.loads(row['factura_config']))
+                    except Exception:
+                        pass
         except Exception:
             pass
     return {
@@ -74,6 +83,7 @@ def inject_negocio():
         'negocio_logo':     logo_base64,
         'negocio_slogan':   negocio_slogan,
         'negocio_telefono': negocio_telefono,
+        'factura_config':   factura_config,
     }
 
 

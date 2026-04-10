@@ -2,193 +2,267 @@
 {% block title %}Factura #{{ "%04d"|format(venta.id) }} — Tecnocel CRM{% endblock %}
 
 {% block content %}
+{# ── Leer config de factura (viene del context_processor como factura_config) ── #}
+{% set fc = factura_config %}
+{% set cp = fc.color_primario %}
+{% set ch = fc.color_header %}
+{% set modelo = fc.modelo %}
+
 <div class="row justify-content-center">
-    <div class="col-12 col-lg-8">
+  <div class="col-12 col-lg-8">
 
-        <!-- Cabecera -->
-        <div class="d-flex align-items-center mb-4 flex-wrap gap-2">
-            <a href="{{ url_for('ventas.lista') }}" class="btn btn-outline-secondary btn-sm me-2">
-                <i class="bi bi-arrow-left"></i>
-            </a>
-            <div>
-                <h2 class="mb-1 fw-bold text-primary">
-                    <i class="bi bi-receipt me-2"></i>Factura #{{ "%04d"|format(venta.id) }}
-                </h2>
-                <p class="text-muted mb-0">Vista previa de la factura</p>
-            </div>
-            <div class="ms-auto d-flex gap-2 flex-wrap">
-                <a href="{{ url_for('facturas.descargar', venta_id=venta.id) }}"
-                   class="btn btn-success">
-                    <i class="bi bi-download me-1"></i>Descargar PDF
-                </a>
-                <a href="{{ url_for('whatsapp.enviar', venta_id=venta.id) }}" 
-                   class="btn btn-success btn-whatsapp" target="_blank" rel="noopener noreferrer">
-                    <i class="bi bi-whatsapp me-1"></i>Enviar por WhatsApp
-                </a>
-            </div>
-        </div>
-
-        <!-- Vista previa de la factura (estilo tarjeta) -->
-        <div class="card border-0 shadow factura-preview">
-            <!-- Header de la factura -->
-            <div class="card-header text-white py-4 text-center factura-header">
-                {% if negocio and negocio.logo_base64 %}
-                <img src="{{ negocio.logo_base64 }}" alt="{{ negocio.nombre_negocio }}"
-                     style="max-height:70px;max-width:200px;object-fit:contain;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto;">
-                {% else %}
-                <h2 class="fw-bold mb-1">
-                    <i class="bi bi-phone-fill me-2"></i>{{ negocio.nombre_negocio if negocio else 'TECNOCEL' }}
-                </h2>
-                {% endif %}
-                <p class="mb-0 opacity-75">{{ negocio.slogan if negocio and negocio.slogan else 'Venta y soporte de celulares' }}</p>
-                <p class="mb-0 opacity-75 small">{{ negocio.email if negocio else 'tecnocel.negocio@gmail.com' }}</p>
-            </div>
-
-            <div class="card-body p-4">
-
-                <!-- Número de factura y fecha -->
-                <div class="row g-3 mb-4">
-                    <div class="col-6">
-                        <div class="bg-light text-dark rounded-3 p-3 border border-secondary">
-                            <small class="text-secondary fw-bold d-block">N° Factura</small>
-                            <strong class="fs-5 text-dark">#{{ "%04d"|format(venta.id) }}</strong>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="bg-light text-dark rounded-3 p-3 border border-secondary">
-                            <small class="text-secondary fw-bold d-block">Fecha</small>
-                            <strong class="fs-5 text-dark">{{ venta.fecha }}</strong>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="bg-light text-dark rounded-3 p-3 border border-secondary">
-                            <small class="text-secondary fw-bold d-block">Tipo de Pago</small>
-                            <span class="badge {% if venta.tipo_pago == 'contado' %}bg-success{% else %}bg-warning text-dark{% endif %} fs-6 mt-1">
-                                {{ venta.tipo_pago.upper() }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Datos del cliente -->
-                <div class="mb-4">
-                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
-                        <i class="bi bi-person-fill me-2"></i>Datos del Cliente
-                    </h5>
-                    <div class="row g-2">
-                        <div class="col-12 col-md-6">
-                            <small class="text-muted">Nombre</small>
-                            <p class="fw-semibold mb-1">{{ venta.nombre }}</p>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <small class="text-muted">Cédula</small>
-                            <p class="fw-semibold mb-1">{{ venta.cedula or '—' }}</p>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <small class="text-muted">Teléfono</small>
-                            <p class="fw-semibold mb-1">{{ venta.telefono or '—' }}</p>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <small class="text-muted">Ciudad</small>
-                            <p class="fw-semibold mb-1">{{ venta.ciudad or '—' }}</p>
-                        </div>
-                        {% if venta.direccion %}
-                        <div class="col-12">
-                            <small class="text-muted">Dirección</small>
-                            <p class="fw-semibold mb-1">{{ venta.direccion }}</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Detalle del producto -->
-                <div class="mb-4">
-                    <h5 class="fw-bold text-primary border-bottom pb-2 mb-3">
-                        <i class="bi bi-bag-fill me-2"></i>Detalle de la Compra
-                    </h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-primary">
-                                <tr>
-                                    <th>Descripción</th>
-                                    <th class="text-center" width="80">Cant.</th>
-                                    <th class="text-end" width="150">Precio</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="fw-semibold">{{ venta.producto }}</td>
-                                    <td class="text-center">1</td>
-                                    <td class="text-end text-success fw-bold">$ {{ "{:,.0f}".format(venta.precio) }}</td>
-                                </tr>
-                                {% if venta.notas %}
-                                <tr class="table-light">
-                                    <td colspan="3" class="text-muted small fst-italic">
-                                        <i class="bi bi-info-circle me-1"></i>{{ venta.notas }}
-                                    </td>
-                                </tr>
-                                {% endif %}
-                            </tbody>
-                            <tfoot>
-                                <tr class="table-light">
-                                    <td colspan="2" class="text-end fw-bold">Subtotal:</td>
-                                    <td class="text-end">$ {{ "{:,.0f}".format(venta.precio) }}</td>
-                                </tr>
-                                <tr class="table-light">
-                                    <td colspan="2" class="text-end fw-bold">Descuento:</td>
-                                    <td class="text-end">$ 0</td>
-                                </tr>
-                                <tr class="table-primary">
-                                    <td colspan="2" class="text-end fw-bold fs-5">TOTAL:</td>
-                                    <td class="text-end fw-bold fs-5 text-primary">$ {{ "{:,.0f}".format(venta.precio) }}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Pie de la factura -->
-                <div class="text-center py-3 border-top">
-                    <p class="text-muted mb-1">
-                        <i class="bi bi-heart-fill text-danger me-1"></i>
-                        ¡Gracias por comprar en <strong>{{ negocio.nombre_negocio if negocio else 'Tecnocel' }}</strong>!
-                    </p>
-                    <small class="text-muted">
-                        Este comprobante es válido para reclamaciones. Consérvelo.
-                    </small>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- Información sobre WhatsApp -->
-        <div class="alert alert-info mt-4 border-0 shadow-sm">
-            <h6 class="fw-bold">
-                <i class="bi bi-whatsapp text-success me-2"></i>¿Cómo enviar por WhatsApp?
-            </h6>
-            <ol class="mb-0 small">
-                <li>Haz clic en <strong>"Enviar por WhatsApp"</strong> — se abrirá WhatsApp Web con el mensaje prellenado.</li>
-                <li>En WhatsApp Web, haz clic en el ícono de adjunto <i class="bi bi-paperclip"></i> y selecciona el PDF.</li>
-                <li>El PDF se guarda en la carpeta <code>facturas_pdf/</code> dentro del proyecto.</li>
-            </ol>
-        </div>
-
-        <!-- Botones de acción -->
-        <div class="d-flex gap-2 flex-wrap justify-content-center mt-3 mb-4">
-            <a href="{{ url_for('facturas.descargar', venta_id=venta.id) }}"
-               class="btn btn-success btn-lg px-4">
-                <i class="bi bi-file-earmark-pdf me-2"></i>Descargar PDF
-            </a>
-            <a href="{{ url_for('whatsapp.enviar', venta_id=venta.id) }}" 
-               class="btn btn-lg px-4 btn-whatsapp" target="_blank" rel="noopener noreferrer">
-                <i class="bi bi-whatsapp me-2"></i>Abrir WhatsApp Web
-            </a>
-            <a href="{{ url_for('clientes.detalle', id=venta.cliente_id) }}"
-               class="btn btn-outline-primary btn-lg px-4">
-                <i class="bi bi-person me-2"></i>Ver Cliente
-            </a>
-        </div>
-
+    <!-- Cabecera de la página -->
+    <div class="d-flex align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2 class="mb-1 fw-bold text-primary">
+          <i class="bi bi-receipt me-2"></i>Factura #{{ "%04d"|format(venta.id) }}
+        </h2>
+        <p class="text-muted mb-0">Vista previa de la factura</p>
+      </div>
+      <div class="ms-auto d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('facturas.descargar', venta_id=venta.id) }}"
+           class="btn btn-success">
+          <i class="bi bi-download me-1"></i>{{ fc.btn_pdf_label }}
+        </a>
+        <a href="{{ url_for('whatsapp.enviar', venta_id=venta.id) }}"
+           class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer">
+          <i class="bi bi-whatsapp me-1"></i>{{ fc.btn_wa_label }}
+        </a>
+      </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         FACTURA — Layout según modelo elegido
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="card border-0 shadow factura-preview"
+         style="--fc-primary:{{ cp }};--fc-header:{{ ch }};">
+
+      {# ── HEADER ── #}
+      {% if modelo == 'clasico' %}
+      <div class="card-header text-white py-4 text-center"
+           style="background:linear-gradient(135deg,{{ ch }} 0%,#0A1E3A 100%);">
+        {% if negocio and negocio.logo_base64 %}
+          <img src="{{ negocio.logo_base64 }}" alt="{{ negocio.nombre_negocio }}"
+               style="max-height:70px;max-width:200px;object-fit:contain;margin-bottom:10px;display:block;margin:0 auto 10px;">
+        {% else %}
+          <h2 class="fw-bold mb-1">
+            <i class="bi bi-phone-fill me-2"></i>{{ negocio.nombre_negocio if negocio else 'TECNOCEL' }}
+          </h2>
+        {% endif %}
+        <p class="mb-0" style="opacity:.75;">{{ negocio.slogan if negocio and negocio.slogan else 'Venta y soporte de celulares' }}</p>
+        <p class="mb-0 small" style="opacity:.65;">{{ negocio.email if negocio else '' }}</p>
+      </div>
+
+      {% elif modelo == 'moderno' %}
+      <div class="card-header py-4 text-center text-white"
+           style="background:{{ cp }};">
+        {% if negocio and negocio.logo_base64 %}
+          <img src="{{ negocio.logo_base64 }}" alt="{{ negocio.nombre_negocio }}"
+               style="max-height:70px;max-width:200px;object-fit:contain;display:block;margin:0 auto 10px;">
+        {% else %}
+          <h2 class="fw-bold mb-1">
+            <i class="bi bi-phone-fill me-2"></i>{{ negocio.nombre_negocio if negocio else 'TECNOCEL' }}
+          </h2>
+        {% endif %}
+        <p class="mb-0" style="opacity:.9;">{{ negocio.slogan if negocio and negocio.slogan else 'Venta y soporte de celulares' }}</p>
+        <p class="mb-0 small" style="opacity:.8;">{{ negocio.email if negocio else '' }}</p>
+      </div>
+
+      {% else %}{# minimalista #}
+      <div class="card-header py-4 text-center"
+           style="background:#ffffff;color:#222;border-top:4px solid {{ cp }};">
+        {% if negocio and negocio.logo_base64 %}
+          <img src="{{ negocio.logo_base64 }}" alt="{{ negocio.nombre_negocio }}"
+               style="max-height:70px;max-width:200px;object-fit:contain;display:block;margin:0 auto 10px;">
+        {% else %}
+          <h2 class="fw-bold mb-1" style="color:{{ cp }};">
+            {{ negocio.nombre_negocio if negocio else 'TECNOCEL' }}
+          </h2>
+        {% endif %}
+        <p class="mb-0 text-muted">{{ negocio.slogan if negocio and negocio.slogan else 'Venta y soporte de celulares' }}</p>
+        <p class="mb-0 small text-muted">{{ negocio.email if negocio else '' }}</p>
+      </div>
+      {% endif %}
+
+      {# ── CUERPO ── #}
+      <div class="card-body p-4">
+
+        <!-- Número de factura y fecha -->
+        <div class="row g-3 mb-4">
+          <div class="col-6">
+            <div class="rounded-3 p-3 border"
+                 style="background:#f8f9fa;color:#333;border-color:#dee2e6 !important;">
+              <small class="fw-bold d-block" style="color:#6c757d;">N° Factura</small>
+              <strong class="fs-5" style="color:{{ cp }};">#{{ "%04d"|format(venta.id) }}</strong>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="rounded-3 p-3 border"
+                 style="background:#f8f9fa;color:#333;border-color:#dee2e6 !important;">
+              <small class="fw-bold d-block" style="color:#6c757d;">Fecha</small>
+              <strong class="fs-5" style="color:#333;">{{ venta.fecha }}</strong>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="rounded-3 p-3 border"
+                 style="background:#f8f9fa;color:#333;border-color:#dee2e6 !important;">
+              <small class="fw-bold d-block" style="color:#6c757d;">Tipo de Pago</small>
+              <span class="badge fs-6 mt-1"
+                    style="background:{{ cp }};color:#fff;">
+                {{ venta.tipo_pago.upper() }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Datos del cliente -->
+        <div class="mb-4">
+          <h5 class="fw-bold border-bottom pb-2 mb-3" style="color:{{ cp }};">
+            <i class="bi bi-person-fill me-2"></i>Datos del Cliente
+          </h5>
+          <div class="row g-2">
+            <div class="col-12 col-md-6">
+              <small class="text-muted">Nombre</small>
+              <p class="fw-semibold mb-1">{{ venta.nombre }}</p>
+            </div>
+            <div class="col-12 col-md-6">
+              <small class="text-muted">Cédula</small>
+              <p class="fw-semibold mb-1">{{ venta.cedula or '—' }}</p>
+            </div>
+            {% if fc.mostrar_telefono %}
+            <div class="col-12 col-md-6">
+              <small class="text-muted">Teléfono</small>
+              <p class="fw-semibold mb-1">{{ venta.telefono or '—' }}</p>
+            </div>
+            {% endif %}
+            {% if fc.mostrar_ciudad %}
+            <div class="col-12 col-md-6">
+              <small class="text-muted">Ciudad</small>
+              <p class="fw-semibold mb-1">{{ venta.ciudad or '—' }}</p>
+            </div>
+            {% endif %}
+            {% if venta.direccion %}
+            <div class="col-12">
+              <small class="text-muted">Dirección</small>
+              <p class="fw-semibold mb-1">{{ venta.direccion }}</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Detalle del producto -->
+        <div class="mb-4">
+          <h5 class="fw-bold border-bottom pb-2 mb-3" style="color:{{ cp }};">
+            <i class="bi bi-bag-fill me-2"></i>Detalle de la Compra
+          </h5>
+
+          {% if modelo == 'moderno' %}
+          {# ── Modelo Moderno: tarjetas ── #}
+          <div class="rounded-3 p-3 mb-2"
+               style="background:#f8f9fa;border-left:4px solid {{ cp }};">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">{{ venta.producto }}</span>
+              <span class="fw-bold" style="color:{{ cp }};">$ {{ "{:,.0f}".format(venta.precio) }}</span>
+            </div>
+            {% if venta.notas %}
+            <div class="text-muted small fst-italic mt-1">
+              <i class="bi bi-info-circle me-1"></i>{{ venta.notas }}
+            </div>
+            {% endif %}
+          </div>
+          <div class="d-flex justify-content-between align-items-center rounded-3 p-3 mt-2"
+               style="background:{{ cp }};color:#fff;">
+            <span class="fw-bold fs-5">TOTAL</span>
+            <span class="fw-bold fs-5">$ {{ "{:,.0f}".format(venta.precio) }}</span>
+          </div>
+
+          {% else %}
+          {# ── Modelos Clásico y Minimalista: tabla ── #}
+          <div class="table-responsive">
+            <table class="table table-bordered" style="color:#333;">
+              <thead>
+                <tr style="background:{{ cp }};color:#fff;">
+                  <th>Descripción</th>
+                  <th class="text-center" width="80">Cant.</th>
+                  <th class="text-end" width="150">Precio</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="color:#333;">
+                  <td class="fw-semibold" style="color:#333;">{{ venta.producto }}</td>
+                  <td class="text-center" style="color:#333;">1</td>
+                  <td class="text-end fw-bold" style="color:{{ cp }};">$ {{ "{:,.0f}".format(venta.precio) }}</td>
+                </tr>
+                {% if venta.notas %}
+                <tr style="background:#f8f9fa;">
+                  <td colspan="3" class="text-muted small fst-italic" style="color:#666 !important;">
+                    <i class="bi bi-info-circle me-1"></i>{{ venta.notas }}
+                  </td>
+                </tr>
+                {% endif %}
+              </tbody>
+              <tfoot>
+                <tr style="background:#f8f9fa;">
+                  <td colspan="2" class="text-end fw-bold" style="color:#333;">Subtotal:</td>
+                  <td class="text-end" style="color:#333;">$ {{ "{:,.0f}".format(venta.precio) }}</td>
+                </tr>
+                <tr style="background:#f8f9fa;">
+                  <td colspan="2" class="text-end fw-bold" style="color:#333;">Descuento:</td>
+                  <td class="text-end" style="color:#333;">$ 0</td>
+                </tr>
+                <tr style="background:{{ cp }};color:#fff;">
+                  <td colspan="2" class="text-end fw-bold fs-5">TOTAL:</td>
+                  <td class="text-end fw-bold fs-5">$ {{ "{:,.0f}".format(venta.precio) }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {% endif %}
+
+        </div>
+
+        <!-- Pie de la factura -->
+        <div class="text-center py-3 border-top">
+          <p class="text-muted mb-1">
+            <i class="bi bi-heart-fill text-danger me-1"></i>
+            ¡Gracias por comprar en <strong>{{ negocio.nombre_negocio if negocio else 'Tecnocel' }}</strong>!
+          </p>
+          {% if fc.pie_texto %}
+          <small class="text-muted">{{ fc.pie_texto }}</small>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>{# /card factura-preview #}
+
+    <!-- Info WhatsApp -->
+    <div class="alert alert-info mt-4 border-0 shadow-sm">
+      <h6 class="fw-bold">
+        <i class="bi bi-whatsapp text-success me-2"></i>¿Cómo enviar por WhatsApp?
+      </h6>
+      <ol class="mb-0 small">
+        <li>Haz clic en <strong>"{{ fc.btn_wa_label }}"</strong> — se abrirá WhatsApp Web con el mensaje prellenado.</li>
+        <li>En WhatsApp Web, haz clic en el ícono de adjunto <i class="bi bi-paperclip"></i> y selecciona el PDF.</li>
+        <li>El PDF se guarda en la carpeta <code>facturas_pdf/</code> dentro del proyecto.</li>
+      </ol>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="d-flex gap-2 flex-wrap justify-content-center mt-3 mb-4">
+      <a href="{{ url_for('facturas.descargar', venta_id=venta.id) }}"
+         class="btn btn-success btn-lg px-4">
+        <i class="bi bi-file-earmark-pdf me-2"></i>{{ fc.btn_pdf_label }}
+      </a>
+      <a href="{{ url_for('whatsapp.enviar', venta_id=venta.id) }}"
+         class="btn btn-lg px-4 btn-whatsapp" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-whatsapp me-2"></i>{{ fc.btn_wa_label }}
+      </a>
+      <a href="{{ url_for('clientes.detalle', id=venta.cliente_id) }}"
+         class="btn btn-outline-primary btn-lg px-4">
+        <i class="bi bi-person me-2"></i>Ver Cliente
+      </a>
+    </div>
+
+  </div>
 </div>
 {% endblock %}
