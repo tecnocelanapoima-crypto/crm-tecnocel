@@ -410,6 +410,13 @@ def confirmar_recepcion(id):
     url_whatsapp = f"https://wa.me/{numero}?text={urllib.parse.quote(mensaje)}"
 
     flash(f'Comprobante generado: {nombre_archivo}', 'success')
+
+    # Si es petición AJAX, devolver JSON para que el JS abra WA en nueva pestaña
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        from flask import jsonify
+        return jsonify({'ok': True, 'wa_url': url_whatsapp, 'pdf': nombre_archivo})
+
+    # Fallback para petición directa (abre WA en la misma pestaña)
     return redirect(url_whatsapp)
 
 

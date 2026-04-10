@@ -35,11 +35,11 @@
                 </h6>
                 <div class="d-flex gap-2 flex-wrap">
                     {% if orden.estado == 'recibido' %}
-                    <a href="{{ url_for('ordenes.confirmar_recepcion', id=orden.id) }}"
-                       class="btn btn-primary btn-sm"
-                       onclick="return confirm('¿Confirmar recepción y notificar al cliente?')">
+                    <button type="button"
+                            class="btn btn-primary btn-sm"
+                            onclick="confirmarRecepcion('{{ url_for('ordenes.confirmar_recepcion', id=orden.id) }}', this)">
                         <i class="bi bi-check-circle me-1"></i>Confirmar recepción (PDF + WA)
-                    </a>
+                    </button>
                     {% endif %}
                     {% if orden.estado in ['listo', 'entregado'] %}
                     <a href="{{ url_for('ordenes.whatsapp', id=orden.id, tipo='listo') }}"
@@ -197,4 +197,34 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmarRecepcion(url, btn) {
+    if (!confirm('¿Confirmar recepción y notificar al cliente por WhatsApp?')) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generando…';
+
+    fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            window.open(data.wa_url, '_blank');
+            location.reload();
+        } else {
+            alert('Error al confirmar recepción.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Confirmar recepción (PDF + WA)';
+        }
+    })
+    .catch(function() {
+        alert('Error de red. Intenta de nuevo.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Confirmar recepción (PDF + WA)';
+    });
+}
+</script>
 {% endblock %}
