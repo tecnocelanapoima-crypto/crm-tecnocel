@@ -489,8 +489,8 @@ def whatsapp(id, tipo):
             f"📱 *Equipo:* {orden['marca_modelo']}\n"
             f"🔧 *Problema reportado:* {orden['problema']}\n"
             f"📅 *Fecha de recepción:* {orden['fecha_recibido']}\n"
-            f"{'Costo estimado: $ ' + '{:,.0f}'.format(orden['costo_estimado']) + '\n\n' if orden['costo_estimado'] else '\n\n'}"
-            f"Te notificaremos cuando esté listo. ¡Gracias por confiar en nosotros! 🙏"
+            + ("Costo estimado: $ " + '{:,.0f}'.format(orden['costo_estimado']) + '\n\n' if orden['costo_estimado'] else '\n\n')
+            + "Te notificaremos cuando esté listo. ¡Gracias por confiar en nosotros! 🙏"
         )
     elif tipo == 'listo':
         mensaje = (
@@ -498,8 +498,8 @@ def whatsapp(id, tipo):
             f"🎉 ¡Tu equipo está *LISTO* para retirar!\n\n"
             f"📋 *Orden:* {orden['numero_orden']}\n"
             f"📱 *Equipo:* {orden['marca_modelo']}\n"
-            f"{'Valor a pagar: $ ' + '{:,.0f}'.format(orden['costo_final']) + '\n\n' if orden['costo_final'] else '\n\n'}"
-            f"Puedes pasar a recogerlo en *{negocio_nombre}*.\n"
+            + ("Valor a pagar: $ " + '{:,.0f}'.format(orden['costo_final']) + '\n\n' if orden['costo_final'] else '\n\n')
+            + f"Puedes pasar a recogerlo en *{negocio_nombre}*.\n"
             f"¡Te esperamos! 😊"
         )
     elif tipo == 'factura':
