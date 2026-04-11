@@ -6,6 +6,9 @@ Con notificaciones WhatsApp en cada cambio de estado
 
 import os
 import uuid
+import json
+import base64
+import io
 import urllib.parse
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from database.db import get_db
@@ -17,9 +20,12 @@ import subprocess
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    HRFlowable, Image,
+)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 
 ordenes_bp = Blueprint('ordenes', __name__)
 
@@ -78,103 +84,265 @@ def init_ordenes_table():
             pass  # La columna ya existe
 
 
-def generar_pdf_recepcion(orden, cliente, negocio):
+def generar_pdf_recepcion(orden, cliente, negocio, factura_config=None):
+    """
+    Genera el comprobante de recepción con el estilo visual personalizado
+    del negocio (logo, colores, slogan) configurado en Configuración → Estilo.
+    """
+    import shutil
+    from routes.configuracion import DEFAULT_FACTURA_CONFIG
+
+    # ── Configuración de estilo ───────────────────────────────────────────────
+    cfg = DEFAULT_FACTURA_CONFIG.copy()
+    if factura_config:
+        cfg.update(factura_config)
+
+    C_DARK  = colors.HexColor('#050D1A')
+    C_DARK2 = colors.HexColor('#0A1628')
+    C_DARK3 = colors.HexColor('#0D1E35')
+    C_MGRAY = colors.HexColor('#4A6A80')
+    C_LGRAY = colors.HexColor('#A0C4D8')
+    C_WHITE = colors.white
+    C_ACENT = colors.HexColor(cfg.get('color_primario', '#00CFFF'))  # color del usuario
+    C_HEAD  = colors.HexColor(cfg.get('color_header',   '#050D1A'))
+
+    # ── Datos del negocio ─────────────────────────────────────────────────────
+    neg_nombre   = (negocio['nombre_negocio'] if negocio and negocio['nombre_negocio'] else 'Tecnocel')
+    neg_slogan   = (negocio['slogan']         if negocio and negocio['slogan']         else 'Venta y soporte de celulares')
+    neg_email    = (negocio['email']          if negocio and negocio['email']          else '')
+    neg_telefono = (negocio['telefono']       if negocio and negocio['telefono']       else '')
+    neg_logo_b64 = (negocio['logo_base64']    if negocio and negocio['logo_base64']    else None)
+
     # ── Carpeta organizada por año / mes / día ────────────────────────────────
-    ahora       = datetime.now()
-    meses_es    = {
-        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
-        5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
-        9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
-    }
-    anio   = ahora.strftime('%Y')
-    mes    = meses_es[ahora.month]
-    dia    = ahora.strftime('%d')
-    hora   = ahora.strftime('%H-%M-%S')
-
-    carpeta = os.path.join('facturas', anio, mes, dia)
+    ahora    = datetime.now()
+    meses_es = {1:'Enero',2:'Febrero',3:'Marzo',4:'Abril',5:'Mayo',6:'Junio',
+                7:'Julio',8:'Agosto',9:'Septiembre',10:'Octubre',11:'Noviembre',12:'Diciembre'}
+    carpeta  = os.path.join('facturas', ahora.strftime('%Y'), meses_es[ahora.month], ahora.strftime('%d'))
     os.makedirs(carpeta, exist_ok=True)
-
-    # Mantener también la carpeta facturas_pdf para compatibilidad
     os.makedirs('facturas_pdf', exist_ok=True)
 
+    hora           = ahora.strftime('%H-%M-%S')
     nombre_archivo = f"recepcion_{orden['numero_orden'].replace('-', '_')}_{hora}.pdf"
     ruta           = os.path.join(carpeta, nombre_archivo)
     ruta_legacy    = os.path.join('facturas_pdf', nombre_archivo)
 
+    W = A4[0] - 3.6 * cm
+
     doc = SimpleDocTemplate(ruta, pagesize=A4,
-                            rightMargin=2*cm, leftMargin=2*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
+                            rightMargin=1.8*cm, leftMargin=1.8*cm,
+                            topMargin=1.5*cm,  bottomMargin=1.5*cm)
 
-    styles = getSampleStyleSheet()
-    estilo_titulo = ParagraphStyle('titulo', fontSize=20, alignment=TA_CENTER,
-                                   fontName='Helvetica-Bold', spaceAfter=4)
-    estilo_sub    = ParagraphStyle('sub', fontSize=11, alignment=TA_CENTER,
-                                   textColor=colors.grey, spaceAfter=2)
-    estilo_ot     = ParagraphStyle('ot', fontSize=28, alignment=TA_CENTER,
-                                   fontName='Helvetica-Bold', textColor=colors.HexColor('#1a73e8'),
-                                   spaceAfter=6)
-    estilo_label  = ParagraphStyle('label', fontSize=9, textColor=colors.grey)
-    estilo_valor  = ParagraphStyle('valor', fontSize=11, fontName='Helvetica-Bold')
-    estilo_nota   = ParagraphStyle('nota', fontSize=9, alignment=TA_CENTER,
-                                   textColor=colors.grey, spaceBefore=10)
+    # ── Estilos de texto ──────────────────────────────────────────────────────
+    estilos = getSampleStyleSheet()
 
-    fecha_hora = datetime.now().strftime('%d/%m/%Y  %H:%M')
-    nombre_negocio = negocio['nombre_negocio'] if negocio else 'Tecnocel'
-    telefono_negocio = negocio['telefono'] if negocio else ''
+    def ep(nombre, **kw):
+        base = kw.pop('base', 'Normal')
+        return ParagraphStyle(nombre, parent=estilos[base], **kw)
+
+    st_sub   = ep('sub',  fontSize=9,  textColor=C_LGRAY, alignment=TA_CENTER, spaceAfter=1)
+    st_label = ep('lbl',  fontSize=9,  textColor=C_LGRAY, fontName='Helvetica-Bold')
+    st_val   = ep('val',  fontSize=10, textColor=C_WHITE)
+    st_sec   = ep('sec',  fontSize=9,  textColor=C_ACENT, fontName='Helvetica-Bold', spaceAfter=0)
+    st_ot    = ep('ot',   fontSize=26, textColor=C_ACENT, fontName='Helvetica-Bold', alignment=TA_CENTER, spaceAfter=4)
+    st_foot  = ep('foot', fontSize=8,  textColor=C_LGRAY, alignment=TA_CENTER, spaceAfter=2)
+    st_total = ep('tot',  fontSize=12, textColor=C_ACENT, fontName='Helvetica-Bold', alignment=TA_RIGHT)
+
+    # ── Fondo oscuro ──────────────────────────────────────────────────────────
+    def fondo(canvas, doc):
+        canvas.saveState()
+        canvas.setFillColor(C_DARK)
+        canvas.rect(0, 0, A4[0], A4[1], fill=True, stroke=False)
+        canvas.restoreState()
 
     contenido = []
 
-    # Encabezado negocio
-    contenido.append(Paragraph(nombre_negocio.upper(), estilo_titulo))
-    if telefono_negocio:
-        contenido.append(Paragraph(f'Tel: {telefono_negocio}', estilo_sub))
-    contenido.append(Spacer(1, 0.3*cm))
-    contenido.append(HRFlowable(width='100%', thickness=1.5,
-                                color=colors.HexColor('#1a73e8')))
+    # ── ENCABEZADO con logo personalizado ─────────────────────────────────────
+    if neg_logo_b64:
+        try:
+            b64_data = neg_logo_b64.split(',', 1)[1] if ',' in neg_logo_b64 else neg_logo_b64
+            logo_img = Image(io.BytesIO(base64.b64decode(b64_data)),
+                             width=8.5*cm, height=2.2*cm)
+            logo_img.hAlign = 'CENTER'
+            logo_cell = logo_img
+        except Exception:
+            logo_cell = Paragraph(
+                f'<b><font color="{cfg["color_primario"]}" size="20">{neg_nombre}</font></b>',
+                estilos['Title'])
+    else:
+        logo_cell = Paragraph(
+            f'<b><font color="{cfg["color_primario"]}" size="20">{neg_nombre}</font></b>',
+            estilos['Title'])
+
+    header_data = [
+        [logo_cell],
+        [Paragraph(neg_slogan, st_sub)],
+    ]
+    if neg_email:
+        header_data.append([Paragraph(neg_email, st_sub)])
+    if neg_telefono:
+        header_data.append([Paragraph(f'Tel: {neg_telefono}', st_sub)])
+
+    ht = Table(header_data, colWidths=[W])
+    ht.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,-1), colors.HexColor(cfg.get('color_header','#050D1A'))),
+        ('ALIGN',        (0,0),(-1,-1), 'CENTER'),
+        ('VALIGN',       (0,0),(-1,-1), 'MIDDLE'),
+        ('TOPPADDING',   (0,0),(-1,0),  14),
+        ('BOTTOMPADDING',(0,-1),(-1,-1),10),
+        ('LEFTPADDING',  (0,0),(-1,-1), 8),
+        ('RIGHTPADDING', (0,0),(-1,-1), 8),
+        ('LINEBELOW',    (0,-1),(-1,-1), 2, C_ACENT),
+    ]))
+    contenido += [ht, Spacer(1, 0.4*cm)]
+
+    # ── Título: número de orden ───────────────────────────────────────────────
+    meta = Table(
+        [[Paragraph('COMPROBANTE DE RECEPCIÓN', st_sec),
+          Paragraph(datetime.now().strftime('%d/%m/%Y  %H:%M'), st_sub)]],
+        colWidths=[W * 0.6, W * 0.4]
+    )
+    meta.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,-1), C_DARK2),
+        ('VALIGN',       (0,0),(-1,-1), 'MIDDLE'),
+        ('TOPPADDING',   (0,0),(-1,-1), 7),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 7),
+        ('LEFTPADDING',  (0,0),(-1,-1), 10),
+        ('RIGHTPADDING', (0,0),(-1,-1), 10),
+        ('ALIGN',        (1,0),(1,-1),  'RIGHT'),
+        ('BOX',          (0,0),(-1,-1), 1, C_ACENT),
+    ]))
+    contenido += [meta, Spacer(1, 0.2*cm)]
+    contenido.append(Paragraph(orden['numero_orden'], st_ot))
+    contenido.append(HRFlowable(width='100%', thickness=1.5, color=C_ACENT))
     contenido.append(Spacer(1, 0.4*cm))
 
-    # Título comprobante
-    contenido.append(Paragraph('COMPROBANTE DE RECEPCIÓN', estilo_sub))
-    contenido.append(Paragraph(orden['numero_orden'], estilo_ot))
-    contenido.append(HRFlowable(width='100%', thickness=0.5, color=colors.lightgrey))
-    contenido.append(Spacer(1, 0.5*cm))
+    # ── Sección: datos del cliente ────────────────────────────────────────────
+    sec_c = Table([[Paragraph('  ▌  DATOS DEL CLIENTE', st_sec)]], colWidths=[W])
+    sec_c.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,-1), C_DARK3),
+        ('TOPPADDING',   (0,0),(-1,-1), 6),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+        ('LEFTPADDING',  (0,0),(-1,-1), 8),
+        ('LINEBEFORE',   (0,0),(0,-1),  3, C_ACENT),
+        ('LINEBELOW',    (0,-1),(-1,-1), 0.5, C_MGRAY),
+    ]))
+    contenido += [sec_c, Spacer(1, 0.12*cm)]
 
-    # Tabla de datos
-    datos = [
-        ['Fecha y hora:', fecha_hora],
-        ['Cliente:', cliente['nombre'].title()],
-        ['Teléfono:', cliente['telefono']],
-        ['Equipo:', orden['marca_modelo']],
-        ['Problema reportado:', orden['problema']],
-        ['Costo estimado:', f"$ {int(orden['costo_estimado'] or 0):,}".replace(',', '.')],
-        ['Abono recibido:', f"$ {int(orden['abono'] or 0):,}".replace(',', '.') + f" ({orden['tipo_pago_abono'] if orden['tipo_pago_abono'] else 'Efectivo'})"],
-        ['Saldo pendiente:', f"$ {int(orden['saldo_pendiente'] or 0):,}".replace(',', '.')],
+    filas_c = [
+        [Paragraph('Nombre',   st_label), Paragraph(cliente['nombre'].title(), st_val)],
+        [Paragraph('Teléfono', st_label), Paragraph(cliente['telefono'] or '—', st_val)],
+    ]
+    if cliente.get('ciudad'):
+        filas_c.append([Paragraph('Ciudad', st_label), Paragraph(cliente['ciudad'], st_val)])
+
+    tc = Table(filas_c, colWidths=[W * 0.28, W * 0.72])
+    tc.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,-1), C_DARK2),
+        ('ROWBACKGROUNDS',(0,0),(-1,-1),[C_DARK2, C_DARK3]),
+        ('TOPPADDING',   (0,0),(-1,-1), 7),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 7),
+        ('LEFTPADDING',  (0,0),(-1,-1), 10),
+        ('RIGHTPADDING', (0,0),(-1,-1), 10),
+        ('VALIGN',       (0,0),(-1,-1), 'MIDDLE'),
+        ('BOX',          (0,0),(-1,-1), 1, colors.HexColor('#0088AA')),
+        ('LINEBELOW',    (0,0),(-1,-2), 0.3, C_MGRAY),
+    ]))
+    contenido += [tc, Spacer(1, 0.4*cm)]
+
+    # ── Sección: datos del equipo ─────────────────────────────────────────────
+    sec_e = Table([[Paragraph('  ▌  DETALLE DEL EQUIPO', st_sec)]], colWidths=[W])
+    sec_e.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,-1), C_DARK3),
+        ('TOPPADDING',   (0,0),(-1,-1), 6),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+        ('LEFTPADDING',  (0,0),(-1,-1), 8),
+        ('LINEBEFORE',   (0,0),(0,-1),  3, C_ACENT),
+        ('LINEBELOW',    (0,-1),(-1,-1), 0.5, C_MGRAY),
+    ]))
+    contenido += [sec_e, Spacer(1, 0.12*cm)]
+
+    filas_e = [
+        [Paragraph('Equipo',    st_label), Paragraph(orden['marca_modelo'], st_val)],
+        [Paragraph('Problema',  st_label), Paragraph(orden['problema'],     st_val)],
+    ]
+    if orden.get('notas_tecnico'):
+        filas_e.append([Paragraph('Notas', st_label), Paragraph(orden['notas_tecnico'], st_val)])
+
+    te = Table(filas_e, colWidths=[W * 0.28, W * 0.72])
+    te.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,-1), C_DARK2),
+        ('ROWBACKGROUNDS',(0,0),(-1,-1),[C_DARK2, C_DARK3]),
+        ('TOPPADDING',   (0,0),(-1,-1), 7),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 7),
+        ('LEFTPADDING',  (0,0),(-1,-1), 10),
+        ('RIGHTPADDING', (0,0),(-1,-1), 10),
+        ('VALIGN',       (0,0),(-1,-1), 'MIDDLE'),
+        ('BOX',          (0,0),(-1,-1), 1, colors.HexColor('#0088AA')),
+        ('LINEBELOW',    (0,0),(-1,-2), 0.3, C_MGRAY),
+    ]))
+    contenido += [te, Spacer(1, 0.4*cm)]
+
+    # ── Sección: costos ───────────────────────────────────────────────────────
+    sec_p = Table([[Paragraph('  ▌  COSTOS Y PAGOS', st_sec)]], colWidths=[W])
+    sec_p.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,-1), C_DARK3),
+        ('TOPPADDING',   (0,0),(-1,-1), 6),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+        ('LEFTPADDING',  (0,0),(-1,-1), 8),
+        ('LINEBEFORE',   (0,0),(0,-1),  3, C_ACENT),
+        ('LINEBELOW',    (0,-1),(-1,-1), 0.5, C_MGRAY),
+    ]))
+    contenido += [sec_p, Spacer(1, 0.12*cm)]
+
+    fmt = lambda v: '$ ' + f'{int(v or 0):,}'.replace(',', '.')
+    tipo_pago = orden['tipo_pago_abono'] or 'Efectivo'
+    filas_p = [
+        [Paragraph('Costo estimado', st_label),
+         Paragraph(fmt(orden['costo_estimado']), st_val)],
+        [Paragraph(f'Abono ({tipo_pago})', st_label),
+         Paragraph(fmt(orden['abono']),          st_val)],
+        [Paragraph('Saldo pendiente', ep('sp', fontSize=10, textColor=C_ACENT, fontName='Helvetica-Bold')),
+         Paragraph(fmt(orden['saldo_pendiente']),
+                   ep('sv', fontSize=10, textColor=C_ACENT, fontName='Helvetica-Bold', alignment=TA_RIGHT))],
     ]
 
-    tabla = Table(datos, colWidths=[5*cm, 11*cm])
-    tabla.setStyle(TableStyle([
-        ('FONTNAME',    (0,0), (0,-1), 'Helvetica-Bold'),
-        ('FONTSIZE',    (0,0), (-1,-1), 10),
-        ('TEXTCOLOR',  (0,0), (0,-1), colors.grey),
-        ('TEXTCOLOR',  (1,0), (1,-1), colors.black),
-        ('ROWBACKGROUNDS', (0,0), (-1,-1), [colors.white, colors.HexColor('#f5f8ff')]),
-        ('TOPPADDING',  (0,0), (-1,-1), 7),
-        ('BOTTOMPADDING',(0,0),(-1,-1), 7),
-        ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ('GRID',        (0,0), (-1,-1), 0.3, colors.HexColor('#e0e0e0')),
-        ('ROUNDEDCORNERS', [4]),
+    tp = Table(filas_p, colWidths=[W * 0.5, W * 0.5])
+    tp.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,1),  C_DARK2),
+        ('BACKGROUND',   (0,2),(-1,2),  colors.HexColor('#000000')),
+        ('ROWBACKGROUNDS',(0,0),(-1,1),[C_DARK2, C_DARK3]),
+        ('TOPPADDING',   (0,0),(-1,-1), 8),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 8),
+        ('LEFTPADDING',  (0,0),(-1,-1), 10),
+        ('RIGHTPADDING', (0,0),(-1,-1), 10),
+        ('VALIGN',       (0,0),(-1,-1), 'MIDDLE'),
+        ('ALIGN',        (1,0),(1,-1),  'RIGHT'),
+        ('BOX',          (0,0),(-1,-1), 1, colors.HexColor('#0088AA')),
+        ('LINEABOVE',    (0,2),(-1,2),  1.5, C_ACENT),
+        ('LINEBELOW',    (0,2),(-1,2),  1.5, C_ACENT),
+        ('LINEBELOW',    (0,0),(-1,1),  0.3, C_MGRAY),
     ]))
-    contenido.append(tabla)
-    contenido.append(Spacer(1, 0.8*cm))
-    contenido.append(HRFlowable(width='100%', thickness=0.5, color=colors.lightgrey))
-    contenido.append(Paragraph(
-        'Conserve este comprobante. Le avisaremos cuando su equipo esté listo.',
-        estilo_nota))
+    contenido += [tp, Spacer(1, 0.8*cm)]
 
-    doc.build(contenido)
+    # ── Pie ───────────────────────────────────────────────────────────────────
+    pie_texto = cfg.get('pie_texto', 'Conserve este comprobante. Le avisaremos cuando su equipo esté listo.')
+    contenido.append(HRFlowable(width='100%', thickness=1.5, color=C_ACENT))
+    contenido.append(Spacer(1, 0.25*cm))
+    pie_t = Table([
+        [Paragraph(f'¡Gracias por confiar en <font color="{cfg["color_primario"]}"><b>{neg_nombre}</b></font>!', st_foot)],
+        [Paragraph(pie_texto, ep('fp2', fontSize=8, textColor=C_MGRAY, alignment=TA_CENTER))],
+    ], colWidths=[W])
+    pie_t.setStyle(TableStyle([
+        ('BACKGROUND',   (0,0),(-1,-1), colors.HexColor('#000000')),
+        ('TOPPADDING',   (0,0),(-1,-1), 6),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+        ('ALIGN',        (0,0),(-1,-1), 'CENTER'),
+    ]))
+    contenido.append(pie_t)
 
-    # Copiar también a facturas_pdf para compatibilidad con el resto del sistema
-    import shutil
+    # ── Construir PDF ─────────────────────────────────────────────────────────
+    doc.build(contenido, onFirstPage=fondo, onLaterPages=fondo)
+
     try:
         shutil.copy2(ruta, ruta_legacy)
     except Exception:
@@ -381,8 +549,16 @@ def confirmar_recepcion(id):
         'SELECT * FROM negocios WHERE id = ?', (negocio_id,)
     ).fetchone()
 
-    # Generar PDF
-    ruta_pdf, nombre_archivo = generar_pdf_recepcion(orden, cliente, negocio)
+    # Cargar factura_config del negocio para aplicar estilo personalizado al PDF
+    factura_cfg = None
+    if negocio and negocio['factura_config']:
+        try:
+            factura_cfg = json.loads(negocio['factura_config'])
+        except Exception:
+            pass
+
+    # Generar PDF con estilo personalizado
+    ruta_pdf, nombre_archivo = generar_pdf_recepcion(orden, cliente, negocio, factura_cfg)
 
     # Abrir la carpeta organizada por fecha en Windows Explorer
     carpeta_fecha = os.path.abspath(os.path.dirname(ruta_pdf))
