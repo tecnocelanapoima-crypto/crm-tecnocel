@@ -1,0 +1,46 @@
+{
+  "name": "Tecnocel CRM",
+  "short_name": "Tecnocel",
+  "description": "CRM para gestión de reparaciones y ventas de celulares",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050D1A",
+  "theme_color": "#00CFFF",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/static/img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/img/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva Orden",
+      "short_name": "Orden",
+      "url": "/ordenes/nueva",
+      "icons": [{"src": "/static/img/logo.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Nueva Venta",
+      "short_name": "Venta",
+      "url": "/ventas/nueva",
+      "icons": [{"src": "/static/img/logo.png", "sizes": "192x192"}]
+    },
+    {
+      "name": "Ver Órdenes",
+      "short_name": "Órdenes",
+      "url": "/ordenes",
+      "icons": [{"src": "/static/img/logo.png", "sizes": "192x192"}]
+    }
+  ]
+}

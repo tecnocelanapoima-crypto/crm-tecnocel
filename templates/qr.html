@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Conectar Celular — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+
+    <div class="text-center mb-4">
+      <h2 class="fw-bold text-primary mb-1">
+        <i class="bi bi-phone-fill me-2"></i>Conectar desde el celular
+      </h2>
+      <p class="text-muted">
+        Escanea el código QR con la cámara del celular — ambos dispositivos
+        deben estar en la <strong>misma red WiFi</strong>.
+      </p>
+    </div>
+
+    <!-- QR -->
+    <div class="card border-0 shadow mb-4 text-center">
+      <div class="card-body py-4">
+        <div id="qrcode" class="d-inline-block p-3 bg-white rounded-3 mb-3"></div>
+        <p class="mb-1 text-muted small">URL del servidor</p>
+        <a href="{{ url_celular }}" class="fw-bold fs-5 text-primary text-break" target="_blank">
+          {{ url_celular }}
+        </a>
+      </div>
+    </div>
+
+    <!-- Info de red -->
+    <div class="card border-0 shadow mb-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-wifi me-2 text-success"></i>Datos de conexión</h6>
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="bg-body-secondary rounded p-2 text-center">
+              <small class="text-muted d-block">IP local</small>
+              <strong class="text-primary">{{ ip }}</strong>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="bg-body-secondary rounded p-2 text-center">
+              <small class="text-muted d-block">Puerto</small>
+              <strong class="text-primary">{{ puerto }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pasos -->
+    <div class="card border-0 shadow mb-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-list-ol me-2 text-info"></i>Cómo conectar</h6>
+        <ol class="ps-3 mb-0" style="line-height:2">
+          <li>Conecta el celular al <strong>mismo WiFi</strong> del computador.</li>
+          <li>Abre la <strong>cámara</strong> y apunta al código QR.</li>
+          <li>Toca el enlace que aparece en pantalla.</li>
+          <li>Inicia sesión con tu usuario y contraseña del CRM.</li>
+          <li class="text-success fw-semibold">Instala la app: menú del navegador → <em>"Añadir a pantalla de inicio"</em>.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Instalar PWA -->
+    <div id="pwa-install-card" class="card border-0 shadow mb-4 border-success border-opacity-25" style="display:none!important">
+      <div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-download fs-3 text-success"></i>
+        <div class="flex-grow-1">
+          <div class="fw-bold">Instalar como app</div>
+          <small class="text-muted">Accede directo desde la pantalla de inicio sin abrir el navegador.</small>
+        </div>
+        <button id="pwa-install-btn" class="btn btn-success btn-sm">Instalar</button>
+      </div>
+    </div>
+
+    <!-- Advertencia firewall -->
+    <div class="alert alert-warning border-0 shadow-sm">
+      <i class="bi bi-shield-exclamation me-2"></i>
+      <strong>¿No carga en el celular?</strong> El Firewall de Windows puede estar bloqueando el puerto 5000.
+      Abre el <em>iniciar_crm.bat</em> como Administrador para habilitarlo automáticamente.
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+        integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSi3MoiwEDj8HBq1A7bHBmhmPfWAGflxiRfQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+new QRCode(document.getElementById('qrcode'), {
+  text: '{{ url_celular }}',
+  width: 220,
+  height: 220,
+  colorDark: '#050D1A',
+  colorLight: '#ffffff',
+  correctLevel: QRCode.CorrectLevel.M
+});
+
+/* Botón instalar PWA */
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('pwa-install-card').style.removeProperty('display');
+});
+document.getElementById('pwa-install-btn').addEventListener('click', () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+});
+</script>
+{% endblock %}

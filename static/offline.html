@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sin conexión — Tecnocel CRM</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:#050D1A;color:#e0e6f0;font-family:system-ui,sans-serif;
+      text-align:center;padding:2rem;
+    }
+    .card{
+      background:#0d1b2e;border:1px solid #1a3a5c;border-radius:16px;
+      padding:2.5rem 2rem;max-width:380px;width:100%;
+    }
+    .icon{font-size:4rem;margin-bottom:1rem;color:#00CFFF;}
+    h1{font-size:1.4rem;margin-bottom:.5rem;color:#fff;}
+    p{color:#94a3b8;font-size:.95rem;line-height:1.5;margin-bottom:1.5rem;}
+    button{
+      background:#00CFFF;color:#050D1A;border:none;border-radius:8px;
+      padding:.75rem 2rem;font-weight:700;cursor:pointer;font-size:1rem;
+    }
+    button:hover{background:#33d8ff;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">&#x1F4F5;</div>
+    <h1>Sin conexión con el servidor</h1>
+    <p>
+      El celular no puede alcanzar el servidor CRM.<br>
+      Asegúrate de que el computador esté encendido y ambos dispositivos
+      estén en la misma red WiFi.
+    </p>
+    <button onclick="location.reload()">Reintentar</button>
+  </div>
+</body>
+</html>

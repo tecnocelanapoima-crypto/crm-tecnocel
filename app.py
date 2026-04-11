@@ -5,9 +5,22 @@ Sistema multi-tenant: cada negocio ve solo sus datos
 
 import json
 import os
-from flask import Flask, render_template, redirect, url_for, session, request, flash, jsonify
+import socket
+from flask import Flask, render_template, redirect, url_for, session, request, flash, jsonify, send_from_directory, make_response
 from database.db import init_db, get_db, close_db
 from datetime import date
+
+
+def _get_local_ip() -> str:
+    """Devuelve la IP local de red (LAN), no 127.0.0.1."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return '127.0.0.1'
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '7e9c0c0e-c760-4b6e-8c1b-2dad20c8fc35-tecnocel-prod')
@@ -355,9 +368,46 @@ def eliminar_completo():
     return redirect(url_for('completos'))
 
 
+# ── PWA: manifest y service worker servidos desde la raíz ────────────────────
+@app.route('/manifest.json')
+def pwa_manifest():
+    return send_from_directory('static', 'manifest.json',
+                               mimetype='application/manifest+json')
+
+
+@app.route('/sw.js')
+def service_worker():
+    resp = make_response(send_from_directory('static', 'sw.js',
+                                             mimetype='application/javascript'))
+    resp.headers['Service-Worker-Allowed'] = '/'
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
+
+@app.route('/offline.html')
+def offline_page():
+    return send_from_directory('static', 'offline.html')
+
+
+# ── Página QR: muestra la IP local para conectar el celular ─────────────────
+@app.route('/qr')
+def qr_page():
+    ip     = _get_local_ip()
+    puerto = request.host.split(':')[1] if ':' in request.host else '5000'
+    url    = f'http://{ip}:{puerto}'
+    return render_template('qr.html', url_celular=url, ip=ip, puerto=puerto)
+
+
 if __name__ == '__main__':
-    print("=" * 50)
-    print("  Tecnocel CRM SaaS iniciado")
-    print("  Accede en: http://localhost:5000")
-    print("=" * 50)
+    ip_local = _get_local_ip()
+    linea = "=" * 54
+    print(linea)
+    print("  Tecnocel CRM  —  Servidor iniciado")
+    print(linea)
+    print(f"  PC  (local):   http://localhost:5000")
+    print(f"  Celular (LAN): http://{ip_local}:5000")
+    print(f"  Codigo QR:     http://{ip_local}:5000/qr")
+    print(linea)
+    print("  Asegurate de que el celular este en el mismo WiFi")
+    print(linea)
     app.run(debug=True, host='0.0.0.0', port=5000)
