@@ -1,5 +1,4 @@
 import os
-import webbrowser
 import urllib.parse
 from flask import Blueprint, request, redirect, url_for, flash, jsonify, session
 from database.db import get_db
@@ -17,7 +16,7 @@ def limpiar_telefono(telefono):
     return numero
 
 
-@whatsapp_bp.route('/enviar/<int:venta_id>', methods=['POST'])
+@whatsapp_bp.route('/enviar/<int:venta_id>', methods=['GET', 'POST'])
 @login_required
 def enviar(venta_id):
     nid = session['negocio_id']
@@ -29,22 +28,30 @@ def enviar(venta_id):
     ''', (venta_id, nid)).fetchone()
     db.close()
 
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if not venta:
+        if es_ajax:
+            return jsonify({'error': 'Venta no encontrada'}), 404
         flash('Venta no encontrada.', 'danger')
         return redirect(url_for('ventas.lista'))
 
     numero = limpiar_telefono(venta['telefono'])
     if not numero:
+        if es_ajax:
+            return jsonify({'error': 'Sin teléfono'}), 400
         flash('El cliente no tiene número de teléfono.', 'warning')
         return redirect(url_for('facturas.generar', venta_id=venta_id))
 
+    negocio_nombre = session.get('negocio_nombre', 'Tecnocel')
     try:
         ruta_pdf, nombre_archivo = generar_pdf(venta, venta)
     except Exception as e:
+        if es_ajax:
+            return jsonify({'error': str(e)}), 500
         flash(f'Error al generar el PDF: {str(e)}', 'danger')
         return redirect(url_for('facturas.generar', venta_id=venta_id))
 
-    negocio_nombre = session.get('negocio_nombre', 'Tecnocel')
     mensaje = (
         f"Hola {venta['nombre']}, 👋\n\n"
         f"Le enviamos el comprobante de su compra en *{negocio_nombre}*:\n\n"
@@ -56,10 +63,22 @@ def enviar(venta_id):
         f"¡Gracias por su compra! 🙏"
     )
 
-    url_wa = f"https://wa.me/{numero}?text={urllib.parse.quote(mensaje)}"
-    webbrowser.open(url_wa)
-    flash(f'WhatsApp abierto para {venta["nombre"]}. Adjunte el PDF desde: facturas_pdf/{nombre_archivo}', 'success')
-    return redirect(url_for('facturas.generar', venta_id=venta_id))
+    url_wa  = f"https://wa.me/{numero}?text={urllib.parse.quote(mensaje)}"
+    pdf_url = url_for('facturas.descargar', venta_id=venta_id)
+
+    # AJAX: devuelve JSON para que el JS del celular use Web Share API
+    if es_ajax:
+        return jsonify({
+            'ok':        True,
+            'wa_url':    url_wa,
+            'pdf_url':   pdf_url,
+            'pdf_nombre': nombre_archivo,
+            'cliente':   venta['nombre'],
+        })
+
+    # No-AJAX: redirige al enlace wa.me
+    # — en PC abre WhatsApp Web; en Android abre la app nativa
+    return redirect(url_wa)
 
 
 @whatsapp_bp.route('/abrir/<int:venta_id>')
@@ -79,9 +98,7 @@ def abrir_chat(venta_id):
 
     numero = limpiar_telefono(venta['telefono'])
     if numero:
-        webbrowser.open(f"https://wa.me/{numero}")
-        flash(f'Chat de WhatsApp abierto para {venta["nombre"]}.', 'info')
-    else:
-        flash('El cliente no tiene teléfono registrado.', 'warning')
-
+        return redirect(f"https://wa.me/{numero}")
+    flash('El cliente no tiene teléfono registrado.', 'warning')
     return redirect(url_for('facturas.generar', venta_id=venta_id))
+

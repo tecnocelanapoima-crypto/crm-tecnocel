@@ -235,28 +235,54 @@
       </div>
     </div>{# /card factura-preview #}
 
-    <!-- Info WhatsApp -->
-    <div class="alert alert-info mt-4 border-0 shadow-sm">
-      <h6 class="fw-bold">
-        <i class="bi bi-whatsapp text-success me-2"></i>¿Cómo enviar por WhatsApp?
+    <!-- ── Info envío — diferente para celular vs PC ── -->
+    <!-- Desktop: instrucciones para WhatsApp Web -->
+    <div id="info-desktop" class="alert alert-info mt-4 border-0 shadow-sm">
+      <h6 class="fw-bold mb-2">
+        <i class="bi bi-whatsapp text-success me-2"></i>¿Cómo enviar el PDF al cliente?
       </h6>
       <ol class="mb-0 small">
-        <li>Haz clic en <strong>"{{ fc.btn_wa_label }}"</strong> — se abrirá WhatsApp Web con el mensaje prellenado.</li>
-        <li>En WhatsApp Web, haz clic en el ícono de adjunto <i class="bi bi-paperclip"></i> y selecciona el PDF.</li>
-        <li>El PDF se guarda en la carpeta <code>facturas_pdf/</code> dentro del proyecto.</li>
+        <li>Toca <strong>"{{ fc.btn_wa_label }}"</strong> — se abrirá WhatsApp con el mensaje prellenado.</li>
+        <li>Haz clic en el ícono de adjunto <i class="bi bi-paperclip"></i> y selecciona el PDF.</li>
+        <li>El PDF se guardó en la carpeta <code>facturas_pdf/</code> del servidor.</li>
+      </ol>
+    </div>
+
+    <!-- Celular: instrucciones para Web Share -->
+    <div id="info-mobile" class="alert border-0 shadow-sm mt-4" style="display:none;background:rgba(37,211,102,.1);border-left:4px solid #25D366 !important;">
+      <h6 class="fw-bold mb-2" style="color:#25D366;">
+        <i class="bi bi-phone-fill me-2"></i>Envío rápido desde el celular
+      </h6>
+      <ol class="mb-0 small">
+        <li>Toca <strong>"Compartir PDF por WhatsApp"</strong> — el sistema carga el PDF.</li>
+        <li>En el menú que aparece, selecciona <strong>WhatsApp</strong>.</li>
+        <li>Elige el contacto del cliente y envía.</li>
       </ol>
     </div>
 
     <!-- Botones de acción -->
     <div class="d-flex gap-2 flex-wrap justify-content-center mt-3 mb-4">
+
+      <!-- Descargar PDF -->
       <a href="{{ url_for('facturas.descargar', venta_id=venta.id) }}"
          class="btn btn-success btn-lg px-4">
         <i class="bi bi-file-earmark-pdf me-2"></i>{{ fc.btn_pdf_label }}
       </a>
+
+      <!-- Abrir WhatsApp (PC: WhatsApp Web / Celular: app nativa) -->
       <a href="{{ url_for('whatsapp.enviar', venta_id=venta.id) }}"
          class="btn btn-lg px-4 btn-whatsapp" target="_blank" rel="noopener noreferrer">
         <i class="bi bi-whatsapp me-2"></i>{{ fc.btn_wa_label }}
       </a>
+
+      <!-- Compartir PDF directo (solo aparece en Android/móvil con Web Share API) -->
+      <button type="button" id="btn-compartir-pdf"
+              class="btn btn-lg px-4"
+              style="display:none;background:#25D366;color:#fff;border:none;"
+              onclick="compartirPDF(this)">
+        <i class="bi bi-share-fill me-2"></i>Compartir PDF por WhatsApp
+      </button>
+
       <a href="{{ url_for('clientes.detalle', id=venta.cliente_id) }}"
          class="btn btn-outline-primary btn-lg px-4">
         <i class="bi bi-person me-2"></i>Ver Cliente
@@ -265,4 +291,58 @@
 
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var PDF_URL   = {{ url_for('facturas.descargar', venta_id=venta.id) | tojson }};
+  var PDF_NOMBRE = 'factura_{{ "%04d"|format(venta.id) }}.pdf';
+
+  /* ── Detectar si el dispositivo soporta Web Share con archivos (Android Chrome) ── */
+  function puedeCompartirArchivos() {
+    if (!navigator.canShare) return false;
+    try {
+      return navigator.canShare({
+        files: [new File([''], 'test.pdf', { type: 'application/pdf' })]
+      });
+    } catch (e) { return false; }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (puedeCompartirArchivos()) {
+      /* Mostrar botón de compartir y aviso mobile, ocultar aviso desktop */
+      document.getElementById('btn-compartir-pdf').style.display = '';
+      document.getElementById('info-mobile').style.display = '';
+      document.getElementById('info-desktop').style.display = 'none';
+    }
+  });
+
+  /* ── Compartir PDF usando Web Share API ── */
+  window.compartirPDF = async function (btn) {
+    var oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Cargando PDF…';
+
+    try {
+      var res = await fetch(PDF_URL);
+      if (!res.ok) throw new Error('Error al obtener el PDF (' + res.status + ')');
+      var blob = await res.blob();
+      var file = new File([blob], PDF_NOMBRE, { type: 'application/pdf' });
+
+      await navigator.share({
+        files: [file],
+        title: 'Factura {{ "%04d"|format(venta.id) }} — {{ negocio.nombre_negocio if negocio else "Tecnocel" }}'
+      });
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        alert('No se pudo compartir el PDF.\nUsa el botón "' + {{ fc.btn_pdf_label | tojson }} + '" para descargarlo y enviarlo manualmente.');
+      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = oldHtml;
+    }
+  };
+})();
+</script>
 {% endblock %}
