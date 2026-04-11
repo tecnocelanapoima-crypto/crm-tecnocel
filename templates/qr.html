@@ -3,66 +3,162 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+  <div class="col-12 col-sm-10 col-md-8 col-lg-6">
 
     <div class="text-center mb-4">
       <h2 class="fw-bold text-primary mb-1">
-        <i class="bi bi-phone-fill me-2"></i>Conectar desde el celular
+        <i class="bi bi-phone-fill me-2"></i>Conectar el celular
       </h2>
-      <p class="text-muted">
-        Escanea el código QR con la cámara del celular — ambos dispositivos
-        deben estar en la <strong>misma red WiFi</strong>.
-      </p>
+      <p class="text-muted">Elige el modo según dónde esté el celular</p>
     </div>
 
-    <!-- QR -->
-    <div class="card border-0 shadow mb-4 text-center">
-      <div class="card-body py-4">
-        <div id="qrcode" class="d-inline-block p-3 bg-white rounded-3 mb-3"></div>
-        <p class="mb-1 text-muted small">URL del servidor</p>
-        <a href="{{ url_celular }}" class="fw-bold fs-5 text-primary text-break" target="_blank">
-          {{ url_celular }}
-        </a>
+    <!-- ══ Tabs WiFi / Datos móviles ══ -->
+    <ul class="nav nav-pills mb-4 justify-content-center" id="tabs-conexion">
+      <li class="nav-item">
+        <button class="nav-link active px-4" data-tab="wifi">
+          <i class="bi bi-wifi me-1"></i>WiFi local
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link px-4" data-tab="movil">
+          <i class="bi bi-signal me-1"></i>Datos móviles / Internet
+        </button>
+      </li>
+    </ul>
+
+    <!-- ════════════ PESTAÑA WIFI ════════════ -->
+    <div id="panel-wifi">
+
+      <div class="card border-0 shadow mb-4 text-center">
+        <div class="card-body py-4">
+          <div id="qr-wifi" class="d-inline-block p-3 bg-white rounded-3 mb-3"></div>
+          <p class="mb-1 text-muted small">URL WiFi (misma red)</p>
+          <a href="{{ url_celular }}" class="fw-bold fs-5 text-primary text-break" target="_blank">
+            {{ url_celular }}
+          </a>
+        </div>
       </div>
-    </div>
 
-    <!-- Info de red -->
-    <div class="card border-0 shadow mb-4">
-      <div class="card-body">
-        <h6 class="fw-bold mb-3"><i class="bi bi-wifi me-2 text-success"></i>Datos de conexión</h6>
-        <div class="row g-2">
-          <div class="col-6">
-            <div class="bg-body-secondary rounded p-2 text-center">
-              <small class="text-muted d-block">IP local</small>
-              <strong class="text-primary">{{ ip }}</strong>
+      <div class="card border-0 shadow mb-4">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3"><i class="bi bi-list-ol me-2 text-info"></i>Cómo conectar por WiFi</h6>
+          <ol class="ps-3 mb-0" style="line-height:2.1">
+            <li>Conecta el celular al <strong>mismo WiFi</strong> del computador.</li>
+            <li>Abre la <strong>cámara</strong> y apunta al QR de arriba.</li>
+            <li>Toca el enlace → inicia sesión en el CRM.</li>
+            <li class="text-success fw-semibold">Instala: menú del navegador → <em>"Añadir a pantalla de inicio"</em>.</li>
+          </ol>
+        </div>
+      </div>
+
+    </div><!-- /panel-wifi -->
+
+    <!-- ════════════ PESTAÑA DATOS MÓVILES ════════════ -->
+    <div id="panel-movil" style="display:none;">
+
+      <!-- Estado del túnel -->
+      <div id="tunel-inactivo" {% if tunnel_url %}style="display:none"{% endif %}>
+        <div class="card border-0 shadow mb-4">
+          <div class="card-body text-center py-4">
+            <i class="bi bi-cloud-slash fs-1 text-warning d-block mb-2"></i>
+            <h6 class="fw-bold">Túnel no activo</h6>
+            <p class="text-muted small mb-3">
+              Para usar con datos móviles necesitas un túnel seguro que
+              exponga el servidor CRM a internet.
+            </p>
+            <div class="alert alert-warning border-0 text-start small mb-0">
+              <strong>Pasos para activarlo:</strong>
+              <ol class="mb-0 mt-1">
+                <li>Cierra este servidor (Ctrl+C en la consola).</li>
+                <li>Descarga <strong>cloudflared.exe</strong> desde:<br>
+                    <code>github.com/cloudflare/cloudflared/releases</code>
+                </li>
+                <li>Cópialo a la carpeta del proyecto:
+                    <code>C:\Users\TECNOCEL\tecnocel-crm\</code>
+                </li>
+                <li>Ejecuta <strong>iniciar_con_tunel.bat</strong> en lugar del .bat normal.</li>
+              </ol>
             </div>
           </div>
-          <div class="col-6">
+        </div>
+        <!-- Spinner de espera -->
+        <div id="esperando-tunel" class="text-center text-muted mb-4" style="display:none">
+          <span class="spinner-border spinner-border-sm me-2"></span>
+          Esperando que el túnel inicie…
+          <br><small>La URL aparecerá aquí automáticamente</small>
+        </div>
+      </div>
+
+      <!-- Túnel activo -->
+      <div id="tunel-activo" {% if not tunnel_url %}style="display:none"{% endif %}>
+        <div class="card border-0 shadow mb-4 text-center border-success border-opacity-25">
+          <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
+            <span class="badge bg-success px-3 py-2">
+              <i class="bi bi-cloud-check me-1"></i>Túnel activo — acceso desde cualquier lugar
+            </span>
+          </div>
+          <div class="card-body py-4">
+            <div id="qr-tunel" class="d-inline-block p-3 bg-white rounded-3 mb-3"></div>
+            <p class="mb-1 text-muted small">URL pública (internet)</p>
+            <a id="tunel-url-link" href="{{ tunnel_url or '#' }}"
+               class="fw-bold fs-6 text-success text-break" target="_blank">
+              {{ tunnel_url or '' }}
+            </a>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow mb-4">
+          <div class="card-body">
+            <h6 class="fw-bold mb-3"><i class="bi bi-list-ol me-2 text-success"></i>Cómo conectar con datos móviles</h6>
+            <ol class="ps-3 mb-0" style="line-height:2.1">
+              <li>El celular puede estar en <strong>cualquier red</strong> (WiFi o datos).</li>
+              <li>Abre la <strong>cámara</strong> y apunta al QR de arriba.</li>
+              <li>Toca el enlace → inicia sesión en el CRM.</li>
+              <li class="text-warning">El PC debe estar <strong>encendido con el túnel activo</strong>.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="alert alert-warning border-0 shadow-sm small">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          La URL cambia cada vez que inicias el túnel.
+          La sesión del celular se cierra cuando el túnel se detiene.
+        </div>
+      </div>
+
+    </div><!-- /panel-movil -->
+
+    <!-- Info de red -->
+    <div class="card border-0 shadow mb-4" id="panel-wifi-info">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2 text-muted"></i>Datos de conexión local</h6>
+        <div class="row g-2">
+          <div class="col-4">
+            <div class="bg-body-secondary rounded p-2 text-center">
+              <small class="text-muted d-block">IP local</small>
+              <strong class="text-primary small">{{ ip }}</strong>
+            </div>
+          </div>
+          <div class="col-4">
             <div class="bg-body-secondary rounded p-2 text-center">
               <small class="text-muted d-block">Puerto</small>
               <strong class="text-primary">{{ puerto }}</strong>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="bg-body-secondary rounded p-2 text-center">
+              <small class="text-muted d-block">Túnel</small>
+              <strong id="badge-tunel" class="{% if tunnel_url %}text-success{% else %}text-danger{% endif %} small">
+                {% if tunnel_url %}Activo{% else %}Inactivo{% endif %}
+              </strong>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Pasos -->
-    <div class="card border-0 shadow mb-4">
-      <div class="card-body">
-        <h6 class="fw-bold mb-3"><i class="bi bi-list-ol me-2 text-info"></i>Cómo conectar</h6>
-        <ol class="ps-3 mb-0" style="line-height:2">
-          <li>Conecta el celular al <strong>mismo WiFi</strong> del computador.</li>
-          <li>Abre la <strong>cámara</strong> y apunta al código QR.</li>
-          <li>Toca el enlace que aparece en pantalla.</li>
-          <li>Inicia sesión con tu usuario y contraseña del CRM.</li>
-          <li class="text-success fw-semibold">Instala la app: menú del navegador → <em>"Añadir a pantalla de inicio"</em>.</li>
-        </ol>
-      </div>
-    </div>
-
     <!-- Instalar PWA -->
-    <div id="pwa-install-card" class="card border-0 shadow mb-4 border-success border-opacity-25" style="display:none!important">
+    <div id="pwa-install-card" class="card border-0 shadow mb-4 border-success border-opacity-25" style="display:none">
       <div class="card-body d-flex align-items-center gap-3">
         <i class="bi bi-download fs-3 text-success"></i>
         <div class="flex-grow-1">
@@ -73,11 +169,10 @@
       </div>
     </div>
 
-    <!-- Advertencia firewall -->
-    <div class="alert alert-warning border-0 shadow-sm">
-      <i class="bi bi-shield-exclamation me-2"></i>
-      <strong>¿No carga en el celular?</strong> El Firewall de Windows puede estar bloqueando el puerto 5000.
-      Abre el <em>iniciar_crm.bat</em> como Administrador para habilitarlo automáticamente.
+    <div class="alert alert-secondary border-0 shadow-sm small">
+      <i class="bi bi-shield-exclamation me-1"></i>
+      <strong>¿No carga en el celular por WiFi?</strong>
+      Ejecuta <em>iniciar_crm.bat</em> como Administrador para habilitar el firewall.
     </div>
 
   </div>
@@ -89,26 +184,92 @@
         integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSi3MoiwEDj8HBq1A7bHBmhmPfWAGflxiRfQ=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
-new QRCode(document.getElementById('qrcode'), {
-  text: '{{ url_celular }}',
-  width: 220,
-  height: 220,
-  colorDark: '#050D1A',
-  colorLight: '#ffffff',
-  correctLevel: QRCode.CorrectLevel.M
-});
+(function () {
 
-/* Botón instalar PWA */
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById('pwa-install-card').style.removeProperty('display');
-});
-document.getElementById('pwa-install-btn').addEventListener('click', () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
-});
+  /* ── QR WiFi ── */
+  new QRCode(document.getElementById('qr-wifi'), {
+    text: '{{ url_celular }}',
+    width: 220, height: 220,
+    colorDark: '#050D1A', colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  /* ── QR Túnel (si ya está activo al cargar la página) ── */
+  var tunelUrl = {{ (tunnel_url or '') | tojson }};
+  var qrTunel  = null;
+
+  function mostrarTunel(url) {
+    tunelUrl = url;
+    document.getElementById('tunel-inactivo').style.display = 'none';
+    document.getElementById('tunel-activo').style.display   = '';
+    document.getElementById('tunel-url-link').textContent   = url;
+    document.getElementById('tunel-url-link').href          = url;
+    document.getElementById('badge-tunel').textContent      = 'Activo';
+    document.getElementById('badge-tunel').className        = 'text-success small fw-bold';
+
+    if (!qrTunel) {
+      qrTunel = new QRCode(document.getElementById('qr-tunel'), {
+        text: url,
+        width: 220, height: 220,
+        colorDark: '#050D1A', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+  }
+
+  if (tunelUrl) { mostrarTunel(tunelUrl); }
+
+  /* ── Polling: esperar a que el túnel inicie ── */
+  var pollingActivo = false;
+  var pollingTimer  = null;
+
+  function iniciarPolling() {
+    if (pollingActivo) return;
+    pollingActivo = true;
+    document.getElementById('esperando-tunel').style.display = '';
+    pollingTimer = setInterval(function () {
+      fetch('/api/estado-tunel')
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.activo) {
+            clearInterval(pollingTimer);
+            pollingActivo = false;
+            mostrarTunel(d.url);
+          }
+        })
+        .catch(function () {});
+    }, 3000);
+  }
+
+  /* ── Tabs ── */
+  document.querySelectorAll('#tabs-conexion .nav-link').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#tabs-conexion .nav-link').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var tab = btn.getAttribute('data-tab');
+      document.getElementById('panel-wifi').style.display  = tab === 'wifi'  ? '' : 'none';
+      document.getElementById('panel-movil').style.display = tab === 'movil' ? '' : 'none';
+
+      /* Al entrar a la pestaña de móvil, iniciar polling si el túnel no está activo */
+      if (tab === 'movil' && !tunelUrl) {
+        iniciarPolling();
+      }
+    });
+  });
+
+  /* ── Botón instalar PWA ── */
+  var deferredPrompt;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('pwa-install-card').style.display = '';
+  });
+  document.getElementById('pwa-install-btn').addEventListener('click', function () {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function () { deferredPrompt = null; });
+  });
+
+})();
 </script>
 {% endblock %}

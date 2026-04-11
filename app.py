@@ -7,8 +7,11 @@ import json
 import os
 import socket
 from flask import Flask, render_template, redirect, url_for, session, request, flash, jsonify, send_from_directory, make_response
+from werkzeug.middleware.proxy_fix import ProxyFix
 from database.db import init_db, get_db, close_db
 from datetime import date
+
+_TUNNEL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tunnel_url.txt')
 
 
 def _get_local_ip() -> str:
@@ -22,9 +25,29 @@ def _get_local_ip() -> str:
     except Exception:
         return '127.0.0.1'
 
+
+def _get_tunnel_url() -> str | None:
+    """Lee la URL del túnel público si está activo."""
+    # 1. Env var (override manual)
+    env = os.environ.get('TUNNEL_URL', '').strip().rstrip('/')
+    if env.startswith('https://'):
+        return env
+    # 2. Archivo escrito por tunnel_manager.py
+    try:
+        if os.path.exists(_TUNNEL_FILE):
+            with open(_TUNNEL_FILE, encoding='utf-8') as f:
+                url = f.read().strip().rstrip('/')
+            if url.startswith('https://'):
+                return url
+    except Exception:
+        pass
+    return None
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', '7e9c0c0e-c760-4b6e-8c1b-2dad20c8fc35-tecnocel-prod')
 app.teardown_appcontext(close_db)
+# Soporte para reverse proxy (Cloudflare Tunnel, ngrok): leer X-Forwarded-For / X-Forwarded-Proto
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 with app.app_context():
     init_db()
@@ -389,13 +412,24 @@ def offline_page():
     return send_from_directory('static', 'offline.html')
 
 
-# ── Página QR: muestra la IP local para conectar el celular ─────────────────
+# ── Página QR: muestra la IP local Y la URL del túnel si está activo ─────────
 @app.route('/qr')
 def qr_page():
     ip     = _get_local_ip()
     puerto = request.host.split(':')[1] if ':' in request.host else '5000'
     url    = f'http://{ip}:{puerto}'
-    return render_template('qr.html', url_celular=url, ip=ip, puerto=puerto)
+    tunnel = _get_tunnel_url()
+    return render_template('qr.html', url_celular=url, ip=ip, puerto=puerto,
+                           tunnel_url=tunnel)
+
+
+# ── API: estado del túnel (usada por polling en /qr) ─────────────────────────
+@app.route('/api/estado-tunel')
+def api_estado_tunel():
+    tunnel = _get_tunnel_url()
+    if tunnel:
+        return jsonify({'activo': True, 'url': tunnel})
+    return jsonify({'activo': False})
 
 
 if __name__ == '__main__':
