@@ -454,6 +454,97 @@ datalist { background: var(--tc-dark-2); }
 .min-width-0   { min-width: 0; }
 .text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ── Barra de navegación inferior (móvil) ──────────── */
+.bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: #000;
+    border-top: 1px solid var(--tc-cyan-border);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.5);
+    z-index: 1040;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 0.5rem;
+}
+
+.bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    height: 100%;
+    text-decoration: none;
+    color: var(--tc-text-dim);
+    font-size: .6rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    transition: color .2s;
+    gap: 3px;
+    border: none;
+    background: none;
+}
+
+.bottom-nav-item i {
+    font-size: 1.3rem;
+    line-height: 1;
+    transition: filter .2s, transform .2s;
+}
+
+.bottom-nav-item:hover,
+.bottom-nav-item.active {
+    color: var(--tc-cyan);
+}
+
+.bottom-nav-item.active i {
+    filter: drop-shadow(0 0 5px rgba(0,207,255,0.8));
+}
+
+/* Botón central FAB */
+.bottom-nav-fab {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--tc-gradient-btn);
+    border: 3px solid #000;
+    color: #fff;
+    font-size: 1.5rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    box-shadow: 0 0 18px rgba(0,207,255,0.5);
+    transition: box-shadow .2s, transform .2s;
+    margin-bottom: 10px;
+}
+
+.bottom-nav-fab:hover  { box-shadow: 0 0 30px rgba(0,207,255,0.8); transform: scale(1.08); }
+.bottom-nav-fab:active { transform: scale(0.94); }
+
+/* Padding inferior para que el contenido no quede detrás de la bottom nav */
+@media (max-width: 991.98px) {
+    body { padding-bottom: 64px; }
+}
+
+/* ── Tarjetas de órdenes en móvil ──────────────────── */
+.orden-card-mobile {
+    color: inherit;
+    background: transparent;
+    transition: background .15s;
+}
+
+.orden-card-mobile:hover,
+.orden-card-mobile:active { background: rgba(0,207,255,0.05); }
+
+.orden-card-listo { border-left: 3px solid var(--tc-success) !important; }
+
+.orden-estado-icono {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--tc-dark-3);
+    border: 1px solid var(--tc-cyan-border);
+    display: flex; align-items: center; justify-content: center;
+}
+
 /* ── Responsive ────────────────────────────────────── */
 @media (max-width: 576px) {
     .container-fluid.py-4 { padding-left: 0.8rem !important; padding-right: 0.8rem !important; }

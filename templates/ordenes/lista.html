@@ -66,6 +66,48 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         {% if ordenes %}
+
+        <!-- ══ Vista MÓVIL: tarjetas (visible solo en xs/sm) ══ -->
+        <div class="d-md-none">
+            {% for o in ordenes %}
+            <a href="{{ url_for('ordenes.detalle', id=o.id) }}"
+               class="d-flex align-items-center gap-3 px-3 py-3 border-bottom text-decoration-none orden-card-mobile
+                      {% if o.estado == 'listo' %}orden-card-listo{% endif %}">
+                <!-- Ícono de estado -->
+                <div class="orden-estado-icono flex-shrink-0">
+                    {% if o.estado == 'recibido' %}
+                        <i class="bi bi-inbox-fill text-primary fs-4"></i>
+                    {% elif o.estado == 'listo' %}
+                        <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                    {% else %}
+                        <i class="bi bi-bag-check-fill text-secondary fs-4"></i>
+                    {% endif %}
+                </div>
+                <!-- Info principal -->
+                <div class="flex-grow-1 min-width-0">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                        <span class="fw-bold text-primary small">{{ o.numero_orden }}</span>
+                        <span class="badge {% if o.estado == 'recibido' %}bg-primary{% elif o.estado == 'listo' %}bg-success{% else %}bg-secondary{% endif %} flex-shrink-0" style="font-size:.68rem;">
+                            {% if o.estado == 'recibido' %}Recibido{% elif o.estado == 'listo' %}Listo{% else %}Entregado{% endif %}
+                        </span>
+                    </div>
+                    <div class="fw-semibold text-truncate" style="font-size:.875rem;color:var(--tc-text);">{{ o.marca_modelo }}</div>
+                    <div class="d-flex align-items-center justify-content-between mt-1">
+                        <span class="text-muted" style="font-size:.78rem;">{{ o.cliente_nombre | title }}</span>
+                        <span class="fw-bold {% if o.costo_final %}text-success{% else %}text-muted{% endif %}" style="font-size:.82rem;">
+                            {% if o.costo_final %}$ {{ "{:,.0f}".format(o.costo_final) }}
+                            {% elif o.costo_estimado %}~ $ {{ "{:,.0f}".format(o.costo_estimado) }}
+                            {% else %}—{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <i class="bi bi-chevron-right text-muted flex-shrink-0" style="font-size:.8rem;"></i>
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- ══ Vista ESCRITORIO: tabla (oculta en móvil) ══ -->
+        <div class="d-none d-md-block">
         <div class="table-responsive">
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-dark">
@@ -124,6 +166,8 @@
                 </tbody>
             </table>
         </div>
+        </div>
+
         {% else %}
         <div class="text-center py-5 text-muted">
             <i class="bi bi-tools fs-1 d-block mb-3"></i>

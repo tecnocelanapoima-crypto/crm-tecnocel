@@ -164,6 +164,37 @@
     {% block content %}{% endblock %}
 </div>
 
+<!-- ══ Barra de navegación inferior (solo móvil) ══ -->
+<nav class="bottom-nav d-flex d-lg-none" id="bottom-nav-bar">
+    <a class="bottom-nav-item {% if request.endpoint == 'index' %}active{% endif %}"
+       href="{{ url_for('index') }}">
+        <i class="bi bi-speedometer2"></i>
+        <span>Inicio</span>
+    </a>
+    <a class="bottom-nav-item {% if request.endpoint and 'ordenes' in request.endpoint %}active{% endif %}"
+       href="{{ url_for('ordenes.lista') }}">
+        <i class="bi bi-tools"></i>
+        <span>Órdenes</span>
+    </a>
+    <!-- Botón central: nueva orden rápida (abre modal si existe, si no va al formulario) -->
+    <button class="bottom-nav-fab" type="button"
+            onclick="abrirNuevaOrden()"
+            title="Recibir equipo rápido"
+            id="bottom-nav-fab-btn">
+        <i class="bi bi-plus-lg"></i>
+    </button>
+    <a class="bottom-nav-item {% if request.endpoint and 'inventario' in request.endpoint %}active{% endif %}"
+       href="{{ url_for('inventario.lista') }}">
+        <i class="bi bi-box-seam-fill"></i>
+        <span>Inventario</span>
+    </a>
+    <a class="bottom-nav-item {% if request.endpoint and 'configuracion' in request.endpoint %}active{% endif %}"
+       href="{{ url_for('configuracion.perfil') }}">
+        <i class="bi bi-gear-fill"></i>
+        <span>Ajustes</span>
+    </a>
+</nav>
+
 <!-- Botón flotante instalar PWA (solo visible en móvil, antes de instalar) -->
 <button id="pwa-fab-install"
         title="Instalar app en el celular"
@@ -212,6 +243,17 @@ function resetConfig(){
 </script>
 {% block scripts %}{% endblock %}
 <script>
+/* ── Botón FAB: abre modal de recepción rápida o va al formulario ── */
+function abrirNuevaOrden() {
+    var modalEl = document.getElementById('modalRecepcionRapida');
+    if (modalEl) {
+        var m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        m.show();
+    } else {
+        window.location.href = '{{ url_for("ordenes.crear") }}';
+    }
+}
+
 /* ── Registrar Service Worker (PWA) ── */
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
