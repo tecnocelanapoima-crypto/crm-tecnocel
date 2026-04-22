@@ -26,6 +26,7 @@ from routes.finanzas  import finanzas_bp
 from routes.ordenes   import ordenes_bp
 from routes.admin          import admin_bp
 from routes.configuracion  import configuracion_bp
+from routes.anamaya        import anamaya_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(clientes_bp,  url_prefix='/clientes')
@@ -37,6 +38,7 @@ app.register_blueprint(finanzas_bp,  url_prefix='/finanzas')
 app.register_blueprint(ordenes_bp,  url_prefix='/ordenes')
 app.register_blueprint(admin_bp,         url_prefix='/admin')
 app.register_blueprint(configuracion_bp, url_prefix='/configuracion')
+app.register_blueprint(anamaya_bp,       url_prefix='/anamaya')
 
 
 # ── Filtro de moneda Jinja2 ──────────────────────────────────────────────

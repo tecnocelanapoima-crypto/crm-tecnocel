@@ -104,6 +104,18 @@ def init_db():
         )
     ''')
 
+    # ── Tabla de leads AnaMaya ──
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS leads_anamaya (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre          TEXT    NOT NULL,
+            telefono        TEXT    NOT NULL,
+            ciudad          TEXT    NOT NULL,
+            origen          TEXT    NOT NULL DEFAULT 'Meta Ads',
+            fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
     # ── Migraciones seguras para suscripción ──────────────────────────────
     migraciones = [
         "ALTER TABLE negocios ADD COLUMN fecha_vencimiento TEXT DEFAULT NULL",
