@@ -2,7 +2,11 @@ import sqlite3
 import os
 from flask import g
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
+# TECNOCEL_DB_PATH permite sobreescribir la ruta en tests (no usar en producción)
+DB_PATH = (
+    os.environ.get('TECNOCEL_DB_PATH')
+    or os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
+)
 
 def get_db():
     if 'db' not in g:
@@ -196,13 +200,25 @@ def init_db():
         except Exception:
             pass
 
-    # ── Migraciones seguras para suscripción ──────────────────────────────
+    # ── Tabla de log de eventos (Capa 1) ──
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS eventos_log (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo       TEXT    NOT NULL,
+            payload    TEXT,
+            error      TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # ── Migraciones seguras ────────────────────────────────────────────────
     migraciones = [
-        "ALTER TABLE negocios ADD COLUMN fecha_vencimiento TEXT DEFAULT NULL",
-        "ALTER TABLE negocios ADD COLUMN plan_nombre TEXT DEFAULT 'basico'",
-        "ALTER TABLE negocios ADD COLUMN dias_gracia INTEGER DEFAULT 3",
-        "ALTER TABLE negocios ADD COLUMN logo_base64 TEXT DEFAULT NULL",
-        "ALTER TABLE negocios ADD COLUMN slogan TEXT DEFAULT NULL",
+        "ALTER TABLE negocios  ADD COLUMN fecha_vencimiento TEXT DEFAULT NULL",
+        "ALTER TABLE negocios  ADD COLUMN plan_nombre TEXT DEFAULT 'basico'",
+        "ALTER TABLE negocios  ADD COLUMN dias_gracia INTEGER DEFAULT 3",
+        "ALTER TABLE negocios  ADD COLUMN logo_base64 TEXT DEFAULT NULL",
+        "ALTER TABLE negocios  ADD COLUMN slogan TEXT DEFAULT NULL",
+        "ALTER TABLE clientes  ADD COLUMN origen TEXT DEFAULT NULL",
     ]
     for sql in migraciones:
         try:
