@@ -32,3 +32,22 @@ de confusión o bugs si el código evoluciona.
 que `teardown_appcontext` los maneje, igual que el resto de los blueprints.
 
 ---
+
+## BUG-002 — Backslash en expresiones f-string en routes/ordenes.py ✅ CORREGIDO
+
+**Archivo:** `routes/ordenes.py`  
+**Líneas originales:** 492, 505  
+**Severidad:** Alta — impedía arrancar la app en Python < 3.12
+
+**Descripción:**  
+Dos f-strings usaban `\n\n` dentro de la expresión `{...}`, inválido en Python < 3.12:
+
+```python
+# Inválido en Python 3.11
+f"{'texto' + '\n\n' if condicion else '\n\n'}"
+```
+
+**Solución aplicada:** Variables locales `_costo_linea` y `_valor_linea` antes del
+bloque `mensaje = (...)`. Compatible con Python 3.9+.
+
+---
