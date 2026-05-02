@@ -143,23 +143,23 @@ def init_db():
         END
     ''')
 
-    # Semillas iniciales — reemplazar PLACEHOLDERs con datos reales en Railway
+    # Semillas iniciales — INSERT OR IGNORE (no sobreescribe si ya existen)
     _semillas_config = [
         (
             1,
-            'PLACEHOLDER_NOMBRE_DUENO_TECNOCEL',
-            'PLACEHOLDER_CORREO_TECNOCEL',
+            'Andrés Urrego',
+            'tecnocelanapoima@gmail.com',
             None,
-            'PLACEHOLDER_WHATSAPP_TECNOCEL',
+            '573124837718',
             'Hola {nombre}, gracias por contactarnos en Tecnocel. '
             'En breve uno de nuestros asesores te atenderá. 📱',
         ),
         (
             6,
-            'PLACEHOLDER_NOMBRE_DUENO_ANAMAYA',
-            'PLACEHOLDER_CORREO_ANAMAYA',
+            'Abel',
+            None,   # correo AnaMaya pendiente — agregar cuando esté disponible
             None,
-            'PLACEHOLDER_WHATSAPP_ANAMAYA',
+            '573155514708',
             'Hola {nombre}, bienvenido/a a AnaMaya Wellness 🌿. '
             'Pronto te contactaremos para agendar tu sesión.',
         ),
@@ -173,7 +173,28 @@ def init_db():
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', _s)
         except Exception:
-            pass  # Registro ya existe o negocio_id no existe aún
+            pass  # negocio_id no existe aún en esta DB
+
+    # Migración: actualizar placeholders viejos si Railway ya tenía la tabla
+    _actualizaciones_config = [
+        (
+            'Andrés Urrego', 'tecnocelanapoima@gmail.com', '573124837718',
+            1, 'PLACEHOLDER_NOMBRE_DUENO_TECNOCEL',
+        ),
+        (
+            'Abel', None, '573155514708',
+            6, 'PLACEHOLDER_NOMBRE_DUENO_ANAMAYA',
+        ),
+    ]
+    for _a in _actualizaciones_config:
+        try:
+            c.execute('''
+                UPDATE negocio_config
+                SET nombre_dueno=?, correo_notificaciones=?, whatsapp_dueno=?
+                WHERE negocio_id=? AND nombre_dueno=?
+            ''', _a)
+        except Exception:
+            pass
 
     # ── Migraciones seguras para suscripción ──────────────────────────────
     migraciones = [
