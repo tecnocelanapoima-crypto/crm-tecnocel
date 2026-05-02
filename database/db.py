@@ -157,7 +157,7 @@ def init_db():
         (
             6,
             'Abel',
-            None,   # correo AnaMaya pendiente — agregar cuando esté disponible
+            'tecnocelanapoima@gmail.com',
             None,
             '573155514708',
             'Hola {nombre}, bienvenido/a a AnaMaya Wellness 🌿. '
@@ -182,7 +182,7 @@ def init_db():
             1, 'PLACEHOLDER_NOMBRE_DUENO_TECNOCEL',
         ),
         (
-            'Abel', None, '573155514708',
+            'Abel', 'tecnocelanapoima@gmail.com', '573155514708',
             6, 'PLACEHOLDER_NOMBRE_DUENO_ANAMAYA',
         ),
     ]
