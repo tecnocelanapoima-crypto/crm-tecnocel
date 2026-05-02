@@ -116,6 +116,65 @@ def init_db():
         )
     ''')
 
+    # ── Tabla de configuración por negocio (Capa 1) ──
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS negocio_config (
+            id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+            negocio_id              INTEGER NOT NULL UNIQUE,
+            nombre_dueno            TEXT,
+            correo_notificaciones   TEXT,
+            telegram_chat_id        TEXT,
+            whatsapp_dueno          TEXT,
+            mensaje_bienvenida_lead TEXT,
+            activo                  INTEGER NOT NULL DEFAULT 1,
+            created_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE
+        )
+    ''')
+
+    # Trigger para mantener updated_at actualizado automáticamente
+    c.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_negocio_config_updated_at
+        AFTER UPDATE ON negocio_config
+        FOR EACH ROW
+        BEGIN
+            UPDATE negocio_config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+        END
+    ''')
+
+    # Semillas iniciales — reemplazar PLACEHOLDERs con datos reales en Railway
+    _semillas_config = [
+        (
+            1,
+            'PLACEHOLDER_NOMBRE_DUENO_TECNOCEL',
+            'PLACEHOLDER_CORREO_TECNOCEL',
+            None,
+            'PLACEHOLDER_WHATSAPP_TECNOCEL',
+            'Hola {nombre}, gracias por contactarnos en Tecnocel. '
+            'En breve uno de nuestros asesores te atenderá. 📱',
+        ),
+        (
+            6,
+            'PLACEHOLDER_NOMBRE_DUENO_ANAMAYA',
+            'PLACEHOLDER_CORREO_ANAMAYA',
+            None,
+            'PLACEHOLDER_WHATSAPP_ANAMAYA',
+            'Hola {nombre}, bienvenido/a a AnaMaya Wellness 🌿. '
+            'Pronto te contactaremos para agendar tu sesión.',
+        ),
+    ]
+    for _s in _semillas_config:
+        try:
+            c.execute('''
+                INSERT OR IGNORE INTO negocio_config
+                    (negocio_id, nombre_dueno, correo_notificaciones,
+                     telegram_chat_id, whatsapp_dueno, mensaje_bienvenida_lead)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', _s)
+        except Exception:
+            pass  # Registro ya existe o negocio_id no existe aún
+
     # ── Migraciones seguras para suscripción ──────────────────────────────
     migraciones = [
         "ALTER TABLE negocios ADD COLUMN fecha_vencimiento TEXT DEFAULT NULL",
