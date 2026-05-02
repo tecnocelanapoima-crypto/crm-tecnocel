@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luminary — Digital Excellence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET & TOKENS ─────────────────────────────── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --accent:#00F5D4;
+  --accent-dim:rgba(0,245,212,.12);
+  --accent-glow:rgba(0,245,212,.35);
+  --bg:#030712;
+  --bg2:rgba(10,15,30,1);
+  --card:rgba(255,255,255,.04);
+  --border:rgba(255,255,255,.08);
+  --glass:rgba(255,255,255,.05);
+  --glass-b:rgba(255,255,255,.10);
+  --text:#F8FAFC;
+  --text2:rgba(248,250,252,.60);
+  --text3:rgba(248,250,252,.35);
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;line-height:1.6}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer}
+::selection{background:rgba(0,245,212,.2);color:var(--accent)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#1e2235;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,245,212,.3)}
+
+/* ─── SCROLL PROGRESS BAR ────────────────────────── */
+/* Fixed ribbon at the very top; JS sets width 0→100% */
+#progress{
+  position:fixed;top:0;left:0;height:3px;width:0%;z-index:9999;
+  background:linear-gradient(90deg,var(--accent),#7B2FBE,var(--accent));
+  background-size:200% 100%;
+  animation:progressShimmer 2s linear infinite;
+  box-shadow:0 0 12px var(--accent-glow);
+  transition:width .08s linear;
+}
+@keyframes progressShimmer{0%{background-position:0 0}100%{background-position:200% 0}}
+
+/* ─── STICKY HEADER ──────────────────────────────── */
+/* Shrinks + frosted glass when user scrolls past 80px */
+#header{
+  position:fixed;inset:0 0 auto;z-index:1000;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.6rem 4rem;
+  transition:padding .4s cubic-bezier(.4,0,.2,1),
+             background .4s,backdrop-filter .4s,box-shadow .4s;
+}
+#header.scrolled{
+  padding:.9rem 4rem;
+  background:rgba(3,7,18,.82);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 4px 40px rgba(0,0,0,.5);
+}
+.logo{font-size:1.5rem;font-weight:800;letter-spacing:-.03em}
+.logo span{color:var(--accent)}
+nav{display:flex;gap:2.5rem;align-items:center}
+nav a{color:var(--text2);font-size:.9rem;font-weight:500;transition:color .2s}
+nav a:hover{color:var(--accent)}
+.nav-cta{
+  padding:.6rem 1.5rem;background:var(--accent);color:var(--bg)!important;
+  border-radius:50px;font-weight:700!important;transition:all .3s!important;
+}
+.nav-cta:hover{background:#fff!important;box-shadow:0 0 28px var(--accent-glow)}
+
+/* ─── SHARED LAYOUT ──────────────────────────────── */
+.container{max-width:1200px;margin:0 auto;padding:0 2rem}
+.section-tag{
+  display:inline-flex;align-items:center;gap:.5rem;
+  padding:.4rem 1rem;background:var(--accent-dim);
+  border:1px solid rgba(0,245,212,.2);border-radius:50px;
+  font-size:.78rem;font-weight:700;color:var(--accent);
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:1.5rem;
+}
+.section-title{
+  font-size:clamp(2rem,4vw,3.5rem);font-weight:800;
+  line-height:1.12;letter-spacing:-.03em;margin-bottom:1rem;
+}
+.section-sub{font-size:1.05rem;color:var(--text2);max-width:560px;line-height:1.75}
+.text-accent{color:var(--accent)}
+.center{text-align:center}
+.center .section-sub{margin:0 auto}
+
+/* ─── SCROLL ANIMATIONS (Intersection Observer) ───── */
+/* Elements start invisible/translated; JS adds .visible */
+.fade-up{opacity:0;transform:translateY(40px);transition:opacity .7s ease,transform .7s ease}
+.fade-up.visible{opacity:1;transform:none}
+.fade-in{opacity:0;transition:opacity .8s ease}
+.fade-in.visible{opacity:1}
+.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}
+.d4{transition-delay:.4s}.d5{transition-delay:.5s}
+
+/* ─────────────────────────────────────────────────── */
+/* 1. HERO                                             */
+/* ─────────────────────────────────────────────────── */
+#hero{
+  height:100vh;min-height:700px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;position:relative;
+}
+/* Parallax wrapper — JS translates Y at 40% scroll speed */
+#hero-bg{
+  position:absolute;inset:-25% -5%;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%,  rgba(0,245,212,.18),transparent),
+    radial-gradient(ellipse 50% 60% at 90% 70%,  rgba(123,47,190,.22),transparent),
+    radial-gradient(ellipse 60% 40% at 10% 80%,  rgba(0,100,220,.16),transparent),
+    var(--bg);
+  animation:heroBreath 9s ease-in-out infinite alternate;
+}
+@keyframes heroBreath{0%{opacity:.85}100%{opacity:1;transform:scale(1.04)}}
+
+/* Full-screen BG video iframe */
+#hero-vid{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;z-index:1;
+}
+#hero-vid iframe{
+  position:absolute;
+  top:50%;left:50%;
+  width:177.78vh;min-width:100%;
+  height:56.25vw;min-height:100%;
+  transform:translate(-50%,-50%);
+  pointer-events:none;border:none;
+}
+
+/* SVG grain texture overlay */
+.grain{
+  position:absolute;inset:0;z-index:2;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");
+  background-size:200px;opacity:.4;
+}
+.hero-veil{
+  position:absolute;inset:0;z-index:3;
+  background:linear-gradient(to bottom,rgba(3,7,18,.55) 0%,rgba(3,7,18,.2) 50%,rgba(3,7,18,.92) 100%);
+}
+/* Floating orbs */
+.orb{position:absolute;border-radius:50%;pointer-events:none;z-index:2;filter:blur(60px)}
+.orb-a{width:500px;height:500px;background:rgba(0,245,212,.07);top:-120px;right:-100px;animation:orbFloat 12s ease-in-out infinite}
+.orb-b{width:400px;height:400px;background:rgba(123,47,190,.09);bottom:-80px;left:-80px;animation:orbFloat 15s ease-in-out infinite reverse}
+@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-40px) scale(1.06)}}
+
+.hero-content{
+  position:relative;z-index:4;text-align:center;
+  max-width:920px;padding:0 2rem;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:.5rem;
+  padding:.5rem 1.3rem;background:rgba(0,245,212,.08);
+  border:1px solid rgba(0,245,212,.28);border-radius:50px;
+  font-size:.83rem;font-weight:600;color:var(--accent);
+  margin-bottom:2rem;backdrop-filter:blur(10px);
+}
+.hero-badge::before{
+  content:'';width:8px;height:8px;background:var(--accent);
+  border-radius:50%;animation:blink 2s infinite;
+}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.6)}}
+.hero-title{
+  font-size:clamp(3rem,7.5vw,6.8rem);font-weight:900;
+  line-height:1.03;letter-spacing:-.04em;margin-bottom:1.6rem;
+}
+.grad{
+  background:linear-gradient(130deg,var(--accent) 0%,#7B2FBE 55%,var(--accent) 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:gradMove 4s linear infinite;
+}
+@keyframes gradMove{0%{background-position:0% center}100%{background-position:200% center}}
+.hero-sub{font-size:1.18rem;color:var(--text2);max-width:580px;margin:0 auto 2.8rem;line-height:1.75}
+.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:.5rem;
+  padding:.95rem 2.4rem;border-radius:50px;font-size:1rem;
+  font-weight:700;border:none;transition:all .3s ease;font-family:inherit;
+}
+.btn-p{background:var(--accent);color:var(--bg)}
+.btn-p:hover{background:#fff;box-shadow:0 0 42px var(--accent-glow),0 12px 30px rgba(0,0,0,.35);transform:translateY(-2px)}
+.btn-s{background:transparent;color:var(--text);border:1px solid var(--glass-b);backdrop-filter:blur(10px)}
+.btn-s:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);transform:translateY(-2px)}
+.hero-scroll{
+  position:absolute;bottom:2.5rem;left:50%;transform:translateX(-50%);
+  z-index:4;display:flex;flex-direction:column;align-items:center;gap:.5rem;
+  color:var(--text3);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+}
+.mouse{
+  width:24px;height:38px;border:2px solid rgba(255,255,255,.2);
+  border-radius:12px;display:flex;justify-content:center;padding-top:6px;
+}
+.mouse::after{
+  content:'';width:4px;height:8px;background:var(--accent);
+  border-radius:2px;animation:dot 1.6s infinite;
+}
+@keyframes dot{0%{transform:translateY(0);opacity:1}100%{transform:translateY(14px);opacity:0}}
+
+/* ─────────────────────────────────────────────────── */
+/* 2. FEATURES                                         */
+/* ─────────────────────────────────────────────────── */
+#features{
+  padding:8rem 0;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+}
+.features-hd{text-align:center;margin-bottom:5rem}
+.f-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2rem}
+.f-card{
+  padding:2.5rem;background:var(--glass);border:1px solid var(--glass-b);
+  border-radius:20px;backdrop-filter:blur(20px);
+  transition:transform .3s,border-color .3s,box-shadow .3s;
+  position:relative;overflow:hidden;
+}
+.f-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at top left,rgba(0,245,212,.06),transparent 60%);
+  opacity:0;transition:opacity .3s;
+}
+.f-card:hover{transform:translateY(-8px);border-color:rgba(0,245,212,.3);box-shadow:0 24px 50px rgba(0,0,0,.4),0 0 28px rgba(0,245,212,.06)}
+.f-card:hover::before{opacity:1}
+.f-icon{
+  width:54px;height:54px;background:var(--accent-dim);
+  border:1px solid rgba(0,245,212,.2);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;margin-bottom:1.5rem;
+}
+.f-card h3{font-size:1.25rem;font-weight:700;margin-bottom:.7rem;letter-spacing:-.02em}
+.f-card p{color:var(--text2);line-height:1.75;font-size:.95rem}
+
+/* ─────────────────────────────────────────────────── */
+/* 3. STATS (counter animation)                        */
+/* ─────────────────────────────────────────────────── */
+#stats{
+  padding:6rem 0;
+  background:linear-gradient(135deg,rgba(0,245,212,.025) 0%,transparent 50%,rgba(123,47,190,.025) 100%);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+}
+.s-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2rem;text-align:center}
+.s-item{padding:2rem}
+.s-num{
+  font-size:clamp(2.5rem,5vw,4rem);font-weight:900;
+  color:var(--accent);letter-spacing:-.04em;line-height:1;
+  margin-bottom:.5rem;font-variant-numeric:tabular-nums;
+}
+.s-bar{width:36px;height:2px;background:var(--accent);margin:.75rem auto;opacity:.4}
+.s-lbl{font-size:.92rem;color:var(--text2);font-weight:500;letter-spacing:.02em}
+
+/* ─────────────────────────────────────────────────── */
+/* 4. HORIZONTAL SCROLL GALLERY                        */
+/* ─────────────────────────────────────────────────── */
+#gallery{padding:8rem 0 0;overflow:hidden}
+.g-head{
+  padding:0 4rem;margin-bottom:3rem;
+  display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;
+}
+/* Draggable horizontal scroll track */
+.h-scroll{
+  display:flex;gap:1.5rem;
+  overflow-x:auto;padding:1rem 4rem 3rem;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none;cursor:grab;-webkit-overflow-scrolling:touch;
+}
+.h-scroll::-webkit-scrollbar{display:none}
+.h-scroll:active{cursor:grabbing}
+.g-card{
+  min-width:380px;height:500px;border-radius:20px;overflow:hidden;
+  position:relative;scroll-snap-align:start;flex-shrink:0;
+  border:1px solid var(--border);transition:transform .3s;
+}
+.g-card:hover{transform:scale(1.025)}
+.g-bg{position:absolute;inset:0;transition:transform .5s ease}
+.g-card:hover .g-bg{transform:scale(1.05)}
+.gb1{background:linear-gradient(135deg,#0f2027,#203a43,#2c5364)}
+.gb2{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
+.gb3{background:linear-gradient(135deg,#0d0d0d,#1a0a2e,#2d1b69)}
+.gb4{background:linear-gradient(135deg,#0a2342,#126872,#00a896)}
+.gb5{background:linear-gradient(135deg,#1a0533,#4a0e4e,#7b2d8b)}
+.gb6{background:linear-gradient(135deg,#0d1b2a,#1b2838,#373f47)}
+.g-art{position:absolute;inset:0;overflow:hidden}
+.g-art::before,.g-art::after{content:'';position:absolute;border-radius:50%}
+.ga1::before{width:300px;height:300px;background:radial-gradient(circle,rgba(0,245,212,.15),transparent);top:-60px;right:-60px}
+.ga1::after{width:200px;height:200px;background:radial-gradient(circle,rgba(123,47,190,.2),transparent);bottom:40px;left:20px}
+.ga2::before{width:260px;height:260px;background:radial-gradient(circle,rgba(99,179,237,.18),transparent);bottom:-30px;right:30px}
+.ga2::after{width:180px;height:180px;background:radial-gradient(circle,rgba(0,245,212,.1),transparent);top:40px;left:-20px}
+.ga3::before{width:350px;height:350px;background:radial-gradient(circle,rgba(159,122,234,.18),transparent);top:20px;left:-100px}
+.ga3::after{width:200px;height:200px;background:radial-gradient(circle,rgba(0,245,212,.12),transparent);bottom:-50px;right:50px}
+.g-info{
+  position:absolute;bottom:0;left:0;right:0;padding:2rem;
+  background:linear-gradient(to top,rgba(0,0,0,.88) 0%,transparent 100%);
+}
+.g-tag{
+  display:inline-block;padding:.28rem .8rem;
+  background:var(--accent-dim);border:1px solid rgba(0,245,212,.3);
+  border-radius:50px;font-size:.73rem;color:var(--accent);font-weight:700;
+  letter-spacing:.05em;margin-bottom:.7rem;
+}
+.g-card h3{font-size:1.25rem;font-weight:700;letter-spacing:-.02em;margin-bottom:.25rem}
+.g-card span{font-size:.83rem;color:var(--text2)}
+.arrow-row{display:flex;gap:.5rem}
+.arr{
+  width:40px;height:40px;border:1px solid var(--border);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:none;color:var(--text);font-size:.95rem;
+  transition:all .3s;
+}
+.arr:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+/* ─────────────────────────────────────────────────── */
+/* 5. ABOUT (sticky image + text reveal)               */
+/* ─────────────────────────────────────────────────── */
+#about{padding:8rem 0}
+.ab-inner{display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:start}
+/* Pin/sticky element: image stays fixed while text scrolls past */
+.ab-visual{position:sticky;top:120px}
+.ab-frame{
+  position:relative;border-radius:24px;overflow:hidden;
+  aspect-ratio:3/4;
+  background:linear-gradient(135deg,#0f2027,#203a43);
+}
+.ab-art{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 40%,rgba(0,245,212,.14),transparent),
+    radial-gradient(ellipse 60% 80% at 70% 70%,rgba(123,47,190,.18),transparent);
+}
+.ab-grid{
+  position:absolute;inset:0;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(255,255,255,.03) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.03) 40px);
+}
+.ab-badge{
+  position:absolute;bottom:2rem;left:2rem;right:2rem;padding:1.4rem;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(20px);
+  border:1px solid var(--glass-b);border-radius:16px;
+}
+.ab-badge h4{font-size:.95rem;font-weight:700;margin-bottom:.2rem}
+.ab-badge p{font-size:.82rem;color:var(--text2)}
+.ab-stamp{
+  position:absolute;top:2rem;right:2rem;width:76px;height:76px;
+  border:2px solid var(--accent);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.68rem;font-weight:800;color:var(--accent);
+  letter-spacing:.06em;text-align:center;line-height:1.3;
+}
+.ab-text{padding-top:2rem}
+/* Text reveal: JS wraps words in spans; each gets .visible on scroll */
+.reveal-p{font-size:1.05rem;color:var(--text2);line-height:1.8;margin-bottom:1.5rem}
+.rw{display:inline-block;opacity:0;transform:translateY(14px);transition:opacity .4s ease,transform .4s ease}
+.rw.visible{opacity:1;transform:none}
+.ab-mini{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:3rem}
+.ab-stat{padding:1.5rem;background:var(--glass);border:1px solid var(--glass-b);border-radius:16px}
+.ab-stat-n{font-size:2rem;font-weight:800;color:var(--accent);letter-spacing:-.03em;line-height:1;margin-bottom:.2rem}
+.ab-stat-l{font-size:.83rem;color:var(--text2)}
+
+/* ─────────────────────────────────────────────────── */
+/* 6. VIDEO SHOWCASE                                   */
+/* ─────────────────────────────────────────────────── */
+#video-showcase{
+  padding:8rem 0;
+  background:linear-gradient(180deg,var(--bg2) 0%,var(--bg) 100%);
+}
+.vs-hd{text-align:center;margin-bottom:4rem}
+/* Main video: lazy-loaded when scrolled into view */
+.main-vid{
+  position:relative;border-radius:24px;overflow:hidden;
+  aspect-ratio:16/9;background:#050510;border:1px solid var(--border);
+  max-width:900px;margin:0 auto 4rem;
+}
+.main-vid iframe,.main-vid video{width:100%;height:100%;border:none;display:block}
+/* Video cards: thumbnail shown; iframe swaps in on hover */
+.vc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.vc{
+  border-radius:16px;overflow:hidden;position:relative;
+  aspect-ratio:16/10;background:var(--card);border:1px solid var(--border);cursor:pointer;
+}
+.vc-thumb{position:absolute;inset:0;transition:opacity .35s}
+.vc-iframe{
+  position:absolute;inset:0;width:100%;height:100%;
+  opacity:0;transition:opacity .35s;pointer-events:none;border:none;
+}
+.vc:hover .vc-thumb{opacity:0}
+.vc:hover .vc-iframe{opacity:1;pointer-events:all}
+.vc-meta{
+  position:absolute;bottom:0;left:0;right:0;padding:1.4rem;
+  background:linear-gradient(to top,rgba(0,0,0,.88),transparent);
+  transition:opacity .3s;z-index:5;
+}
+.vc:hover .vc-meta{opacity:0}
+.vc h4{font-size:.9rem;font-weight:600;margin-bottom:.2rem}
+.vc p{font-size:.78rem;color:var(--text2)}
+.play-sm{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:48px;height:48px;background:rgba(0,245,212,.9);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:var(--bg);font-size:1.1rem;transition:all .3s;z-index:5;
+}
+.vc:hover .play-sm{transform:translate(-50%,-50%) scale(0);opacity:0}
+.vtb1{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
+.vtb2{background:linear-gradient(135deg,#0d0d0d,#1a0a2e,#2d1b69)}
+.vtb3{background:linear-gradient(135deg,#0a2342,#126872,#00a896)}
+.vt-art{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.vt-art::before{
+  content:'';width:130px;height:130px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.09);
+}
+.vt-art::after{
+  content:'';position:absolute;width:190px;height:190px;border-radius:50%;
+  border:1px solid rgba(0,245,212,.09);
+}
+
+/* ─────────────────────────────────────────────────── */
+/* 7. TESTIMONIALS                                     */
+/* ─────────────────────────────────────────────────── */
+#testimonials{
+  padding:8rem 0;
+  background:linear-gradient(135deg,rgba(0,245,212,.02) 0%,transparent 60%);
+}
+.t-hd{text-align:center;margin-bottom:4rem}
+.carousel-wrap{position:relative;overflow:hidden}
+.c-track{display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1)}
+.t-slide{min-width:100%;padding:0 2rem}
+.t-card{
+  max-width:800px;margin:0 auto;padding:3rem;
+  background:var(--glass);border:1px solid var(--glass-b);
+  border-radius:24px;backdrop-filter:blur(20px);text-align:center;
+}
+.t-stars{color:var(--accent);font-size:.95rem;letter-spacing:.2em;margin-bottom:1.5rem}
+.t-quote{font-size:1.15rem;line-height:1.8;font-style:italic;font-weight:300;margin-bottom:2rem}
+.t-quote::before{content:'\201C';font-size:3.5rem;line-height:0;vertical-align:-1.4rem;color:var(--accent);opacity:.35;margin-right:.15rem}
+.t-author{display:flex;align-items:center;justify-content:center;gap:1rem}
+.av{
+  width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#7B2FBE);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:1rem;color:var(--bg);
+}
+.ai h4{font-size:.92rem;font-weight:700}
+.ai p{font-size:.82rem;color:var(--text2)}
+.c-dots{display:flex;justify-content:center;gap:.6rem;margin-top:2.5rem}
+.dot{
+  width:8px;height:8px;border-radius:50%;background:var(--border);
+  border:none;padding:0;cursor:pointer;transition:all .3s;
+}
+.dot.on{background:var(--accent);width:22px;border-radius:4px}
+.c-btn{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:42px;height:42px;border:1px solid var(--border);background:var(--glass);
+  backdrop-filter:blur(10px);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text);font-size:.95rem;transition:all .3s;z-index:5;
+}
+.c-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.c-prev{left:0}.c-next{right:0}
+
+/* ─────────────────────────────────────────────────── */
+/* 8. CTA BANNER                                       */
+/* ─────────────────────────────────────────────────── */
+#cta{padding:8rem 0}
+.cta-box{
+  background:linear-gradient(135deg,rgba(0,245,212,.07) 0%,rgba(123,47,190,.07) 100%);
+  border:1px solid rgba(0,245,212,.14);border-radius:32px;
+  padding:6rem 4rem;text-align:center;position:relative;overflow:hidden;
+}
+.cta-box::before{
+  content:'';position:absolute;top:-120px;left:50%;transform:translateX(-50%);
+  width:500px;height:300px;
+  background:radial-gradient(ellipse,rgba(0,245,212,.09),transparent);
+  pointer-events:none;
+}
+.cta-box::after{
+  content:'';position:absolute;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  background-size:200px;opacity:.2;pointer-events:none;
+}
+.cta-title{font-size:clamp(2.5rem,5vw,4rem);font-weight:900;letter-spacing:-.04em;margin-bottom:1.5rem;line-height:1.1}
+.cta-sub{font-size:1.1rem;color:var(--text2);max-width:520px;margin:0 auto 3rem;line-height:1.75}
+.cta-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+
+/* ─────────────────────────────────────────────────── */
+/* 9. FOOTER                                           */
+/* ─────────────────────────────────────────────────── */
+footer{padding:5rem 0 3rem;border-top:1px solid var(--border)}
+.ft-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4rem;margin-bottom:4rem}
+.ft-brand p{color:var(--text2);font-size:.88rem;line-height:1.75;margin-top:1rem;max-width:270px}
+.ft-social{display:flex;gap:.6rem;margin-top:1.5rem}
+.soc{
+  width:34px;height:34px;border:1px solid var(--border);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text2);font-size:.85rem;transition:all .3s;
+}
+.soc:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.ft-col h4{font-size:.8rem;font-weight:700;margin-bottom:1.4rem;letter-spacing:.06em;text-transform:uppercase}
+.ft-col ul{list-style:none;display:flex;flex-direction:column;gap:.7rem}
+.ft-col li a{color:var(--text2);font-size:.88rem;transition:color .2s}
+.ft-col li a:hover{color:var(--accent)}
+.ft-bottom{
+  padding-top:2rem;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;
+}
+.ft-bottom p{font-size:.82rem;color:var(--text3)}
+.ft-links{display:flex;gap:1.5rem}
+.ft-links a{font-size:.82rem;color:var(--text3);transition:color .2s}
+.ft-links a:hover{color:var(--accent)}
+
+/* ─── RESPONSIVE ─────────────────────────────────── */
+@media(max-width:1024px){
+  .s-grid{grid-template-columns:repeat(2,1fr)}
+  .ft-grid{grid-template-columns:1fr 1fr;gap:2.5rem}
+  .ab-inner{gap:3rem}
+}
+@media(max-width:768px){
+  #header{padding:1rem 1.5rem}
+  #header.scrolled{padding:.7rem 1.5rem}
+  nav{display:none}
+  .hero-title{font-size:2.8rem}
+  .f-grid{grid-template-columns:1fr}
+  .s-grid{grid-template-columns:1fr 1fr}
+  .g-card{min-width:280px;height:380px}
+  .h-scroll,.g-head{padding-left:1.5rem;padding-right:1.5rem}
+  .g-head{flex-direction:column;align-items:flex-start}
+  .ab-inner{grid-template-columns:1fr}
+  .ab-visual{position:static}
+  .vc-grid{grid-template-columns:1fr}
+  .ft-grid{grid-template-columns:1fr;gap:2rem}
+  .ft-bottom{flex-direction:column;text-align:center}
+  .cta-box{padding:4rem 1.5rem}
+  #header,.h-scroll{padding-left:1.5rem;padding-right:1.5rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SCROLL PROGRESS BAR ═══════════════════════════ -->
+<div id="progress"></div>
+
+<!-- ═══ STICKY HEADER ═════════════════════════════════ -->
+<header id="header">
+  <a href="#" class="logo">Lumi<span>nary</span></a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#about">About</a>
+    <a href="#video-showcase">Work</a>
+    <a href="#testimonials">Clients</a>
+    <a href="#cta" class="nav-cta">Get Started</a>
+  </nav>
+</header>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 1. HERO — fullscreen video bg + parallax           -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section id="hero">
+  <!-- Parallax BG: JS moves this at 40% scroll speed -->
+  <div id="hero-bg">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+  </div>
+
+  <!-- Full-screen BG video (autoplay, muted, loop) -->
+  <div id="hero-vid">
+    <iframe
+      src="https://www.youtube.com/embed/LXb3EKWsInQ?autoplay=1&mute=1&loop=1&playlist=LXb3EKWsInQ&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1"
+      allow="autoplay;encrypted-media"
+      allowfullscreen
+      title="Hero background video"
+    ></iframe>
+  </div>
+
+  <div class="grain"></div>
+  <div class="hero-veil"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge">Now shipping v3.0 — see what's new</div>
+    <h1 class="hero-title">
+      We Build<br>
+      <span class="grad">Digital Experiences</span><br>
+      That Matter
+    </h1>
+    <p class="hero-sub">
+      Award-winning agency crafting next-generation digital products,
+      brand identities, and immersive web experiences for the world's
+      most ambitious companies.
+    </p>
+    <div class="hero-btns">
+      <a href="#cta" class="btn btn-p">
+        Start Your Project
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#video-showcase" class="btn btn-s">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Watch Showreel
+      </a>
+    </div>
+  </div>
+
+  <div class="hero-scroll">
+    <div class="mouse"></div>
+    <span>Scroll</span>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 2. FEATURES — glassmorphism cards, fade-up on scroll-->
+<!-- ═══════════════════════════════════════════════════ -->
+<section id="features">
+  <div class="container">
+    <div class="features-hd">
+      <div class="section-tag fade-up">✦ What We Do</div>
+      <h2 class="section-title fade-up d1">Everything you need to <span class="text-accent">launch &amp; scale</span></h2>
+      <p class="section-sub fade-up d2" style="margin:0 auto">From concept to launch, we deliver end-to-end digital solutions that drive growth and delight users at every touchpoint.</p>
+    </div>
+    <div class="f-grid">
+      <div class="f-card fade-up d1">
+        <div class="f-icon">⚡</div>
+        <h3>Performance-First Design</h3>
+        <p>Every pixel crafted with purpose. Blazing-fast interfaces that convert visitors into loyal customers through exceptional, intuitive experiences.</p>
+      </div>
+      <div class="f-card fade-up d2">
+        <div class="f-icon">🧬</div>
+        <h3>AI-Powered Products</h3>
+        <p>Cutting-edge AI woven into your product. Intelligent automation, personalization at scale, and predictive features that keep users coming back.</p>
+      </div>
+      <div class="f-card fade-up d3">
+        <div class="f-icon">🛡️</div>
+        <h3>Enterprise Security</h3>
+        <p>Security-by-design architecture with zero-trust principles. Your data and users protected at every layer, meeting the highest compliance standards.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 3. STATS — counters animate when section is visible -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section id="stats">
+  <div class="container">
+    <div class="s-grid">
+      <div class="s-item fade-up">
+        <div class="s-num" data-target="250" data-suffix="+">0</div>
+        <div class="s-bar"></div>
+        <div class="s-lbl">Projects Delivered</div>
+      </div>
+      <div class="s-item fade-up d1">
+        <div class="s-num" data-target="98" data-suffix="%">0</div>
+        <div class="s-bar"></div>
+        <div class="s-lbl">Client Satisfaction</div>
+      </div>
+      <div class="s-item fade-up d2">
+        <div class="s-num" data-target="12" data-suffix="M+">0</div>
+        <div class="s-bar"></div>
+        <div class="s-lbl">Users Reached</div>
+      </div>
+      <div class="s-item fade-up d3">
+        <div class="s-num" data-target="8" data-suffix="yr">0</div>
+        <div class="s-bar"></div>
+        <div class="s-lbl">Years of Excellence</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 4. HORIZONTAL SCROLL GALLERY                       -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section id="gallery">
+  <div class="g-head">
+    <div>
+      <div class="section-tag fade-up">✦ Our Work</div>
+      <h2 class="section-title fade-up d1">Selected Projects</h2>
+    </div>
+    <div class="arrow-row fade-up d2">
+      <span style="color:var(--text2);font-size:.83rem;align-self:center">Drag to explore</span>
+      <button class="arr" id="gp">&#8592;</button>
+      <button class="arr" id="gn">&#8594;</button>
+    </div>
+  </div>
+
+  <div class="h-scroll" id="gscroll">
+    <div class="g-card"><div class="g-bg gb1"></div><div class="g-art ga1"></div><div class="g-info"><span class="g-tag">Branding</span><h3>Nexus Finance</h3><span>Brand Identity · Web App · Mobile</span></div></div>
+    <div class="g-card"><div class="g-bg gb2"></div><div class="g-art ga2"></div><div class="g-info"><span class="g-tag">Product Design</span><h3>Aether AI Dashboard</h3><span>UX/UI · Development · AI Integration</span></div></div>
+    <div class="g-card"><div class="g-bg gb3"></div><div class="g-art ga3"></div><div class="g-info"><span class="g-tag">E-commerce</span><h3>Lumis Luxury Store</h3><span>Full-Stack · 3D Experience · AR</span></div></div>
+    <div class="g-card"><div class="g-bg gb4"></div><div class="g-art ga2"></div><div class="g-info"><span class="g-tag">SaaS</span><h3>Velo Analytics Suite</h3><span>Dashboard · Data Viz · API</span></div></div>
+    <div class="g-card"><div class="g-bg gb5"></div><div class="g-art ga1"></div><div class="g-info"><span class="g-tag">Campaign</span><h3>Prism Media Launch</h3><span>Motion · Interactive · Web</span></div></div>
+    <div class="g-card"><div class="g-bg gb6"></div><div class="g-art ga3"></div><div class="g-info"><span class="g-tag">Web3</span><h3>Onyx NFT Marketplace</h3><span>Blockchain · Smart Contracts · UI</span></div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 5. ABOUT — sticky image + word-by-word text reveal  -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section id="about">
+  <div class="container">
+    <div class="ab-inner">
+
+      <!-- Sticky pinned element stays fixed while text scrolls -->
+      <div class="ab-visual">
+        <div class="ab-frame fade-in">
+          <div class="ab-art"></div>
+          <div class="ab-grid"></div>
+          <div class="ab-stamp">Since<br>2016</div>
+          <div class="ab-badge">
+            <h4>Award-Winning Agency</h4>
+            <p>Webby Award · Awwwards SOTD · CSS Design Awards</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ab-text">
+        <div class="section-tag fade-up">✦ Our Story</div>
+        <h2 class="section-title fade-up d1">Born from a passion for <span class="text-accent">digital craft</span></h2>
+
+        <!-- Text reveal paragraphs — JS splits into words -->
+        <p class="reveal-p" id="rp1">We started as a small team of designers and engineers obsessed with the intersection of beauty and function. Eight years later, we have grown into a full-service digital agency trusted by startups and Fortune 500 companies alike.</p>
+        <p class="reveal-p" id="rp2">Our philosophy is simple: every interaction is an opportunity to create something meaningful. We do not just build websites — we craft digital ecosystems that grow with your ambitions and resonate with your audience on a profound level.</p>
+        <p class="reveal-p" id="rp3">From Silicon Valley startups disrupting industries to established brands reinventing themselves, we bring the same relentless attention to detail and strategic thinking to every engagement we undertake.</p>
+
+        <div class="ab-mini">
+          <div class="ab-stat fade-up d1"><div class="ab-stat-n">42</div><div class="ab-stat-l">Team Members</div></div>
+          <div class="ab-stat fade-up d2"><div class="ab-stat-n">18</div><div class="ab-stat-l">Awards Won</div></div>
+          <div class="ab-stat fade-up d3"><div class="ab-stat-n">30+</div><div class="ab-stat-l">Countries Served</div></div>
+          <div class="ab-stat fade-up d4"><div class="ab-stat-n">$2B+</div><div class="ab-stat-l">Client Revenue Generated</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 6. VIDEO SHOWCASE — autoplay on scroll + hover cards-->
+<!-- ═══════════════════════════════════════════════════ -->
+<section id="video-showcase">
+  <div class="container">
+    <div class="vs-hd">
+      <div class="section-tag fade-up">✦ Featured Work</div>
+      <h2 class="section-title fade-up d1">See it in <span class="text-accent">motion</span></h2>
+      <p class="section-sub fade-up d2" style="margin:0 auto">Watch how we transform ideas into immersive digital experiences that captivate and convert audiences worldwide.</p>
+    </div>
+
+    <!-- Main video: src loaded by IntersectionObserver when in view -->
+    <div class="main-vid fade-up" id="main-vid-wrap">
+      <iframe
+        id="main-vid"
+        src="about:blank"
+        data-src="https://www.youtube.com/embed/LXb3EKWsInQ?autoplay=1&mute=0&controls=1&rel=0&modestbranding=1"
+        allow="autoplay;encrypted-media"
+        allowfullscreen
+        title="Agency Showreel"
+      ></iframe>
+    </div>
+
+    <!-- Video cards — thumbnail visible; iframe swaps in on hover -->
+    <div class="vc-grid">
+      <div class="vc fade-up d1">
+        <div class="vc-thumb vtb1"><div class="vt-art"></div></div>
+        <iframe class="vc-iframe" data-src="https://www.youtube.com/embed/LXb3EKWsInQ?autoplay=1&mute=1&controls=0&loop=1&playlist=LXb3EKWsInQ" allow="autoplay;encrypted-media" title="Case study 1"></iframe>
+        <div class="play-sm">&#9654;</div>
+        <div class="vc-meta"><h4>Brand Identity Case Study</h4><p>Nexus Finance · 3:24</p></div>
+      </div>
+      <div class="vc fade-up d2">
+        <div class="vc-thumb vtb2"><div class="vt-art"></div></div>
+        <iframe class="vc-iframe" data-src="https://www.youtube.com/embed/M7lc1UVf-VE?autoplay=1&mute=1&controls=0&loop=1&playlist=M7lc1UVf-VE" allow="autoplay;encrypted-media" title="Case study 2"></iframe>
+        <div class="play-sm">&#9654;</div>
+        <div class="vc-meta"><h4>Product Design Process</h4><p>Aether AI · 5:12</p></div>
+      </div>
+      <div class="vc fade-up d3">
+        <div class="vc-thumb vtb3"><div class="vt-art"></div></div>
+        <iframe class="vc-iframe" data-src="https://www.youtube.com/embed/ZZ5LpwO-An4?autoplay=1&mute=1&controls=0&loop=1&playlist=ZZ5LpwO-An4" allow="autoplay;encrypted-media" title="Case study 3"></iframe>
+        <div class="play-sm">&#9654;</div>
+        <div class="vc-meta"><h4>E-Commerce 3D Experience</h4><p>Lumis Store · 4:08</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 7. TESTIMONIALS CAROUSEL                            -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section id="testimonials">
+  <div class="container">
+    <div class="t-hd">
+      <div class="section-tag fade-up">✦ Testimonials</div>
+      <h2 class="section-title fade-up d1">Trusted by <span class="text-accent">industry leaders</span></h2>
+    </div>
+    <div class="carousel-wrap">
+      <button class="c-btn c-prev" id="cprev">&#8592;</button>
+      <button class="c-btn c-next" id="cnext">&#8594;</button>
+      <div class="c-track" id="ctrack">
+        <div class="t-slide"><div class="t-card"><div class="t-stars">★★★★★</div><p class="t-quote">Working with Luminary was the best investment we made this year. They transformed our outdated platform into a product users genuinely love. Revenue increased 180% within three months of launch.</p><div class="t-author"><div class="av">S</div><div class="ai"><h4>Sarah Chen</h4><p>CEO, Nexus Finance</p></div></div></div></div>
+        <div class="t-slide"><div class="t-card"><div class="t-stars">★★★★★</div><p class="t-quote">The attention to detail is extraordinary. Every animation, every interaction feels intentional. They do not just execute your vision — they elevate it in ways you never imagined were possible.</p><div class="t-author"><div class="av">M</div><div class="ai"><h4>Marcus Webb</h4><p>CTO, Aether Systems</p></div></div></div></div>
+        <div class="t-slide"><div class="t-card"><div class="t-stars">★★★★★</div><p class="t-quote">From day one, the team understood our brand DNA better than any agency we had ever worked with. The final product won us an Awwwards SOTD and helped us close our Series B. Phenomenal.</p><div class="t-author"><div class="av">A</div><div class="ai"><h4>Anya Patel</h4><p>Founder, Velo Analytics</p></div></div></div></div>
+        <div class="t-slide"><div class="t-card"><div class="t-stars">★★★★★</div><p class="t-quote">They delivered our complete rebrand and new website in 8 weeks — on time and well above expectations. The strategic insights they brought were worth as much as the design work itself.</p><div class="t-author"><div class="av">J</div><div class="ai"><h4>James Rivera</h4><p>VP Marketing, Prism Media</p></div></div></div></div>
+      </div>
+      <div class="c-dots">
+        <button class="dot on" data-i="0"></button>
+        <button class="dot" data-i="1"></button>
+        <button class="dot" data-i="2"></button>
+        <button class="dot" data-i="3"></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 8. CTA BANNER                                       -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section id="cta">
+  <div class="container">
+    <div class="cta-box fade-up">
+      <div class="section-tag" style="display:inline-flex;margin-bottom:1.5rem">✦ Let's Build Together</div>
+      <h2 class="cta-title">Ready to create something<br><span class="text-accent">extraordinary?</span></h2>
+      <p class="cta-sub">Join 250+ companies that chose Luminary to transform their digital presence. Let's start with a free strategy session.</p>
+      <div class="cta-btns">
+        <a href="#" class="btn btn-p">
+          Book a Free Call
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#gallery" class="btn btn-s">View Our Portfolio</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- 9. FOOTER                                           -->
+<!-- ═══════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="ft-grid">
+      <div class="ft-brand">
+        <a href="#" class="logo">Lumi<span>nary</span></a>
+        <p>Award-winning digital agency crafting exceptional web experiences, brand identities, and AI-powered products since 2016.</p>
+        <div class="ft-social">
+          <a href="#" class="soc">𝕏</a>
+          <a href="#" class="soc">in</a>
+          <a href="#" class="soc">ig</a>
+          <a href="#" class="soc">gh</a>
+        </div>
+      </div>
+      <div class="ft-col">
+        <h4>Services</h4>
+        <ul>
+          <li><a href="#">Web Design</a></li>
+          <li><a href="#">Product Strategy</a></li>
+          <li><a href="#">AI Integration</a></li>
+          <li><a href="#">Brand Identity</a></li>
+          <li><a href="#">Motion Design</a></li>
+        </ul>
+      </div>
+      <div class="ft-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About Us</a></li>
+          <li><a href="#">Our Work</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Press</a></li>
+        </ul>
+      </div>
+      <div class="ft-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="#">hello@luminary.co</a></li>
+          <li><a href="#">+1 (415) 000-0000</a></li>
+          <li><a href="#">San Francisco, CA</a></li>
+          <li><a href="#">London, UK</a></li>
+          <li><a href="#">Tokyo, JP</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="ft-bottom">
+      <p>© 2024 Luminary Agency. All rights reserved.</p>
+      <div class="ft-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Cookie Policy</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   SCROLL PROGRESS BAR
+   Reads scrollY / maxScroll and sets width as %
+═══════════════════════════════════════════════════ */
+const progress = document.getElementById('progress');
+
+/* ═══════════════════════════════════════════════════
+   STICKY HEADER — shrinks + blur after 80px scroll
+═══════════════════════════════════════════════════ */
+const header = document.getElementById('header');
+
+/* ═══════════════════════════════════════════════════
+   PARALLAX HERO BACKGROUND
+   #hero-bg translates at 40% of scroll speed,
+   creating depth between BG and foreground content
+═══════════════════════════════════════════════════ */
+const heroBg  = document.getElementById('hero-bg');
+const heroEl  = document.getElementById('hero');
+
+function onScroll() {
+  const y = window.scrollY;
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+
+  // Progress bar
+  progress.style.width = (y / max * 100) + '%';
+
+  // Header shrink
+  header.classList.toggle('scrolled', y > 80);
+
+  // Parallax: only while hero is in view
+  if (y < heroEl.offsetHeight) {
+    heroBg.style.transform = `translateY(${y * 0.4}px)`;
+  }
+}
+
+// Throttle with rAF for smooth 60fps updates
+let rafPending = false;
+window.addEventListener('scroll', () => {
+  if (!rafPending) {
+    rafPending = true;
+    requestAnimationFrame(() => { onScroll(); rafPending = false; });
+  }
+}, { passive: true });
+onScroll(); // init
+
+/* ═══════════════════════════════════════════════════
+   INTERSECTION OBSERVER — fade-up / fade-in
+   Adds .visible when element enters viewport
+═══════════════════════════════════════════════════ */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.14, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.fade-up, .fade-in').forEach(el => io.observe(el));
+
+/* ═══════════════════════════════════════════════════
+   COUNTER ANIMATION (Stats section)
+   Ease-out cubic interpolation over 2 seconds
+═══════════════════════════════════════════════════ */
+function runCounter(el) {
+  const target = +el.dataset.target;
+  const suffix = el.dataset.suffix || '';
+  const dur = 2000, steps = 60;
+  let step = 0;
+  const t = setInterval(() => {
+    step++;
+    const eased = 1 - Math.pow(1 - step / steps, 3);
+    el.textContent = Math.round(target * eased) + suffix;
+    if (step >= steps) { clearInterval(t); el.textContent = target + suffix; }
+  }, dur / steps);
+}
+
+const statsIO = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.querySelectorAll('.s-num').forEach(runCounter);
+      statsIO.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.3 });
+statsIO.observe(document.getElementById('stats'));
+
+/* ═══════════════════════════════════════════════════
+   TEXT REVEAL — word-by-word animation
+   Splits paragraph text into <span class="rw">,
+   IntersectionObserver adds .visible on each word
+   with staggered transition-delay
+═══════════════════════════════════════════════════ */
+['rp1','rp2','rp3'].forEach(id => {
+  const p = document.getElementById(id);
+  if (!p) return;
+  const words = p.textContent.trim().split(/\s+/);
+  p.innerHTML = words.map((w, i) =>
+    `<span class="rw" style="transition-delay:${i * 0.038}s">${w}&nbsp;</span>`
+  ).join('');
+
+  const rIO = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.rw').forEach(s => s.classList.add('visible'));
+        rIO.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.2 });
+  rIO.observe(p);
+});
+
+/* ═══════════════════════════════════════════════════
+   HORIZONTAL SCROLL GALLERY
+   Mouse drag-to-scroll + arrow buttons
+   Momentum via velocity tracking
+═══════════════════════════════════════════════════ */
+const gs = document.getElementById('gscroll');
+let drag = false, startX = 0, scrollLeft = 0, vel = 0, lastX = 0;
+
+gs.addEventListener('mousedown', e => {
+  drag = true; startX = e.pageX; scrollLeft = gs.scrollLeft;
+  vel = 0; lastX = e.pageX;
+  gs.style.cursor = 'grabbing';
+  gs.style.userSelect = 'none';
+});
+gs.addEventListener('mousemove', e => {
+  if (!drag) return;
+  vel = e.pageX - lastX; lastX = e.pageX;
+  gs.scrollLeft = scrollLeft - (e.pageX - startX) * 1.2;
+});
+['mouseup','mouseleave'].forEach(ev =>
+  gs.addEventListener(ev, () => {
+    drag = false;
+    gs.style.cursor = 'grab';
+    gs.style.userSelect = '';
+    // Momentum: keep scrolling briefly after release
+    let momentum = vel;
+    const glide = () => {
+      if (Math.abs(momentum) < 0.5) return;
+      gs.scrollLeft -= momentum;
+      momentum *= 0.92;
+      requestAnimationFrame(glide);
+    };
+    glide();
+  })
+);
+document.getElementById('gn').onclick = () => gs.scrollBy({ left: 400, behavior: 'smooth' });
+document.getElementById('gp').onclick = () => gs.scrollBy({ left: -400, behavior: 'smooth' });
+
+// Touch support for mobile
+gs.addEventListener('touchstart', e => { startX = e.touches[0].pageX; scrollLeft = gs.scrollLeft; }, { passive: true });
+gs.addEventListener('touchmove', e => { gs.scrollLeft = scrollLeft - (e.touches[0].pageX - startX) * 1.2; }, { passive: true });
+
+/* ═══════════════════════════════════════════════════
+   VIDEO PLAY ON SCROLL (main showcase video)
+   iframe src stays as about:blank until 40% visible;
+   then the real YouTube src is injected — video autoplays
+═══════════════════════════════════════════════════ */
+const mainVid  = document.getElementById('main-vid');
+const mainWrap = document.getElementById('main-vid-wrap');
+let vidLoaded  = false;
+
+const vidIO = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting && !vidLoaded) {
+      vidLoaded = true;
+      mainVid.src = mainVid.dataset.src;
+      vidIO.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.4 });
+vidIO.observe(mainWrap);
+
+/* ═══════════════════════════════════════════════════
+   VIDEO CARDS — hover to play
+   Injects iframe src on first mouseenter to avoid
+   loading all videos upfront (saves bandwidth)
+═══════════════════════════════════════════════════ */
+document.querySelectorAll('.vc').forEach(card => {
+  const iframe = card.querySelector('.vc-iframe');
+  let loaded = false;
+  card.addEventListener('mouseenter', () => {
+    if (!loaded && iframe.dataset.src) {
+      iframe.src = iframe.dataset.src;
+      loaded = true;
+    }
+  });
+});
+
+/* ═══════════════════════════════════════════════════
+   TESTIMONIALS CAROUSEL
+   Dot + arrow navigation; auto-advances every 5s;
+   pauses on hover; keyboard ← → supported
+═══════════════════════════════════════════════════ */
+const track = document.getElementById('ctrack');
+const dots  = document.querySelectorAll('.dot');
+let slide = 0;
+const total = dots.length;
+
+function goTo(i) {
+  slide = ((i % total) + total) % total;
+  track.style.transform = `translateX(-${slide * 100}%)`;
+  dots.forEach((d, idx) => d.classList.toggle('on', idx === slide));
+}
+
+document.getElementById('cnext').onclick = () => goTo(slide + 1);
+document.getElementById('cprev').onclick = () => goTo(slide - 1);
+dots.forEach(d => d.addEventListener('click', () => goTo(+d.dataset.i)));
+
+let timer = setInterval(() => goTo(slide + 1), 5000);
+const cw = track.closest('.carousel-wrap');
+cw.addEventListener('mouseenter', () => clearInterval(timer));
+cw.addEventListener('mouseleave', () => { timer = setInterval(() => goTo(slide + 1), 5000); });
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')  goTo(slide - 1);
+  if (e.key === 'ArrowRight') goTo(slide + 1);
+});
+
+/* ═══════════════════════════════════════════════════
+   SMOOTH SCROLL-SNAP between major sections
+   Uses scroll-snap-type on the html element at
+   "proximity" so it only snaps when near a boundary
+═══════════════════════════════════════════════════ */
+document.querySelectorAll('section, footer').forEach(s => {
+  s.style.scrollSnapAlign = 'start';
+});
+document.documentElement.style.scrollSnapType = 'y proximity';
+</script>
+</body>
+</html>
