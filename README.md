@@ -151,6 +151,147 @@ El sistema abre **WhatsApp Web** automáticamente con el número del cliente pre
 
 ---
 
+## Capa 1 — Captura y enrutamiento de leads
+
+### Flujo completo
+
+```
+[Meta Ads / n8n / cualquier fuente]
+          │
+          │  POST /webhook/lead
+          │  Header: X-Webhook-Token: <WEBHOOK_TOKEN>
+          │  Body: { negocio_id, nombre, telefono, ciudad, origen }
+          ▼
+    ┌─────────────┐
+    │  Flask CRM  │
+    └──────┬──────┘
+           │
+           ├─ ¿Token inválido? ──────────────────────────→ 401 Unauthorized
+           │
+           ├─ ¿Campos faltantes? ────────────────────────→ 400 Bad Request
+           │
+           ├─ ¿negocio_id no existe? ────────────────────→ 404 Not Found
+           │
+           ├─ ¿Teléfono ya registrado (mismo negocio)? ──→ 200 { duplicado: true }
+           │                                               (sin notificaciones)
+           │
+           ├─ Guarda en tabla clientes (con campo origen)
+           │
+           ├──── Thread 1 (async) ────→ Email al dueño vía SMTP
+           │                                  └─→ eventos_log { email_ok | email_error }
+           │
+           └──── Thread 2 (async) ────→ POST a N8N_WEBHOOK_URL_LEAD_BIENVENIDA
+                                              └─→ eventos_log { n8n_ok | n8n_error }
+                                              │
+                                              ▼
+                                        [Workflow n8n]
+                                              │
+                                              └─→ WhatsApp al cliente
+                                                  (mensaje_bienvenida del negocio)
+
+    Respuesta al emisor: 201 { ok: true, cliente_id: N }
+    (independientemente del resultado de las notificaciones)
+```
+
+### Configurar las variables de entorno
+
+Copia `.env.example` a `.env` y ajusta los valores:
+
+```bash
+cp .env.example .env
+```
+
+Variables obligatorias para producción:
+
+| Variable | Descripción |
+|---|---|
+| `WEBHOOK_TOKEN` | Token secreto para autenticar el webhook entrante |
+| `SMTP_HOST` | Servidor SMTP (ej: `smtp.gmail.com`) |
+| `SMTP_PORT` | Puerto SMTP (ej: `587` para TLS) |
+| `SMTP_USER` | Usuario / correo remitente |
+| `SMTP_PASS` | Contraseña o App Password de Gmail |
+| `SMTP_FROM` | Nombre y correo que aparece en el "De:" |
+| `N8N_WEBHOOK_URL_LEAD_BIENVENIDA` | URL del webhook en n8n que envía el WhatsApp |
+| `APP_URL` | URL pública del CRM (se incluye en el email) |
+
+En **Railway**: ve a tu proyecto → Variables → agrega cada una.
+
+### Probar localmente con curl
+
+**Lead válido (AnaMaya, negocio_id=6):**
+```bash
+curl -X POST http://localhost:5000/webhook/lead \
+  -H "Content-Type: application/json" \
+  -H "X-Webhook-Token: $WEBHOOK_TOKEN" \
+  -d '{
+    "negocio_id": 6,
+    "nombre": "María López",
+    "telefono": "3109876543",
+    "ciudad": "Anapoima",
+    "origen": "Meta Ads",
+    "mensaje_inicial": "Quiero información sobre masajes"
+  }'
+# Esperado: 201 { "ok": true, "cliente_id": N }
+```
+
+**Duplicado (mismo teléfono):**
+```bash
+curl -X POST http://localhost:5000/webhook/lead \
+  -H "Content-Type: application/json" \
+  -H "X-Webhook-Token: $WEBHOOK_TOKEN" \
+  -d '{"negocio_id": 6, "nombre": "María López", "telefono": "3109876543", "origen": "Meta Ads"}'
+# Esperado: 200 { "ok": false, "duplicado": true }
+```
+
+**Token inválido:**
+```bash
+curl -X POST http://localhost:5000/webhook/lead \
+  -H "Content-Type: application/json" \
+  -H "X-Webhook-Token: token-incorrecto" \
+  -d '{"negocio_id": 6, "nombre": "X", "telefono": "3000000000"}'
+# Esperado: 401
+```
+
+**Script de QA rápido** (más cómodo que curl):
+```bash
+python scripts/test_lead.py
+```
+
+### Simular un fallo de notificación
+
+Para probar que el endpoint responde 201 aunque el correo falle:
+
+```bash
+# Configura un SMTP falso
+SMTP_HOST=smtp.inexistente.com SMTP_USER=a SMTP_PASS=b \
+python -c "
+from app import app
+with app.test_client() as c:
+    r = c.post('/webhook/lead',
+        json={'negocio_id': 6, 'nombre': 'Test', 'telefono': '3199999999', 'origen': 'test'},
+        headers={'X-Webhook-Token': 'token-aqui'})
+    print(r.status_code, r.get_json())
+"
+# Esperado: 201 (el fallo SMTP queda en eventos_log, no rompe la respuesta)
+```
+
+Para inspeccionar `eventos_log` después de un fallo:
+```bash
+sqlite3 tecnocel.db "SELECT tipo, error, created_at FROM eventos_log ORDER BY created_at DESC LIMIT 10;"
+```
+
+### Correr los tests unitarios
+
+```bash
+# Con unittest (sin dependencias extra)
+python -m unittest discover tests/ -v
+
+# O con pytest si lo tienes instalado
+python -m pytest tests/ -v
+```
+
+---
+
 ## Solución de problemas
 
 | Error | Solución |

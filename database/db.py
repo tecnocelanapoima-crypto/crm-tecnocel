@@ -2,7 +2,11 @@ import sqlite3
 import os
 from flask import g
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
+# TECNOCEL_DB_PATH permite sobreescribir la ruta en tests (no usar en producción)
+DB_PATH = (
+    os.environ.get('TECNOCEL_DB_PATH')
+    or os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tecnocel.db')
+)
 
 def get_db():
     if 'db' not in g:
@@ -104,13 +108,117 @@ def init_db():
         )
     ''')
 
-    # ── Migraciones seguras para suscripción ──────────────────────────────
+    # ── Tabla de leads AnaMaya ──
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS leads_anamaya (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre          TEXT    NOT NULL,
+            telefono        TEXT    NOT NULL,
+            ciudad          TEXT    NOT NULL,
+            origen          TEXT    NOT NULL DEFAULT 'Meta Ads',
+            fecha_creacion  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # ── Tabla de configuración por negocio (Capa 1) ──
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS negocio_config (
+            id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+            negocio_id              INTEGER NOT NULL UNIQUE,
+            nombre_dueno            TEXT,
+            correo_notificaciones   TEXT,
+            telegram_chat_id        TEXT,
+            whatsapp_dueno          TEXT,
+            mensaje_bienvenida_lead TEXT,
+            activo                  INTEGER NOT NULL DEFAULT 1,
+            created_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (negocio_id) REFERENCES negocios(id) ON DELETE CASCADE
+        )
+    ''')
+
+    # Trigger para mantener updated_at actualizado automáticamente
+    c.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_negocio_config_updated_at
+        AFTER UPDATE ON negocio_config
+        FOR EACH ROW
+        BEGIN
+            UPDATE negocio_config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+        END
+    ''')
+
+    # Semillas iniciales — INSERT OR IGNORE (no sobreescribe si ya existen)
+    _semillas_config = [
+        (
+            1,
+            'Andrés Urrego',
+            'tecnocelanapoima@gmail.com',
+            None,
+            '573124837718',
+            'Hola {nombre}, gracias por contactarnos en Tecnocel. '
+            'En breve uno de nuestros asesores te atenderá. 📱',
+        ),
+        (
+            6,
+            'Abel',
+            'tecnocelanapoima@gmail.com',
+            None,
+            '573155514708',
+            'Hola {nombre}, bienvenido/a a AnaMaya Wellness 🌿. '
+            'Pronto te contactaremos para agendar tu sesión.',
+        ),
+    ]
+    for _s in _semillas_config:
+        try:
+            c.execute('''
+                INSERT OR IGNORE INTO negocio_config
+                    (negocio_id, nombre_dueno, correo_notificaciones,
+                     telegram_chat_id, whatsapp_dueno, mensaje_bienvenida_lead)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', _s)
+        except Exception:
+            pass  # negocio_id no existe aún en esta DB
+
+    # Migración: actualizar placeholders viejos si Railway ya tenía la tabla
+    _actualizaciones_config = [
+        (
+            'Andrés Urrego', 'tecnocelanapoima@gmail.com', '573124837718',
+            1, 'PLACEHOLDER_NOMBRE_DUENO_TECNOCEL',
+        ),
+        (
+            'Abel', 'tecnocelanapoima@gmail.com', '573155514708',
+            6, 'PLACEHOLDER_NOMBRE_DUENO_ANAMAYA',
+        ),
+    ]
+    for _a in _actualizaciones_config:
+        try:
+            c.execute('''
+                UPDATE negocio_config
+                SET nombre_dueno=?, correo_notificaciones=?, whatsapp_dueno=?
+                WHERE negocio_id=? AND nombre_dueno=?
+            ''', _a)
+        except Exception:
+            pass
+
+    # ── Tabla de log de eventos (Capa 1) ──
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS eventos_log (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo       TEXT    NOT NULL,
+            payload    TEXT,
+            error      TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # ── Migraciones seguras ────────────────────────────────────────────────
     migraciones = [
-        "ALTER TABLE negocios ADD COLUMN fecha_vencimiento TEXT DEFAULT NULL",
-        "ALTER TABLE negocios ADD COLUMN plan_nombre TEXT DEFAULT 'basico'",
-        "ALTER TABLE negocios ADD COLUMN dias_gracia INTEGER DEFAULT 3",
-        "ALTER TABLE negocios ADD COLUMN logo_base64 TEXT DEFAULT NULL",
-        "ALTER TABLE negocios ADD COLUMN slogan TEXT DEFAULT NULL",
+        "ALTER TABLE negocios  ADD COLUMN fecha_vencimiento TEXT DEFAULT NULL",
+        "ALTER TABLE negocios  ADD COLUMN plan_nombre TEXT DEFAULT 'basico'",
+        "ALTER TABLE negocios  ADD COLUMN dias_gracia INTEGER DEFAULT 3",
+        "ALTER TABLE negocios  ADD COLUMN logo_base64 TEXT DEFAULT NULL",
+        "ALTER TABLE negocios  ADD COLUMN slogan TEXT DEFAULT NULL",
+        "ALTER TABLE clientes  ADD COLUMN origen TEXT DEFAULT NULL",
     ]
     for sql in migraciones:
         try:
