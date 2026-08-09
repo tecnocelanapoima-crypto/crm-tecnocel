@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from database.db import get_db
 from routes.auth import login_required
 from datetime import date
+import urllib.parse
 
 ventas_bp = Blueprint('ventas', __name__)
 
@@ -191,3 +192,61 @@ def eliminar(id):
         flash('Venta no encontrada.', 'danger')
     db.close()
     return redirect(url_for('ventas.lista'))
+
+
+@ventas_bp.route('/rapida', methods=['POST'])
+@login_required
+def venta_rapida():
+    """Venta exprés desde el modal del dashboard. Devuelve JSON."""
+    nid          = session['negocio_id']
+    producto     = request.form.get('producto', '').strip()
+    precio_str   = request.form.get('precio', '0').strip()
+    tipo_pago    = request.form.get('tipo_pago', 'Efectivo').strip()
+    cliente_nombre = request.form.get('cliente_nombre', '').strip()
+    cliente_tel  = request.form.get('cliente_telefono', '').strip()
+    fecha        = request.form.get('fecha', date.today().isoformat())
+
+    if not producto:
+        return jsonify({'ok': False, 'error': 'Producto requerido'}), 400
+    try:
+        precio = float(precio_str)
+    except ValueError:
+        return jsonify({'ok': False, 'error': 'Precio inválido'}), 400
+
+    db = get_db()
+
+    if cliente_tel:
+        cliente = db.execute(
+            'SELECT id, nombre FROM clientes WHERE negocio_id=? AND telefono=?',
+            (nid, cliente_tel)
+        ).fetchone()
+    else:
+        cliente = None
+
+    if cliente:
+        cliente_id = cliente['id']
+        nombre_cliente = cliente['nombre']
+    else:
+        nombre_cliente = cliente_nombre or 'Cliente Exprés'
+        cur = db.execute(
+            'INSERT INTO clientes (negocio_id, nombre, telefono) VALUES (?,?,?)',
+            (nid, nombre_cliente, cliente_tel or None)
+        )
+        cliente_id = cur.lastrowid
+
+    db.execute(
+        'INSERT INTO ventas (negocio_id, cliente_id, producto, precio, tipo_pago, fecha) VALUES (?,?,?,?,?,?)',
+        (nid, cliente_id, producto, precio, tipo_pago, fecha)
+    )
+    db.commit()
+
+    whatsapp_url = None
+    if cliente_tel:
+        numero = ''.join(c for c in cliente_tel if c.isdigit())
+        if len(numero) == 10:
+            numero = '57' + numero
+        msg = (f"Hola {nombre_cliente} \U0001f44b\n\nGracias por tu compra en {session.get('negocio_nombre','el negocio')}.\n\n"
+               f"\U0001f4e6 {producto}\n\U0001f4b0 $ {precio:,.0f}\n\U0001f4b3 {tipo_pago}\n\n¡Gracias! \U0001f64f")
+        whatsapp_url = f"https://wa.me/{numero}?text={urllib.parse.quote(msg)}"
+
+    return jsonify({'ok': True, 'whatsapp_url': whatsapp_url})
