@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+{% block title %}Juego de Aventura — Tecnocel CRM{% endblock %}
+
+{% block content %}
+<style>
+  :root { --jc: #00CFFF; }
+  .hero-game {
+    background: linear-gradient(135deg, #050D1A 0%, #0A1628 40%, #0D1F3C 100%);
+    border: 1px solid rgba(0,207,255,0.2);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+  .hero-game::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(0,207,255,0.05) 0%, transparent 60%);
+    animation: rotar 20s linear infinite;
+  }
+  @keyframes rotar { to { transform: rotate(360deg); } }
+  .game-title {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #00CFFF, #B388FF, #FFD740);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+    text-shadow: none;
+    position: relative;
+  }
+  .game-subtitle {
+    color: rgba(160,196,216,0.7);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+  .crystal-icon {
+    font-size: 5rem;
+    filter: drop-shadow(0 0 20px rgba(0,207,255,0.8));
+    animation: float 3s ease-in-out infinite;
+    position: relative;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  .start-card {
+    background: rgba(0,207,255,0.05);
+    border: 1px solid rgba(0,207,255,0.2);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .btn-start {
+    background: linear-gradient(135deg, #00CFFF, #0077B6);
+    border: none;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1.1rem;
+    padding: 14px 40px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all .3s;
+    box-shadow: 0 0 20px rgba(0,207,255,0.4);
+    letter-spacing: .05em;
+    width: 100%;
+    margin-top: 1rem;
+  }
+  .btn-start:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 35px rgba(0,207,255,0.7);
+  }
+  .btn-continuar {
+    background: linear-gradient(135deg, #00E676, #007B33);
+    border: none;
+    color: #fff;
+    font-weight: 800;
+    font-size: 1rem;
+    padding: 12px 32px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all .3s;
+    box-shadow: 0 0 20px rgba(0,230,118,0.4);
+    width: 100%;
+    margin-bottom: 0.75rem;
+  }
+  .btn-continuar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 30px rgba(0,230,118,0.7);
+  }
+  .btn-nuevo-sm {
+    background: transparent;
+    border: 1px solid rgba(255,100,100,0.4);
+    color: rgba(255,150,150,0.8);
+    font-size: .875rem;
+    padding: 8px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .3s;
+    width: 100%;
+  }
+  .btn-nuevo-sm:hover {
+    border-color: rgba(255,80,80,0.7);
+    color: #ff6464;
+    background: rgba(255,80,80,0.08);
+  }
+  .input-nombre {
+    background: rgba(0,207,255,0.05);
+    border: 1px solid rgba(0,207,255,0.3);
+    color: #e0f0ff;
+    border-radius: 10px;
+    padding: 12px 16px;
+    width: 100%;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .input-nombre:focus {
+    border-color: #00CFFF;
+    box-shadow: 0 0 12px rgba(0,207,255,0.3);
+  }
+  .input-nombre::placeholder { color: rgba(160,196,216,0.4); }
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  .level-card {
+    background: rgba(0,207,255,0.04);
+    border: 1px solid rgba(0,207,255,0.12);
+    border-radius: 12px;
+    padding: 1rem 0.75rem;
+    text-align: center;
+    transition: all .25s;
+  }
+  .level-card:hover {
+    background: rgba(0,207,255,0.08);
+    border-color: rgba(0,207,255,0.3);
+    transform: translateY(-2px);
+  }
+  .level-card .lc-num {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: rgba(0,207,255,0.7);
+  }
+  .level-card .lc-name {
+    font-size: .72rem;
+    color: rgba(160,196,216,0.6);
+    margin-top: 4px;
+  }
+  .level-card .lc-stars {
+    font-size: .65rem;
+    color: #FFD740;
+    margin-top: 6px;
+  }
+  .level-card .lc-icon {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin: 1.5rem 0;
+    position: relative;
+  }
+  .stat-item {
+    text-align: center;
+  }
+  .stat-item .sv {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #00CFFF;
+  }
+  .stat-item .sl {
+    font-size: .72rem;
+    color: rgba(160,196,216,0.5);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .progress-save {
+    background: rgba(0,230,118,0.05);
+    border: 1px solid rgba(0,230,118,0.2);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .progress-save h6 {
+    color: #00E676;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  .hp-mini {
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.1);
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .hp-mini-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .5s;
+  }
+  .section-title {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: rgba(160,196,216,0.4);
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(0,207,255,0.08);
+    padding-bottom: 0.5rem;
+  }
+</style>
+
+<div class="hero-game">
+  <div class="crystal-icon mb-3">
+    <i class="bi bi-gem" style="color:#00CFFF"></i>
+  </div>
+  <div class="game-title">El Héroe de las Tierras Olvidadas</div>
+  <div class="game-subtitle">10 niveles de dificultad creciente — ¿Puedes llegar al Castillo Oscuro?</div>
+
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="sv">10</div>
+      <div class="sl">Niveles</div>
+    </div>
+    <div class="stat-item">
+      <div class="sv">{{ puntuacion_maxima }}</div>
+      <div class="sl">Pts. máx.</div>
+    </div>
+    <div class="stat-item">
+      <div class="sv">100</div>
+      <div class="sl">Vida inicial</div>
+    </div>
+    <div class="stat-item">
+      <div class="sv">3</div>
+      <div class="sl">Opciones</div>
+    </div>
+  </div>
+
+  {% if juego and juego.estado == 'jugando' %}
+  <!-- Partida guardada -->
+  <div class="start-card">
+    <div class="progress-save">
+      <h6><i class="bi bi-save-fill me-2"></i>Partida en progreso</h6>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span style="color:rgba(160,196,216,0.8);font-weight:600;">{{ juego.nombre }}</span>
+        <span class="badge" style="background:rgba(0,207,255,0.15);color:#00CFFF;border:1px solid rgba(0,207,255,0.3);">
+          Nivel {{ juego.nivel }} / {{ total_niveles }}
+        </span>
+      </div>
+      <div class="d-flex justify-content-between" style="font-size:.8rem;color:rgba(160,196,216,0.6);">
+        <span><i class="bi bi-heart-fill me-1" style="color:#ff4444"></i>{{ juego.vida }} HP</span>
+        <span><i class="bi bi-star-fill me-1" style="color:#FFD740"></i>{{ juego.puntos }} pts</span>
+      </div>
+      <div class="hp-mini mt-2">
+        <div class="hp-mini-fill" style="width:{{ juego.vida }}%;background:{% if juego.vida > 60 %}#00E676{% elif juego.vida > 30 %}#FFD740{% else %}#FF3D00{% endif %}"></div>
+      </div>
+    </div>
+
+    <button class="btn-continuar" onclick="window.location.href='{{ url_for('juego.jugar') }}'">
+      <i class="bi bi-play-circle-fill me-2"></i>Continuar partida
+    </button>
+    <form method="POST" action="{{ url_for('juego.reiniciar') }}" style="margin-top:.5rem">
+      <button type="submit" class="btn-nuevo-sm">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Abandonar y comenzar nuevo juego
+      </button>
+    </form>
+  </div>
+
+  {% else %}
+  <!-- Nuevo juego -->
+  <div class="start-card">
+    <form method="POST" action="{{ url_for('juego.nuevo') }}">
+      <div class="mb-3 text-start">
+        <label style="color:rgba(160,196,216,0.7);font-size:.85rem;font-weight:600;margin-bottom:.5rem;display:block;">
+          <i class="bi bi-person-fill me-1"></i>Nombre del héroe
+        </label>
+        <input type="text" name="nombre" class="input-nombre"
+               placeholder="Escribe tu nombre de aventurero..."
+               maxlength="30" autocomplete="off">
+      </div>
+      <button type="submit" class="btn-start">
+        <i class="bi bi-play-fill me-2"></i>¡COMENZAR AVENTURA!
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Cuadrícula de niveles -->
+<div class="section-title"><i class="bi bi-map me-1"></i>Los 10 desafíos</div>
+<div class="level-grid">
+  {% set niveles_info = [
+    (1, 'bi-tree-fill', '#00E676', 'El Bosque Susurrante'),
+    (2, 'bi-water', '#2979FF', 'El Río de las Sombras'),
+    (3, 'bi-moon-stars-fill', '#B388FF', 'La Caverna del Eco'),
+    (4, 'bi-sun-fill', '#FF6D00', 'El Desierto Ardiente'),
+    (5, 'bi-stars', '#FFD740', 'La Torre del Mago'),
+    (6, 'bi-gem', '#00E5FF', 'El Laberinto de Cristal'),
+    (7, 'bi-snow', '#82B1FF', 'El Abismo Helado'),
+    (8, 'bi-building-fill', '#A5D6A7', 'Las Ruinas Antiguas'),
+    (9, 'bi-fire', '#FF3D00', 'El Volcán de Fuego'),
+    (10, 'bi-shield-fill-exclamation', '#B71C1C', 'El Castillo Oscuro'),
+  ] %}
+  {% for num, ico, col, name in niveles_info %}
+  <div class="level-card">
+    <div class="lc-icon"><i class="{{ ico }}" style="color:{{ col }}"></i></div>
+    <div class="lc-num" style="color:{{ col }}">{{ num }}</div>
+    <div class="lc-name">{{ name }}</div>
+    <div class="lc-stars">{% for i in range(num) %}★{% endfor %}{% for i in range(10 - num) %}<span style="opacity:.2">★</span>{% endfor %}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Descripción del juego -->
+<div class="row mt-4 g-3">
+  <div class="col-md-4">
+    <div class="level-card" style="padding:1.5rem">
+      <i class="bi bi-heart-fill fs-3 mb-2" style="color:#ff4444"></i>
+      <div style="color:rgba(160,196,216,0.9);font-weight:700;margin-bottom:.4rem">Sistema de Vida</div>
+      <div style="color:rgba(160,196,216,0.55);font-size:.82rem">Comienzas con 100 HP. Las malas decisiones te cuestan vida. Si llega a 0, es Game Over.</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="level-card" style="padding:1.5rem">
+      <i class="bi bi-star-fill fs-3 mb-2" style="color:#FFD740"></i>
+      <div style="color:rgba(160,196,216,0.9);font-weight:700;margin-bottom:.4rem">Puntuación</div>
+      <div style="color:rgba(160,196,216,0.55);font-size:.82rem">Cada nivel tiene 3 opciones. La mejor decisión otorga más puntos. Intenta maximizar tu puntaje total.</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="level-card" style="padding:1.5rem">
+      <i class="bi bi-shield-fill-exclamation fs-3 mb-2" style="color:#B71C1C"></i>
+      <div style="color:rgba(160,196,216,0.9);font-weight:700;margin-bottom:.4rem">Dificultad</div>
+      <div style="color:rgba(160,196,216,0.55);font-size:.82rem">Cada nivel aumenta la dificultad. Los niveles 5, 9 y 10 tienen encuentros especiales con jefes.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

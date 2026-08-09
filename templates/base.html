@@ -161,6 +161,7 @@
                     <a class="logo-dropdown-item" href="{{ url_for('ventas.lista') }}"><i class="bi bi-cart-fill"></i>Ventas</a>
                     <a class="logo-dropdown-item" href="{{ url_for('inventario.lista') }}"><i class="bi bi-box-seam-fill"></i>Inventario</a>
                     <a class="logo-dropdown-item" href="{{ url_for('finanzas.lista') }}"><i class="bi bi-calculator-fill"></i>Finanzas</a>
+                    <a class="logo-dropdown-item" href="{{ url_for('juego.inicio') }}"><i class="bi bi-controller" style="color:#B388FF"></i>Juego de Aventura</a>
                 </div>
 
                 <!-- Acciones rápidas -->
@@ -247,6 +248,12 @@
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint and 'finanzas' in request.endpoint %}active{% endif %}" href="{{ url_for('finanzas.lista') }}">
                         <i class="bi bi-calculator-fill"></i>Finanzas
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint and 'juego' in request.endpoint %}active{% endif %}" href="{{ url_for('juego.inicio') }}"
+                       style="{% if request.endpoint and 'juego' in request.endpoint %}{% else %}background:rgba(179,136,255,0.07);border-color:rgba(179,136,255,0.25);{% endif %}">
+                        <i class="bi bi-controller me-1"></i>Aventura
                     </a>
                 </li>
             </ul>
