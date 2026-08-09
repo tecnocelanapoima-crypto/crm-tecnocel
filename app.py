@@ -26,6 +26,7 @@ from routes.finanzas  import finanzas_bp
 from routes.ordenes   import ordenes_bp
 from routes.admin          import admin_bp
 from routes.configuracion  import configuracion_bp
+from routes.juego          import juego_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(clientes_bp,  url_prefix='/clientes')
@@ -37,6 +38,7 @@ app.register_blueprint(finanzas_bp,  url_prefix='/finanzas')
 app.register_blueprint(ordenes_bp,  url_prefix='/ordenes')
 app.register_blueprint(admin_bp,         url_prefix='/admin')
 app.register_blueprint(configuracion_bp, url_prefix='/configuracion')
+app.register_blueprint(juego_bp,         url_prefix='/juego')
 
 
 # ── Filtro de moneda Jinja2 ──────────────────────────────────────────────
@@ -86,52 +88,40 @@ def index():
     db  = get_db()
     hoy = date.today().isoformat()
 
-    # ── Tarjetas de resumen — TOTALES ACUMULADOS ───────────────────────────────
-
-    # Total equipos recibidos (todas las órdenes)
     try:
         equipos_hoy = db.execute(
             "SELECT COUNT(*) FROM ordenes WHERE negocio_id = ?", (nid,)
         ).fetchone()[0]
     except Exception: equipos_hoy = 0
 
-    # Equipos listos para entregar
     try:
         equipos_listos = db.execute(
             "SELECT COUNT(*) FROM ordenes WHERE negocio_id = ? AND estado = 'listo'", (nid,)
         ).fetchone()[0]
     except Exception: equipos_listos = 0
 
-    # Total ventas de accesorios/productos — excluye ventas de tipo servicio
     ventas_hoy = db.execute(
         "SELECT COUNT(*) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)
     ).fetchone()[0]
 
-    # Total ingresos por ventas de accesorios/productos — excluye ventas de tipo servicio
     ingresos_ventas_hoy = db.execute(
         "SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)
     ).fetchone()[0]
 
-    # Total abonos recibidos en todas las órdenes (solo informativo)
     try:
         ingresos_abonos_hoy = db.execute(
             "SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)
         ).fetchone()[0]
     except Exception: ingresos_abonos_hoy = 0
 
-    # Total cobrado en órdenes entregadas (costo_final completo)
     try:
         ingresos_ordenes_hoy = db.execute(
             "SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)
         ).fetchone()[0]
     except Exception: ingresos_ordenes_hoy = 0
 
-    # Total recaudado = ventas reales de accesorios + entregas de servicio efectivas (sin duplicados)
     recaudado_hoy = ingresos_ventas_hoy + ingresos_ordenes_hoy
 
-    # ── Datos detallados (SaaS safe) ────────────────────────────────────────
-
-    # Órdenes activas (no entregadas)
     try:
         ordenes_activas = db.execute('''
             SELECT o.id, o.numero_orden, o.marca_modelo, o.problema, o.estado, o.fecha_creacion, o.abono,
@@ -143,7 +133,6 @@ def index():
             LIMIT 10
         ''', (nid,)).fetchall()
 
-        # Detalle para la alerta de WhatsApp
         equipos_listos_detalle = db.execute('''
             SELECT o.numero_orden, o.marca_modelo, c.nombre AS cliente_nombre, c.telefono
             FROM ordenes o
@@ -155,7 +144,6 @@ def index():
         ordenes_activas = []
         equipos_listos_detalle = []
 
-    # Ventas de accesorios recientes — excluye ventas de tipo servicio
     ventas_accesorios_recientes = db.execute('''
         SELECT v.id, v.producto, v.precio, v.tipo_pago, v.fecha_creacion,
                c.nombre AS cliente_nombre
@@ -167,7 +155,6 @@ def index():
         LIMIT 5
     ''', (nid,)).fetchall()
 
-    # Entregas recientes — tomadas directamente de órdenes entregadas (fuente única, sin duplicados)
     try:
         entregas_recientes = db.execute('''
             SELECT o.id,
@@ -212,7 +199,6 @@ def completos():
     nid = session['negocio_id']
     db  = get_db()
 
-    # 1. Ventas de accesorios/productos — excluye TODOS los duplicados de servicios
     ventas = db.execute('''
         SELECT v.id as id, 'Venta' as tipo, v.producto as concepto, v.precio as valor,
                v.fecha as fecha_fin, c.nombre as cliente_nombre, 'success' as color
@@ -222,7 +208,6 @@ def completos():
           AND (v.notas IS NULL OR v.notas NOT LIKE 'Orden %')
     ''', (nid,)).fetchall()
 
-    # 2. Reparaciones entregadas — concepto unificado: marca_modelo + problema
     entregas = db.execute('''
         SELECT o.id as id,
                'Reparación' as tipo,
@@ -235,7 +220,6 @@ def completos():
         WHERE o.negocio_id = ? AND o.estado = 'entregado'
     ''', (nid,)).fetchall()
 
-    # Combinar y ordenar (más reciente primero)
     todo = list(ventas) + list(entregas)
     todo.sort(key=lambda x: x['fecha_fin'] if x['fecha_fin'] else '', reverse=True)
 
@@ -244,10 +228,8 @@ def completos():
     return render_template('completos.html', lista=todo, total=total_recaudado)
 
 
-# ── API: Stats del Dashboard (AJAX) ─────────────────────────────────────────
 @app.route('/dashboard/stats')
 def dashboard_stats():
-    """Devuelve los contadores del Dashboard en JSON para refresco asíncrono."""
     if not session.get('negocio_id'):
         return jsonify({'error': 'no_auth'}), 401
     nid = session['negocio_id']
@@ -259,7 +241,6 @@ def dashboard_stats():
         ingresos_ventas  = db.execute("SELECT COALESCE(SUM(precio), 0) FROM ventas WHERE negocio_id = ? AND producto NOT LIKE 'Servicio: %'", (nid,)).fetchone()[0]
         ingresos_abonos  = db.execute("SELECT COALESCE(SUM(abono), 0) FROM ordenes WHERE negocio_id = ?", (nid,)).fetchone()[0]
         ingresos_ordenes = db.execute("SELECT COALESCE(SUM(costo_final), 0) FROM ordenes WHERE negocio_id = ? AND estado = 'entregado'", (nid,)).fetchone()[0]
-        # Total recaudado = ventas reales + entregas efectivas (sin duplicados)
         recaudado = ingresos_ventas + ingresos_ordenes
         return jsonify({
             'equipos_hoy':     equipos_hoy,
@@ -273,10 +254,8 @@ def dashboard_stats():
         return jsonify({'error': str(e)}), 500
 
 
-# ── API: Buscar cliente por teléfono (AJAX autocompletado) ───────────────────
 @app.route('/api/cliente-por-telefono')
 def cliente_por_telefono():
-    """Busca un cliente por teléfono para autocompletar el nombre."""
     if not session.get('negocio_id'):
         return jsonify({'error': 'no_auth'}), 401
     nid = session['negocio_id']
@@ -329,7 +308,6 @@ def eliminar_completo():
     if tipo == 'Venta':
         db.execute('DELETE FROM ventas WHERE id = ? AND negocio_id = ?', (item_id, nid))
     elif tipo == 'Reparación':
-        # Borrar también cualquier venta duplicada histórica asociada a esta orden
         orden = db.execute(
             'SELECT numero_orden FROM ordenes WHERE id = ? AND negocio_id = ?', (item_id, nid)
         ).fetchone()
