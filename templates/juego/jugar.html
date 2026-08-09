@@ -1,0 +1,560 @@
+{% extends 'base.html' %}
+{% block title %}Nivel {{ nivel.numero }} — {{ nivel.titulo }} | Aventura{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --lc: {{ nivel.color }};
+    --lc-bg: {{ nivel.color }}18;
+    --lc-border: {{ nivel.color }}40;
+  }
+  .game-hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(5,13,26,0.9);
+    border: 1px solid rgba(0,207,255,0.15);
+    border-radius: 14px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+  }
+  .hud-hero {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+  }
+  .hud-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--lc), #0A1628);
+    border: 2px solid var(--lc);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--lc) 40%, transparent);
+  }
+  .hud-nombre {
+    font-weight: 800;
+    color: #e0f0ff;
+    font-size: .9rem;
+  }
+  .hud-nivel-badge {
+    font-size: .7rem;
+    color: var(--lc);
+    font-weight: 600;
+  }
+  .hud-stats {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+  .hud-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+  }
+  .hud-stat-label {
+    font-size: .62rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: rgba(160,196,216,0.45);
+    margin-bottom: 3px;
+  }
+  .hud-stat-val {
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-family: monospace;
+  }
+  .hp-bar-wrap {
+    flex: 1;
+    min-width: 120px;
+    max-width: 200px;
+  }
+  .hp-bar-bg {
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .hp-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .8s cubic-bezier(.4,0,.2,1), background .5s;
+  }
+  .level-progress {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .lp-step {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,207,255,0.2);
+    background: rgba(0,207,255,0.04);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .65rem;
+    font-weight: 800;
+    color: rgba(160,196,216,0.35);
+    flex-shrink: 0;
+    transition: all .3s;
+  }
+  .lp-step.done {
+    background: rgba(0,207,255,0.15);
+    border-color: rgba(0,207,255,0.5);
+    color: #00CFFF;
+  }
+  .lp-step.current {
+    background: var(--lc-bg);
+    border-color: var(--lc);
+    color: var(--lc);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--lc) 50%, transparent);
+    font-size: .75rem;
+  }
+  .lp-line {
+    flex: 1;
+    height: 2px;
+    background: rgba(0,207,255,0.1);
+    border-radius: 1px;
+    min-width: 10px;
+  }
+  .nivel-card {
+    background: linear-gradient(135deg, #050D1A 0%, #0A1628 100%);
+    border: 1px solid var(--lc-border);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    animation: fadeInUp .4s ease;
+    box-shadow: 0 0 30px color-mix(in srgb, var(--lc) 8%, transparent),
+                0 8px 32px rgba(0,0,0,0.3);
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .nivel-header {
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--lc) 12%, #050D1A),
+      color-mix(in srgb, var(--lc) 4%, #050D1A));
+    border-bottom: 1px solid var(--lc-border);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .nivel-icon-wrap {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--lc) 15%, transparent);
+    border: 2px solid var(--lc);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--lc) 40%, transparent);
+    animation: iconPulse 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes iconPulse {
+    0%,100% { box-shadow: 0 0 16px color-mix(in srgb, var(--lc) 40%, transparent); }
+    50% { box-shadow: 0 0 30px color-mix(in srgb, var(--lc) 70%, transparent); }
+  }
+  .nivel-info { flex: 1; }
+  .nivel-num-label {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: color-mix(in srgb, var(--lc) 80%, white);
+    margin-bottom: 2px;
+  }
+  .nivel-titulo {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .nivel-subtitulo {
+    font-size: .8rem;
+    color: rgba(160,196,216,0.6);
+    margin-top: 3px;
+  }
+  .dificultad-stars {
+    color: #FFD740;
+    font-size: .8rem;
+  }
+  .boss-badge {
+    background: linear-gradient(135deg, #B71C1C, #7B0000);
+    color: #ffcdd2;
+    font-size: .7rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,100,100,0.3);
+    box-shadow: 0 0 10px rgba(183,28,28,0.4);
+    animation: bossGlow 1.5s ease-in-out infinite;
+  }
+  @keyframes bossGlow {
+    0%,100% { box-shadow: 0 0 8px rgba(183,28,28,0.4); }
+    50% { box-shadow: 0 0 20px rgba(183,28,28,0.8); }
+  }
+  .nivel-body { padding: 2rem; }
+  .historia-text {
+    color: rgba(190,220,240,0.9);
+    font-size: 1rem;
+    line-height: 1.7;
+    background: rgba(0,207,255,0.03);
+    border-left: 3px solid var(--lc-border);
+    padding: 1.2rem 1.5rem;
+    border-radius: 0 10px 10px 0;
+    margin-bottom: 2rem;
+  }
+  .opciones-title {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: rgba(160,196,216,0.45);
+    margin-bottom: 1rem;
+  }
+  .opciones-grid { display: flex; flex-direction: column; gap: 0.75rem; }
+  .opcion-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(0,207,255,0.04);
+    border: 1px solid rgba(0,207,255,0.18);
+    border-radius: 14px;
+    padding: 1.1rem 1.4rem;
+    cursor: pointer;
+    transition: all .25s;
+    text-align: left;
+    width: 100%;
+    color: rgba(180,210,230,0.85);
+    font-size: .95rem;
+    line-height: 1.5;
+    position: relative;
+    overflow: hidden;
+  }
+  .opcion-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--lc-bg), transparent);
+    opacity: 0;
+    transition: opacity .25s;
+  }
+  .opcion-btn:hover {
+    border-color: var(--lc);
+    color: #fff;
+    transform: translateX(6px);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--lc) 25%, transparent),
+                -4px 0 0 var(--lc);
+  }
+  .opcion-btn:hover::before { opacity: 1; }
+  .opcion-btn:hover .opcion-letra {
+    background: var(--lc);
+    color: #000;
+  }
+  .opcion-letra {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(0,207,255,0.1);
+    border: 1.5px solid rgba(0,207,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900;
+    font-size: .9rem;
+    color: #00CFFF;
+    flex-shrink: 0;
+    transition: all .25s;
+    position: relative;
+  }
+  .opcion-icono {
+    font-size: 1.2rem;
+    color: var(--lc);
+    flex-shrink: 0;
+    transition: transform .25s;
+    position: relative;
+  }
+  .opcion-btn:hover .opcion-icono { transform: scale(1.2); }
+  .opcion-texto { flex: 1; position: relative; }
+  .resultado-card {
+    border-radius: 16px;
+    padding: 1.8rem;
+    margin-bottom: 1.5rem;
+    animation: fadeInUp .4s ease;
+  }
+  .resultado-optima {
+    background: rgba(0,230,118,0.08);
+    border: 1px solid rgba(0,230,118,0.3);
+  }
+  .resultado-media {
+    background: rgba(255,215,64,0.06);
+    border: 1px solid rgba(255,215,64,0.25);
+  }
+  .resultado-mala {
+    background: rgba(255,61,0,0.06);
+    border: 1px solid rgba(255,61,0,0.25);
+  }
+  .resultado-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    animation: bounceIn .5s cubic-bezier(.36,.07,.19,.97) both;
+  }
+  @keyframes bounceIn {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  .resultado-titulo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+  }
+  .resultado-texto {
+    color: rgba(180,210,230,0.85);
+    font-size: .95rem;
+    line-height: 1.65;
+  }
+  .resultado-stats {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  .rs-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: .82rem;
+    font-weight: 700;
+  }
+  .rs-puntos {
+    background: rgba(255,215,64,0.12);
+    border: 1px solid rgba(255,215,64,0.3);
+    color: #FFD740;
+  }
+  .rs-vida-ok {
+    background: rgba(0,230,118,0.1);
+    border: 1px solid rgba(0,230,118,0.3);
+    color: #00E676;
+  }
+  .rs-vida-bad {
+    background: rgba(255,61,0,0.1);
+    border: 1px solid rgba(255,61,0,0.3);
+    color: #FF3D00;
+  }
+  .btn-continuar-game {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    font-weight: 800;
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: all .3s;
+    letter-spacing: .04em;
+  }
+  .btn-next {
+    background: linear-gradient(135deg, var(--lc), color-mix(in srgb, var(--lc) 50%, #000));
+    color: #000;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--lc) 40%, transparent);
+  }
+  .btn-next:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 35px color-mix(in srgb, var(--lc) 70%, transparent);
+  }
+  .btn-gameover {
+    background: linear-gradient(135deg, #B71C1C, #7B0000);
+    color: #ffcdd2;
+    box-shadow: 0 0 20px rgba(183,28,28,0.4);
+  }
+  .btn-gameover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 35px rgba(183,28,28,0.7);
+  }
+  .btn-victory {
+    background: linear-gradient(135deg, #FFD740, #FF6D00);
+    color: #1a0a00;
+    box-shadow: 0 0 20px rgba(255,215,64,0.5);
+  }
+  .btn-victory:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 35px rgba(255,215,64,0.8);
+  }
+  .shake { animation: shake .4s cubic-bezier(.36,.07,.19,.97) both; }
+  @keyframes shake {
+    10%,90% { transform: translate3d(-1px,0,0); }
+    20%,80% { transform: translate3d(2px,0,0); }
+    30%,50%,70% { transform: translate3d(-4px,0,0); }
+    40%,60% { transform: translate3d(4px,0,0); }
+  }
+</style>
+
+<div class="game-hud">
+  <div class="hud-hero">
+    <div class="hud-avatar">
+      <i class="{{ nivel.icono }}" style="color:{{ nivel.color }}"></i>
+    </div>
+    <div>
+      <div class="hud-nombre">{{ juego.nombre }}</div>
+      <div class="hud-nivel-badge">
+        <i class="{{ nivel.icono }} me-1"></i>{{ nivel.titulo }}
+      </div>
+    </div>
+  </div>
+  <div class="hud-stats">
+    <div class="hud-stat hp-bar-wrap">
+      <div class="hud-stat-label"><i class="bi bi-heart-fill me-1" style="color:#ff4444"></i>Vida</div>
+      <div class="hud-stat-val {% if juego.vida <= 25 %}shake{% endif %}"
+           style="color:{% if juego.vida > 60 %}#00E676{% elif juego.vida > 30 %}#FFD740{% else %}#FF3D00{% endif %}">
+        {{ juego.vida }} HP
+      </div>
+      <div class="hp-bar-bg">
+        <div class="hp-bar-fill"
+             style="width:{{ juego.vida }}%;
+                    background:{% if juego.vida > 60 %}linear-gradient(90deg,#00c853,#00E676){% elif juego.vida > 30 %}linear-gradient(90deg,#F57F17,#FFD740){% else %}linear-gradient(90deg,#B71C1C,#FF3D00){% endif %}">
+        </div>
+      </div>
+    </div>
+    <div class="hud-stat">
+      <div class="hud-stat-label"><i class="bi bi-star-fill me-1" style="color:#FFD740"></i>Puntos</div>
+      <div class="hud-stat-val" style="color:#FFD740">{{ juego.puntos }}</div>
+    </div>
+    <div class="hud-stat">
+      <div class="hud-stat-label"><i class="bi bi-layers me-1" style="color:#00CFFF"></i>Nivel</div>
+      <div class="hud-stat-val" style="color:#00CFFF">{{ juego.nivel }} / {{ total_niveles }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="level-progress">
+  {% for i in range(1, total_niveles + 1) %}
+    <div class="lp-step {% if i < juego.nivel %}done{% elif i == juego.nivel %}current{% endif %}"
+         title="Nivel {{ i }}">{{ i }}</div>
+    {% if i < total_niveles %}
+    <div class="lp-line {% if i < juego.nivel %}done{% endif %}"
+         style="{% if i < juego.nivel %}background:rgba(0,207,255,0.3){% endif %}"></div>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<div class="nivel-card">
+  <div class="nivel-header">
+    <div class="nivel-icon-wrap">
+      <i class="{{ nivel.icono }}" style="color:{{ nivel.color }}"></i>
+    </div>
+    <div class="nivel-info">
+      <div class="nivel-num-label">
+        Nivel {{ nivel.numero }} de {{ total_niveles }}
+        {% if nivel.boss %}
+          <span class="boss-badge ms-2"><i class="bi bi-exclamation-triangle-fill me-1"></i>JEFE</span>
+        {% endif %}
+      </div>
+      <div class="nivel-titulo">{{ nivel.titulo }}</div>
+      <div class="nivel-subtitulo">{{ nivel.subtitulo }}</div>
+    </div>
+    <div>
+      <div class="dificultad-stars">
+        {% for i in range(nivel.dificultad) %}★{% endfor %}
+        <span style="opacity:.2">{% for i in range(10 - nivel.dificultad) %}★{% endfor %}</span>
+      </div>
+      <div style="font-size:.65rem;color:rgba(160,196,216,0.4);margin-top:2px;">Dificultad</div>
+    </div>
+  </div>
+
+  <div class="nivel-body">
+    <div class="historia-text">{{ nivel.historia | safe }}</div>
+
+    {% if mostrando and ultimo_resultado %}
+    <div class="resultado-card {% if ultimo_resultado.optima %}resultado-optima{% elif ultimo_resultado.vida_perdida == 0 %}resultado-optima{% elif ultimo_resultado.vida_perdida <= 30 %}resultado-media{% else %}resultado-mala{% endif %}">
+      <div class="resultado-icon">
+        {% if ultimo_resultado.optima %}
+          🏆
+        {% elif ultimo_resultado.vida_perdida <= 30 %}
+          ⚡
+        {% else %}
+          💀
+        {% endif %}
+      </div>
+      <div class="resultado-titulo"
+           style="color:{% if ultimo_resultado.optima %}#00E676{% elif ultimo_resultado.vida_perdida <= 30 %}#FFD740{% else %}#FF3D00{% endif %}">
+        {% if ultimo_resultado.optima %}¡Elección perfecta!
+        {% elif ultimo_resultado.vida_perdida <= 30 %}Decisión aceptable
+        {% else %}Mala decisión...
+        {% endif %}
+      </div>
+      <p class="resultado-texto mb-0">{{ ultimo_resultado.resultado_texto }}</p>
+      <div class="resultado-stats">
+        <span class="rs-badge rs-puntos">
+          <i class="bi bi-plus-circle-fill"></i>+{{ ultimo_resultado.puntos_ganados }} puntos
+        </span>
+        {% if ultimo_resultado.vida_perdida > 0 %}
+        <span class="rs-badge rs-vida-bad">
+          <i class="bi bi-heart-half"></i>-{{ ultimo_resultado.vida_perdida }} HP
+        </span>
+        {% else %}
+        <span class="rs-badge rs-vida-ok">
+          <i class="bi bi-heart-fill"></i>Sin daño
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('juego.continuar') }}">
+      {% set estado = juego.estado %}
+      {% if estado == 'ganado' %}
+      <button type="submit" class="btn-continuar-game btn-victory">
+        <i class="bi bi-trophy-fill me-2"></i>¡VER RESULTADO FINAL!
+      </button>
+      {% elif estado == 'muerto' %}
+      <button type="submit" class="btn-continuar-game btn-gameover">
+        <i class="bi bi-skull me-2"></i>GAME OVER — Ver resultados
+      </button>
+      {% else %}
+      <button type="submit" class="btn-continuar-game btn-next">
+        <i class="bi bi-arrow-right-circle-fill me-2"></i>
+        Continuar al nivel {{ juego.nivel + 1 }}
+        {% if juego.nivel < total_niveles %}— {{ ['El Bosque Susurrante','El Río de las Sombras','La Caverna del Eco','El Desierto Ardiente','La Torre del Mago','El Laberinto de Cristal','El Abismo Helado','Las Ruinas Antiguas','El Volcán de Fuego','El Castillo Oscuro'][juego.nivel] }}{% endif %}
+      </button>
+      {% endif %}
+    </form>
+
+    {% else %}
+    <div class="opciones-title"><i class="bi bi-list-check me-1"></i>¿Qué decides hacer?</div>
+    <div class="opciones-grid">
+      {% for opcion in nivel.opciones %}
+      <form method="POST" action="{{ url_for('juego.elegir') }}">
+        <input type="hidden" name="opcion" value="{{ opcion.letra }}">
+        <button type="submit" class="opcion-btn">
+          <span class="opcion-letra">{{ opcion.letra }}</span>
+          <i class="{{ opcion.icono }} opcion-icono"></i>
+          <span class="opcion-texto">{{ opcion.texto }}</span>
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const fill = document.querySelector('.hp-bar-fill');
+  if (fill) {
+    const target = fill.style.width;
+    fill.style.width = '100%';
+    setTimeout(() => { fill.style.width = target; }, 100);
+  }
+});
+</script>
+{% endblock %}

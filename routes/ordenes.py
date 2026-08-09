@@ -79,7 +79,6 @@ def init_ordenes_table():
 
 
 def generar_pdf_recepcion(orden, cliente, negocio):
-    # ── Carpeta organizada por año / mes / día ────────────────────────────────
     ahora       = datetime.now()
     meses_es    = {
         1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
@@ -94,7 +93,6 @@ def generar_pdf_recepcion(orden, cliente, negocio):
     carpeta = os.path.join('facturas', anio, mes, dia)
     os.makedirs(carpeta, exist_ok=True)
 
-    # Mantener también la carpeta facturas_pdf para compatibilidad
     os.makedirs('facturas_pdf', exist_ok=True)
 
     nombre_archivo = f"recepcion_{orden['numero_orden'].replace('-', '_')}_{hora}.pdf"
@@ -124,7 +122,6 @@ def generar_pdf_recepcion(orden, cliente, negocio):
 
     contenido = []
 
-    # Encabezado negocio
     contenido.append(Paragraph(nombre_negocio.upper(), estilo_titulo))
     if telefono_negocio:
         contenido.append(Paragraph(f'Tel: {telefono_negocio}', estilo_sub))
@@ -133,13 +130,11 @@ def generar_pdf_recepcion(orden, cliente, negocio):
                                 color=colors.HexColor('#1a73e8')))
     contenido.append(Spacer(1, 0.4*cm))
 
-    # Título comprobante
     contenido.append(Paragraph('COMPROBANTE DE RECEPCIÓN', estilo_sub))
     contenido.append(Paragraph(orden['numero_orden'], estilo_ot))
     contenido.append(HRFlowable(width='100%', thickness=0.5, color=colors.lightgrey))
     contenido.append(Spacer(1, 0.5*cm))
 
-    # Tabla de datos
     datos = [
         ['Fecha y hora:', fecha_hora],
         ['Cliente:', cliente['nombre'].title()],
@@ -173,7 +168,6 @@ def generar_pdf_recepcion(orden, cliente, negocio):
 
     doc.build(contenido)
 
-    # Copiar también a facturas_pdf para compatibilidad con el resto del sistema
     import shutil
     try:
         shutil.copy2(ruta, ruta_legacy)
@@ -223,7 +217,6 @@ def lista():
             ORDER BY o.fecha_creacion DESC
         ''', (nid,)).fetchall()
 
-    # Contadores por estado
     contadores = db.execute('''
         SELECT estado, COUNT(*) as total
         FROM ordenes WHERE negocio_id = ?
@@ -277,7 +270,6 @@ def crear():
             for e in errores: flash(e, 'danger')
             return render_template('ordenes/form.html', form=request.form, hoy=datetime.now().strftime('%Y-%m-%d'))
 
-        # Buscar si ya existe ese cliente en este negocio por teléfono
         cliente = db.execute(
             'SELECT id FROM clientes WHERE negocio_id = ? AND telefono = ?',
             (nid, cliente_telefono)
@@ -293,13 +285,11 @@ def crear():
             db.commit()
             cliente_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
 
-        # Generar número de orden único
         ultimo = db.execute(
             'SELECT COUNT(*) FROM ordenes WHERE negocio_id = ?', (nid,)
         ).fetchone()[0]
         numero_orden = f'OT-{nid:03d}-{(ultimo+1):04d}'
 
-        # Guardar foto si existe
         foto_filename = None
         if 'foto' in request.files:
             file = request.files['foto']
@@ -325,7 +315,6 @@ def crear():
 
         flash(f'Orden {numero_orden} creada exitosamente.', 'success')
 
-        # Si el técnico presionó "Crear + PDF + WhatsApp", generar PDF y abrir WA directamente
         accion = request.form.get('accion', 'solo_crear')
         if accion == 'crear_y_confirmar':
             return redirect(url_for('ordenes.confirmar_recepcion', id=orden_id))
@@ -381,15 +370,12 @@ def confirmar_recepcion(id):
         'SELECT * FROM negocios WHERE id = ?', (negocio_id,)
     ).fetchone()
 
-    # Generar PDF
     ruta_pdf, nombre_archivo = generar_pdf_recepcion(orden, cliente, negocio)
 
-    # Abrir la carpeta organizada por fecha en Windows Explorer
     carpeta_fecha = os.path.abspath(os.path.dirname(ruta_pdf))
     if platform.system() == 'Windows':
         subprocess.Popen(['explorer', carpeta_fecha])
 
-    # Construir mensaje WhatsApp
     numero = limpiar_telefono(cliente['telefono'])
     negocio_nombre = negocio['nombre_negocio'] if negocio else 'Tecnocel'
     
@@ -450,8 +436,6 @@ def cambiar_estado(id):
         WHERE id=? AND negocio_id=?
     ''', (nuevo_estado, fecha_listo, fecha_entregado, costo_f, id, nid))
     db.commit()
-    # NOTA: Las órdenes entregadas se registran únicamente en la tabla ordenes.
-    # No se crea venta automática para evitar duplicados en Trabajos Completos.
 
     estados = {'recibido': 'Recibido', 'listo': 'Listo para retirar', 'entregado': 'Entregado'}
     flash(f'Estado cambiado a "{estados[nuevo_estado]}".', 'success')
@@ -489,18 +473,19 @@ def whatsapp(id, tipo):
             f"📱 *Equipo:* {orden['marca_modelo']}\n"
             f"🔧 *Problema reportado:* {orden['problema']}\n"
             f"📅 *Fecha de recepción:* {orden['fecha_recibido']}\n"
-            f"{'Costo estimado: $ ' + '{:,.0f}'.format(orden['costo_estimado']) + '\n\n' if orden['costo_estimado'] else '\n\n'}"
-            f"Te notificaremos cuando esté listo. ¡Gracias por confiar en nosotros! 🙏"
+            + ("Costo estimado: $ " + "{:,.0f}".format(orden['costo_estimado']) + "\n\n" if orden['costo_estimado'] else "\n\n")
+            + "Te notificaremos cuando esté listo. ¡Gracias por confiar en nosotros! 🙏"
         )
     elif tipo == 'listo':
+        _val_listo = ("Valor a pagar: $ " + "{:,.0f}".format(orden['costo_final']) + "\n\n" if orden['costo_final'] else "\n\n")
         mensaje = (
             f"Hola {orden['cliente_nombre']} 👋\n\n"
             f"🎉 ¡Tu equipo está *LISTO* para retirar!\n\n"
             f"📋 *Orden:* {orden['numero_orden']}\n"
             f"📱 *Equipo:* {orden['marca_modelo']}\n"
-            f"{'Valor a pagar: $ ' + '{:,.0f}'.format(orden['costo_final']) + '\n\n' if orden['costo_final'] else '\n\n'}"
-            f"Puedes pasar a recogerlo en *{negocio_nombre}*.\n"
-            f"¡Te esperamos! 😊"
+            + _val_listo
+            + f"Puedes pasar a recogerlo en *{negocio_nombre}*.\n"
+            + "¡Te esperamos! 😊"
         )
     elif tipo == 'factura':
         costo = orden['costo_final'] or orden['costo_estimado'] or 0
@@ -512,7 +497,7 @@ def whatsapp(id, tipo):
             f"🔧 *Servicio:* {orden['problema']}\n"
             f"💰 *Total pagado:* $ {costo:,.0f}\n"
             f"📅 *Fecha:* {orden['fecha_entregado'] or datetime.now().strftime('%Y-%m-%d')}\n\n"
-            f"¡Gracias por tu preferencia! Cualquier garantía comunícate con nosotros. 🙏"
+            f"¡Gracias por tu preferencia! Cualquier garantía comúnicarte con nosotros. 🙏"
         )
     else:
         flash('Tipo de mensaje no válido.', 'danger')
@@ -535,7 +520,6 @@ def recepcion_rapida():
     problema = request.form.get('problema_rapida', '').strip()
     costo_estimado = request.form.get('costo_estimado_rapida', '').strip()
 
-    # Validaciones
     es_ajax = request.form.get('origen') == 'modal'
 
     def error(msg):
@@ -550,7 +534,6 @@ def recepcion_rapida():
     if not marca_modelo:     return error('La marca/modelo es obligatoria.')
     if not problema:         return error('El problema es obligatorio.')
 
-    # Convertir costo estimado a número
     costo_estimado_num = None
     if costo_estimado:
         try:
@@ -558,7 +541,6 @@ def recepcion_rapida():
         except ValueError:
             return error('El costo estimado debe ser un número válido.')
 
-    # Buscar o crear cliente
     cliente = db.execute(
         'SELECT id FROM clientes WHERE negocio_id = ? AND telefono = ?',
         (nid, telefono_cliente)
@@ -574,7 +556,6 @@ def recepcion_rapida():
         db.commit()
         cliente_id = db.execute('SELECT last_insert_rowid()').fetchone()[0]
 
-    # Generar número de orden
     ultima_orden = db.execute(
         'SELECT numero_orden FROM ordenes WHERE negocio_id = ? ORDER BY id DESC LIMIT 1',
         (nid,)
@@ -586,7 +567,6 @@ def recepcion_rapida():
     else:
         nuevo_num = f"OT-{nid:03d}-0001"
 
-    # Crear la orden
     fecha_hoy = datetime.now().strftime('%Y-%m-%d')
     db.execute(
         '''INSERT INTO ordenes
@@ -601,7 +581,6 @@ def recepcion_rapida():
 
     flash(f'Equipo registrado. Orden: {nuevo_num}', 'success')
 
-    # Construir URL de WhatsApp directamente
     negocio = db.execute('SELECT * FROM negocios WHERE id = ?', (nid,)).fetchone()
     negocio_nombre = negocio['nombre_negocio'] if negocio else 'Tecnocel'
     numero = limpiar_telefono(telefono_cliente)
@@ -614,7 +593,6 @@ def recepcion_rapida():
     )
     wa_url = f"https://wa.me/{numero}?text={urllib.parse.quote(mensaje)}" if numero else None
 
-    # Si viene del modal (fetch), devolver JSON
     if es_ajax:
         from flask import jsonify
         return jsonify({'success': True, 'whatsapp_url': wa_url, 'numero_orden': nuevo_num})
@@ -638,7 +616,6 @@ def recepcion_rapida_v2():
     except ValueError:
         costo = 0
 
-    # Buscar o crear cliente
     cliente = db.execute('SELECT id FROM clientes WHERE negocio_id = ? AND telefono = ?', (nid, telefono)).fetchone()
     if not cliente:
         db.execute('INSERT INTO clientes (negocio_id, nombre, telefono) VALUES (?, ?, ?)', (nid, nombre, telefono))
@@ -647,7 +624,6 @@ def recepcion_rapida_v2():
     else:
         cliente_id = cliente['id']
 
-    # Generar número de orden consistente con el resto del sistema
     ultima = db.execute('SELECT numero_orden FROM ordenes WHERE negocio_id = ? ORDER BY id DESC LIMIT 1', (nid,)).fetchone()
     if ultima:
         try:
@@ -658,7 +634,6 @@ def recepcion_rapida_v2():
     else:
         numero_orden = f'OT-{nid:03d}-0001'
 
-    # Guardar orden
     fecha_hoy = datetime.now().strftime('%Y-%m-%d')
     db.execute('''INSERT INTO ordenes (negocio_id, cliente_id, numero_orden, marca_modelo, problema,
                   estado, costo_estimado, abono, saldo_pendiente, fecha_recibido)
@@ -666,7 +641,6 @@ def recepcion_rapida_v2():
                (nid, cliente_id, numero_orden, marca_modelo, problema, costo, costo, fecha_hoy))
     db.commit()
 
-    # WhatsApp
     negocio = db.execute('SELECT * FROM negocios WHERE id = ?', (nid,)).fetchone()
     negocio_nombre = negocio['nombre_negocio'] if negocio else 'Tecnocel'
     numero = limpiar_telefono(telefono)
