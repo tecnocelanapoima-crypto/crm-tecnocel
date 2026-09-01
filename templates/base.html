@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-bs-theme="dark">
+<html lang="es" data-bs-theme="dark" data-theme="{{ negocio_tema }}" data-compact="false">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <script>if(localStorage.getItem('crm_compact')==='true')document.documentElement.setAttribute('data-compact','true');</script>
     <style>
         .logo-dropdown-toggle{background:none;border:none;padding:0;cursor:pointer}
         .logo-dropdown-toggle::after{display:none}
@@ -127,6 +128,8 @@
 </head>
 <body>
 
+<div id="page-progress" aria-hidden="true"></div>
+
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container-fluid px-3">
 
@@ -174,10 +177,21 @@
                 <!-- Tema de color -->
                 <div class="logo-dropdown-section">
                     <div class="logo-dropdown-section-title">Color del tema</div>
-                    <button class="logo-dropdown-item" onclick="cambiarTema('cyan')"><span class="color-dot" style="background:#00CFFF"></span>Cyan Neón</button>
-                    <button class="logo-dropdown-item" onclick="cambiarTema('emerald')"><span class="color-dot" style="background:#00E676"></span>Verde Esmeralda</button>
-                    <button class="logo-dropdown-item" onclick="cambiarTema('amber')"><span class="color-dot" style="background:#FFD740"></span>Ámbar Solar</button>
-                    <button class="logo-dropdown-item" onclick="cambiarTema('purple')"><span class="color-dot" style="background:#B388FF"></span>Púrpura</button>
+                    <button class="logo-dropdown-item" data-tema="cyan"    onclick="cambiarTema('cyan')">   <span class="color-dot" style="background:#00CFFF"></span>Cyan Neón       <i class="bi bi-check2 tema-check"></i></button>
+                    <button class="logo-dropdown-item" data-tema="emerald" onclick="cambiarTema('emerald')"><span class="color-dot" style="background:#00E676"></span>Verde Esmeralda <i class="bi bi-check2 tema-check"></i></button>
+                    <button class="logo-dropdown-item" data-tema="amber"   onclick="cambiarTema('amber')">  <span class="color-dot" style="background:#FFD740"></span>Ámbar Solar     <i class="bi bi-check2 tema-check"></i></button>
+                    <button class="logo-dropdown-item" data-tema="purple"  onclick="cambiarTema('purple')"> <span class="color-dot" style="background:#B388FF"></span>Púrpura         <i class="bi bi-check2 tema-check"></i></button>
+                    <button class="logo-dropdown-item" data-tema="rose"    onclick="cambiarTema('rose')">   <span class="color-dot" style="background:#FF6B9D"></span>Rosa Coral       <i class="bi bi-check2 tema-check"></i></button>
+                    <button class="logo-dropdown-item" data-tema="slate"   onclick="cambiarTema('slate')">  <span class="color-dot" style="background:#82B1FF"></span>Acero Azul      <i class="bi bi-check2 tema-check"></i></button>
+                </div>
+
+                <!-- Vista -->
+                <div class="logo-dropdown-section">
+                    <div class="logo-dropdown-section-title">Vista</div>
+                    <button class="logo-dropdown-item" onclick="toggleCompacto()">
+                        <i class="bi bi-layout-text-sidebar-reverse"></i>
+                        <span id="lblCompacto">Activar modo compacto</span>
+                    </button>
                 </div>
 
                 <!-- Módulos dashboard (solo en index) -->
@@ -302,27 +316,88 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
-function cambiarTema(t){
-    const m={cyan:{p:'#00CFFF',b:'rgba(0,207,255,0.2)'},emerald:{p:'#00E676',b:'rgba(0,230,118,0.2)'},amber:{p:'#FFD740',b:'rgba(255,215,64,0.2)'},purple:{p:'#B388FF',b:'rgba(179,136,255,0.2)'}};
-    if(m[t]){document.documentElement.style.setProperty('--tc-cyan',m[t].p);document.documentElement.style.setProperty('--tc-cyan-border',m[t].b);localStorage.setItem('tc-tema',t);}
+// ── Cambiar tema: aplica data-theme + guarda en servidor ──────────────────
+function cambiarTema(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('crm_theme', t);
+    fetch('/api/guardar-tema', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({tema: t})
+    }).catch(() => {});
 }
-function toggleModulo(id){
-    const el=document.getElementById(id);
-    if(el){const h=el.style.display==='none';el.style.display=h?'':'none';localStorage.setItem('tc-modulo-'+id,h?'visible':'hidden');}
+
+// ── Alternar modo compacto (preferencia local por dispositivo) ────────────
+function toggleCompacto() {
+    const activo = document.documentElement.getAttribute('data-compact') === 'true';
+    const siguiente = String(!activo);
+    document.documentElement.setAttribute('data-compact', siguiente);
+    localStorage.setItem('crm_compact', siguiente);
+    const lbl = document.getElementById('lblCompacto');
+    if (lbl) lbl.textContent = siguiente === 'true' ? 'Desactivar modo compacto' : 'Activar modo compacto';
 }
-function resetConfig(){
+
+// ── Mostrar/ocultar módulos del dashboard ─────────────────────────────────
+function toggleModulo(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const oculto = el.style.display === 'none';
+    el.style.display = oculto ? '' : 'none';
+    localStorage.setItem('tc-modulo-' + id, oculto ? 'visible' : 'hidden');
+}
+
+// ── Restablecer configuración visual ──────────────────────────────────────
+function resetConfig() {
+    localStorage.removeItem('crm_compact');
     localStorage.removeItem('tc-tema');
-    ['dashboard-stats','dashboard-last-sales','dashboard-last-clients'].forEach(id=>{
-        localStorage.removeItem('tc-modulo-'+id);
-        const el=document.getElementById(id);if(el)el.style.display='';
+    ['dashboard-stats','dashboard-last-sales','dashboard-last-clients'].forEach(id => {
+        localStorage.removeItem('tc-modulo-' + id);
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
     });
-    cambiarTema('cyan');
+    fetch('/api/guardar-tema', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({tema: 'cyan'})
+    }).then(() => window.location.reload()).catch(() => window.location.reload());
 }
-(function(){
-    const t=localStorage.getItem('tc-tema');if(t)cambiarTema(t);
-    ['dashboard-stats','dashboard-last-sales','dashboard-last-clients'].forEach(id=>{
-        const s=localStorage.getItem('tc-modulo-'+id);const el=document.getElementById(id);
-        if(el&&s==='hidden')el.style.display='none';
+
+// ── Inicialización (sin FOUC — data-theme ya viene del servidor) ──────────
+(function () {
+    // Modo compacto (preferencia por dispositivo, no se guarda en servidor)
+    const compacto = localStorage.getItem('crm_compact') === 'true';
+    if (compacto) {
+        document.documentElement.setAttribute('data-compact', 'true');
+        const lbl = document.getElementById('lblCompacto');
+        if (lbl) lbl.textContent = 'Desactivar modo compacto';
+    }
+
+    // Módulos dashboard
+    ['dashboard-stats','dashboard-last-sales','dashboard-last-clients'].forEach(id => {
+        const s = localStorage.getItem('tc-modulo-' + id);
+        const el = document.getElementById(id);
+        if (el && s === 'hidden') el.style.display = 'none';
+    });
+
+    // Barra de progreso al navegar entre páginas
+    document.addEventListener('click', function (e) {
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript') || link.target) return;
+        const bar = document.getElementById('page-progress');
+        if (bar) {
+            bar.style.opacity = '1';
+            bar.style.width = '0%';
+            setTimeout(() => { bar.style.width = '72%'; }, 20);
+        }
+    });
+    window.addEventListener('pageshow', function () {
+        const bar = document.getElementById('page-progress');
+        if (bar) {
+            bar.style.width = '100%';
+            setTimeout(() => { bar.style.opacity = '0'; bar.style.width = '0%'; }, 450);
+        }
     });
 })();
 </script>

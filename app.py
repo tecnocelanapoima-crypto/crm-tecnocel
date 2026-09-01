@@ -55,16 +55,18 @@ def inject_negocio():
     logo_base64 = None
     negocio_slogan = ''
     negocio_telefono = ''
+    negocio_tema = 'cyan'
     if nid:
         try:
             db = get_db()
             row = db.execute(
-                'SELECT logo_base64, slogan, telefono FROM negocios WHERE id = ?', (nid,)
+                'SELECT logo_base64, slogan, telefono, tema FROM negocios WHERE id = ?', (nid,)
             ).fetchone()
             if row:
                 logo_base64 = row['logo_base64']
                 negocio_slogan = row['slogan'] or ''
                 negocio_telefono = row['telefono'] or ''
+                negocio_tema = row['tema'] or 'cyan'
         except Exception:
             pass
     return {
@@ -74,6 +76,7 @@ def inject_negocio():
         'negocio_logo':     logo_base64,
         'negocio_slogan':   negocio_slogan,
         'negocio_telefono': negocio_telefono,
+        'negocio_tema':     negocio_tema,
     }
 
 
@@ -242,6 +245,21 @@ def completos():
     total_recaudado = sum(item['valor'] for item in todo if item['valor'])
 
     return render_template('completos.html', lista=todo, total=total_recaudado)
+
+
+# ── API: Guardar tema del negocio ────────────────────────────────────────────
+@app.route('/api/guardar-tema', methods=['POST'])
+def guardar_tema():
+    if not session.get('negocio_id'):
+        return jsonify({'ok': False}), 401
+    datos = request.get_json(silent=True) or {}
+    tema = datos.get('tema', 'cyan')
+    if tema not in {'cyan', 'emerald', 'amber', 'purple', 'rose', 'slate'}:
+        tema = 'cyan'
+    db = get_db()
+    db.execute('UPDATE negocios SET tema = ? WHERE id = ?', (tema, session['negocio_id']))
+    db.commit()
+    return jsonify({'ok': True, 'tema': tema})
 
 
 # ── API: Stats del Dashboard (AJAX) ─────────────────────────────────────────
